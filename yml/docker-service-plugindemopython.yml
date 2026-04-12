@@ -1,0 +1,28 @@
+networks:
+  nw-letto:
+    external: true
+
+services:
+  plugindemopython:
+    restart: always
+    networks:
+      - nw-letto
+    hostname: letto-plugindemopython
+    container_name: letto-plugindemopython
+    deploy:
+      resources:
+        limits:
+          memory: "${PLUGINDEMO_MEMORY_LIMIT:-500m}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "3"
+    volumes:
+      - ${VOLUME_LOG:-/opt/letto/docker/storage/log}/plugindemopython:/log
+      - ${VOLUME_IMAGES:-/opt/letto/docker/storage/images}:/opt/letto/images
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICEPATH: "/plugindemopython"
+      RESOURCE_DIR: "/app/resources"

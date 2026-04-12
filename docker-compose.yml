@@ -1,9 +1,0 @@
-services:
-  plugindemo:
-    build: .
-    container_name: plugindemo-python
-    ports:
-      - "8080:8080"
-    environment:
-      SERVICEPATH: "/plugindemo"
-      RESOURCE_DIR: "/app/resources"
