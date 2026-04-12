@@ -1,0 +1,8 @@
+/.idea/
+/.idea/*
+*.pyc
+/.venv/
+/build/
+/tmp/
+/out/
+/target/
