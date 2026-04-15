@@ -6,6 +6,8 @@ import io
 import asyncio
 import logging
 import httpx
+import platform
+import socket
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -23,6 +25,13 @@ from PIL import Image, ImageDraw
 CONF_STANDARD_SERVICEPATH = "/plugindemopython"
 # Name des Plugin-Service
 CONF_APPLICATION_NAME     = "plugindemopython"
+
+# Name des Services wie es am Setup registriert wird
+CONF_PLUGIN_NAME = "letto-plugindemopython"
+# Author des Plugins
+CONF_PLUGIN_AUTHOR = "LeTTo GmbH"
+# Lizenz des Plugins
+CONF_PLUGIN_LICENSE = "OpenSource"
 # Name des Plugins wie es in Letto erscheint
 CONF_PLUGIN     = "UhrPy"
 # Version des Plugins
@@ -39,12 +48,15 @@ CONF_JSLIBS     = ["plugins/uhr/uhrPyScript.js", "plugins/uhr/uhrPyConfigScript.
 # ----------------------------------
 # Environment aus der yml-Datei
 # ----------------------------------
-LETTO_SETUP_URI = os.getenv("letto_setup_uri", os.getenv("LETTO_SETUP_URI", "")).rstrip("/")
+LETTO_SETUP_URI = os.getenv("letto_setup_uri", os.getenv("LETTO_SETUP_URI", "http://letto-setup.nw-letto:8096")).rstrip("/")
+LETTO_SETUP_USER = "user";
+LETTO_SETUP_PASSWORD = os.getenv("letto_user_user_password", os.getenv("LETTO_USER_USER_PASSWORD", ""))
 PLUGIN_PUBLIC_URL = os.getenv("PLUGIN_PUBLIC_URL", "").rstrip("/")
 PLUGIN_ENDPOINT_NAME = os.getenv("PLUGIN_ENDPOINT_NAME", "plugindemo")
 PLUGIN_REGISTER_ON_READY = os.getenv("PLUGIN_REGISTER_ON_READY", "true").lower() == "true"
 PLUGIN_REGISTER_RETRIES = int(os.getenv("PLUGIN_REGISTER_RETRIES", "30"))
 PLUGIN_REGISTER_DELAY_SECONDS = float(os.getenv("PLUGIN_REGISTER_DELAY_SECONDS", "1.0"))
+NW_LETTO_ADDRESS = os.getenv("network.letto.address", os.getenv("NETWORK.LETTO.ADDRESS", "letto-plugindemopython"))
 
 # --------------------------
 # Paths (match Java project)
@@ -68,6 +80,24 @@ _registration_task = None
 # --------------------------
 # Utilities
 # --------------------------
+def get_system_info():
+    # OS
+    os_name = platform.system()
+    os_version = platform.version()
+
+    # IP
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+
+    return {
+        "bs": f"{os_name} {os_version}",
+        "ip": ip
+    }
+info = get_system_info()
 def now_time_str() -> str:
     return datetime.now().strftime("%H:%M:%S")
 
@@ -617,14 +647,38 @@ async def _wait_until_service_is_ready() -> dict:
 # --------------------------
 def _build_registration_payload(urls: dict) -> dict:
     return {
-        "name": SERVICE_NAME,
-        "serviceName": SERVICE_NAME,
-        "infoUrl": urls["info"],
-        "pingUrl": urls["ping"],
-        "pluginListUrl": urls["pluginlist"],
-        "generalInfoListUrl": urls["generalinfolist"],
-        "generalInfoUrl": urls["generalinfo"],
-        "reloadPluginDtoUrl": urls["reloadplugindto"],
+        "name": CONF_PLUGIN_NAME,              # Name des Services
+        "version": CONF_VERSION,               # Version des Services
+        "author": CONF_PLUGIN_AUTHOR,          # Information über den Autor des Services
+        "license": CONF_PLUGIN_LICENSE,        # Information über die Lizenz des Services
+        "bs": info["bs"],                      # Betriebssystem auf dem das Service läuft
+        "ip": info["ip"],                      # IP des Services
+        "encoding": "UTF-8",                   # Zeichen-Encoding
+        "programmingLanguage": "python",       # Programmiersprache in der das Service Programmiert wurde
+        "nwLettoAddress": NW_LETTO_ADDRESS,    # Adresse innerhalb des Docker-Netzwerkes nw-letto, wenn das Service dort direkt erreichbar ist
+        # Name des Docker-Containers, dieser muss eindeutig sein!!
+        # Bei externen Services auf anderen Servcern gibt es keinen dockerName, dann muss die externe URI eindeutig sein
+        "dockerName": "",
+        # interne URI mit der auf das Service ohne Authentifizierung zugegriffen werden kann.
+        # die URI muss protokoll://adresse:port/basisendpunkt enthalten woran dann die Standard-Plugin-Endpoints angehängt werden.
+        # Ist die uriIntern nicht gesetzt dann wird wenn extern=true ist auf der uriExtern verbunden.
+        # Läuft das Service also auf einem Fremdserver muss Benutzername und Passwort angegeben sein um sich am Fremdserver zu authentifizieren oder alle Endpunkte müssen offen sein.
+        "uriIntern":"",
+        "extern":"false",             # Service ist von Extern (Browser) direkt erreichbar
+        # externe URI mit der vom Browser auf das Service zugegriffen werden kann (wenn extern=true)
+        # Hier muss die gesamte absolute Basis-URI angegeben werden unter der die Plugin-Endpoints liegen
+        "uriExtern":"",
+        "plugin":"true",             # Gibt an ob es sich bei dem Service um ein Plugin handelt
+        "scaleable":"false",         # Gibt an ob das Service skalierbar (mehrfach vorkommen kann) ist
+        "stateless":"true",          # Gibt an ob das Service nur Stateless-Endpoints hat
+        "username":"",               # Benutzername wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
+        "password":"",               # Passwort wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
+        "usePluginToken":"false",    # Wenn hier true steht, dann muss für das Plugin ein Token verwendet werden, der in der Schule gespeichert ist. Dieser Token muss für die Authentifizierung am Plugin verwendet werden. - Ist noch nicht implementiert.
+        "serviceStartTime":"",       # Datum und Uhrzeit an der das Service gestartet wurde als DateInteger
+        "lastRegistrationTime":"",   # Datum und Uhrzeit der letzten Service-Registratur
+        "params":"",                 # zusätzliche nicht weiter definierte Parameter des Plugins
+        "htmlServiceStartTime":"",
+        "htmlLastRegistrationTime":now_time_str()
     }
 async def register_plugin_in_setup() -> None:
     if not PLUGIN_REGISTER_ON_READY:
@@ -642,8 +696,9 @@ async def register_plugin_in_setup() -> None:
     # Diesen Pfad bitte auf den exakten Java-Setup-Endpoint anpassen,
     # falls euer Setup-Service einen anderen Registrierungs-Pfad erwartet.
     register_url = f"{LETTO_SETUP_URI}/api/plugin/register"
+    auth = httpx.BasicAuth(LETTO_SETUP_USER, LETTO_SETUP_PASSWORD)
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0, auth=auth) as client:
         for attempt in range(1, PLUGIN_REGISTER_RETRIES + 1):
             try:
                 response = await client.post(register_url, json=payload)
