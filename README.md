@@ -3,10 +3,19 @@
 Dieses Projekt ist eine Python/FastAPI-Portierung der REST-API aus `plugin-demo-java`.
 Der Fokus liegt auf denselben Endpoints + dem Demo-Plugin **Uhr1**.
 
-## Start (Docker)
+## Build des Docker-Containers (build.bat)
 ```bash
-docker compose up --build
+docker build -t letto-plugin-demopython:latest -f Dockerfile .
 ```
+
+## Installation am LeTTo-Server
+* Installation des Docker-Containers:
+  * kopiere yml/docker-service-plugindemopython.yml in /opt/letto/docker/compose/letto/ am LeTTo-Server 
+  * starte den Container (docker compose -f /opt/letto/docker/compose/letto/ docker-service-plugindemopython.yml up -d)
+* Proxy Konfiguration:
+  * kopiere proxy/plugindemopython.conf in /opt/letto/docker/proxy/ am LeTTo-Server 
+  * restarte den Proxy (docker restart letto-proxy)
+* d
 
 ## Wichtige Endpoints
 - `GET /ping`  → `pong`

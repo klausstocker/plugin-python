@@ -2,8 +2,12 @@ networks:
   nw-letto:
     external: true
 
+# Der Name bestimmt das Projekt und sollte bei jeder yml-Datei unterschiedlich sein - er kann mit -p bei docker-compose überschrieben werden
+name: letto-plugin-demopython
+
 services:
   plugindemopython:
+    image: lettohub/letto-plugin-demopython:latest
     restart: always
     networks:
       - nw-letto
@@ -21,8 +25,23 @@ services:
     volumes:
       - ${VOLUME_LOG:-/opt/letto/docker/storage/log}/plugindemopython:/log
       - ${VOLUME_IMAGES:-/opt/letto/docker/storage/images}:/opt/letto/images
+      - ${VOLUME_PLUGINS:-/opt/letto/docker/storage/plugins}:/opt/letto/plugins
     ports:
       - "8080:8080"
     environment:
+      TZ: ${TIMEZONE:-Europe/Berlin}
+      LC_ALL: ${LOCALE:-de_DE.UTF-8}
+      letto_schulen: ${LETTO_SCHULEN}
       SERVICEPATH: "/plugindemopython"
       RESOURCE_DIR: "/app/resources"
+      network.letto.address: letto-plugindemopython
+      docker.container.name: letto-plugindemopython
+      servername: ${SERVER_NAME}
+      letto_setup_uri: ${LETTO_SETUP_URI:-http://letto-setup.nw-letto:8096}
+      letto.plugin.uri.intern: ${LETTO_PLUGINDEMO_URI_INTERN:-http://letto-plugindemo.nw-letto:8080}
+      letto.plugin.uri.extern: ${LETTO_PLUGIN_URI_EXTERN:-https://${SERVER_NAME}}
+      letto_pathImages: /opt/letto/images
+      letto_pathPlugins: /opt/letto/plugins
+      letto_webPathImages: ${SERVER_NAME}/images
+      letto_webPathPlugins: ${SERVER_NAME}/images/plugins
+      debug: ${DEBUG_PLUGINS:-${DEBUG:-false}}

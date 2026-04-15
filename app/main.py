@@ -3,6 +3,10 @@ import re
 import math
 import base64
 import io
+import asyncio
+import logging
+import httpx
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -13,9 +17,39 @@ from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
 
 # --------------------------
+# CONFIGURATION
+# --------------------------
+# Der Servicepath muss in der nginx-Konfiguration auf den Docker-Container des Plugins gesetzt werden -> siehe proxy/plugindemopython.conf
+CONF_STANDARD_SERVICEPATH = "/plugindemopython"
+# Name des Plugin-Service
+CONF_APPLICATION_NAME     = "plugindemopython"
+# Name des Plugins wie es in Letto erscheint
+CONF_PLUGIN     = "UhrPy"
+# Version des Plugins
+CONF_VERSION    = "1.0"
+# Java-Script function für die Initialisierung des Plugins wenn es im Java-Script modus laufen sollte
+CONF_INIT_JS    = "initPluginUhrPy"
+# Java-Script function für die Konfiguration des Plugins wenn es im Java-Script konfiguriert werden sollte
+CONF_CONFIG_JS  = "configPluginUhrPy"
+# Hilfe als HTML-Datei
+CONF_HELPFILES  = ["plugins/uhr/UhrPy.html"]
+# Javascript Dateien die für dieses Plugin von LeTTo eingebunden werden müssen
+CONF_JSLIBS     = ["plugins/uhr/uhrPyScript.js", "plugins/uhr/uhrPyConfigScript.js"]
+
+# ----------------------------------
+# Environment aus der yml-Datei
+# ----------------------------------
+LETTO_SETUP_URI = os.getenv("letto_setup_uri", os.getenv("LETTO_SETUP_URI", "")).rstrip("/")
+PLUGIN_PUBLIC_URL = os.getenv("PLUGIN_PUBLIC_URL", "").rstrip("/")
+PLUGIN_ENDPOINT_NAME = os.getenv("PLUGIN_ENDPOINT_NAME", "plugindemo")
+PLUGIN_REGISTER_ON_READY = os.getenv("PLUGIN_REGISTER_ON_READY", "true").lower() == "true"
+PLUGIN_REGISTER_RETRIES = int(os.getenv("PLUGIN_REGISTER_RETRIES", "30"))
+PLUGIN_REGISTER_DELAY_SECONDS = float(os.getenv("PLUGIN_REGISTER_DELAY_SECONDS", "1.0"))
+
+# --------------------------
 # Paths (match Java project)
 # --------------------------
-SERVICEPATH = os.getenv("SERVICEPATH", "/plugindemopython").rstrip("/")  # external prefix used by reverse proxy
+SERVICEPATH = os.getenv("SERVICEPATH", CONF_STANDARD_SERVICEPATH).rstrip("/")  # external prefix used by reverse proxy
 LOCAL_API = "/open"                                               # internal api base
 EXTERN_OPEN = f"{SERVICEPATH}/api/open"                           # external open base
 PING = "/ping"
@@ -24,9 +58,16 @@ INFO = "/info"
 INFO_OPEN = f"{SERVICEPATH}/open/info"
 
 # --------------------------
+# Logging
+# --------------------------
+logger = logging.getLogger("plugin-registration")
+logging.basicConfig(level=logging.INFO)
+
+_registration_task = None
+
+# --------------------------
 # Utilities
 # --------------------------
-
 def now_time_str() -> str:
     return datetime.now().strftime("%H:%M:%S")
 
@@ -138,8 +179,8 @@ class PluginGeneralInfo(BaseModel):
     help: str = ""
     defaultPluginConfig: bool = True
     math: bool = False
-    pluginType: str = "python.PluginUhr"
-    initPluginJS: str = "initPluginUhr"
+    pluginType: str = "python.PluginDemo"
+    initPluginJS: str = CONF_INIT_JS
     javaScript: bool = True
     javascriptLibraries: List[JavascriptLibrary] = Field(default_factory=list)
     javascriptLibrariesLocal: List[JavascriptLibrary] = Field(default_factory=list)
@@ -347,7 +388,7 @@ class PluginSetConfigurationDataRequestDto(BaseModel):
 
 class AdminInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    applicationname: str = "plugindemo"
+    applicationname: str = CONF_APPLICATION_NAME
     pid: int = 0
     applicationhome: str = ""
     startupDate: int = 0
@@ -366,8 +407,8 @@ class AdminInfoDto(BaseModel):
 
 class ServiceInfoDTO(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    serviceName: str = "plugindemo"
-    version: str = "python"
+    serviceName: str = CONF_APPLICATION_NAME
+    version: str = CONF_VERSION
     author: str = "LeTTo"
     license: str = ""
     endpoints: str = ""
@@ -377,18 +418,14 @@ class ServiceInfoDTO(BaseModel):
     jarLibs: List[str] = Field(default_factory=list)
 
 # --------------------------
-# Plugin: Uhr
+# Plugin: die eigentliche Pluginklasse
 # --------------------------
-
-class PluginUhr:
-    """
-    Python port of at.letto.plugins.plugin.uhr.PluginUhr (relevant behavior for REST endpoints).
-    """
-    VERSION = "1.0"
-    HELPFILES = ["plugins/uhr/UhrPy.html"]
-    JSLIBS = ["plugins/uhr/uhrPyScript.js", "plugins/uhr/uhrPyConfigScript.js"]
-    INIT_JS = "initPluginUhrPy"
-    CONFIG_JS = "configPluginUhrPy"
+class PluginDemo:
+    VERSION   = CONF_VERSION
+    HELPFILES = CONF_HELPFILES
+    JSLIBS    = CONF_JSLIBS
+    INIT_JS   = CONF_INIT_JS
+    CONFIG_JS = CONF_CONFIG_JS
 
     def __init__(self, name: str, params: str):
         self.name = name or ""
@@ -450,7 +487,7 @@ class PluginUhr:
             version=self.VERSION,
             wikiHelp="Plugins",
             help=help_text,
-            pluginType="python.PluginUhr",
+            pluginType="python.PluginDemo",
             initPluginJS=self.INIT_JS,
             javaScript=True,
             javascriptLibrariesLocal=libs_local,
@@ -514,19 +551,143 @@ class PluginUhr:
 # Plugin registry (like StartupConfiguration.registerPlugin)
 # --------------------------
 REGISTERED_PLUGINS: Dict[str, str] = {
-    "Uhr1": "PluginUhr",
+    CONF_PLUGIN: "PluginDemo",
 }
 
-def create_plugin(typ: str, name: str, params: str) -> Optional[PluginUhr]:
-    if typ == "Uhr1":
-        return PluginUhr(name, params)
+def create_plugin(typ: str, name: str, params: str) -> Optional[PluginDemo]:
+    if typ == CONF_PLUGIN:
+        return PluginDemo(name, params)
     return None
+
+def _build_service_base_urls() -> dict:
+    """
+    Erzeugt die öffentlichen URLs, unter denen das Setup dieses Service erreicht.
+    PLUGIN_PUBLIC_URL muss die aus dem Docker-Netz erreichbare URL sein,
+    z.B. http://pluginuhr-python:8080
+    """
+    if not PLUGIN_PUBLIC_URL:
+        raise RuntimeError("PLUGIN_PUBLIC_URL ist nicht gesetzt")
+
+    base = PLUGIN_PUBLIC_URL.rstrip("/")
+    return {
+        "root": base,
+        "ping": f"{base}/{SERVICE_NAME}/ping",
+        "pluginlist": f"{base}/open/pluginlist",
+        "generalinfolist": f"{base}/open/generalinfolist",
+        "generalinfo": f"{base}/open/generalinfo",
+        "reloadplugindto": f"{base}/plugindemo/api/open/reloadplugindto",
+        "info": f"{base}/info",
+    }
+
+
+async def _wait_until_service_is_ready() -> dict:
+    """
+    Wartet, bis das Service von außen wirklich erreichbar ist.
+    Das Setup ruft direkt nach der Registrierung synchron weitere Endpoints auf.
+    """
+    urls = _build_service_base_urls()
+
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        for attempt in range(1, PLUGIN_REGISTER_RETRIES + 1):
+            try:
+                ping_ok = (await client.get(urls["ping"])).status_code == 200
+                pluginlist_ok = (await client.get(urls["pluginlist"])).status_code == 200
+                generalinfolist_ok = (await client.get(urls["generalinfolist"])).status_code == 200
+                generalinfo_ok = (
+                    await client.post(
+                        urls["generalinfo"],
+                        content="Uhr",
+                        headers={"Content-Type": "text/plain; charset=utf-8"},
+                    )
+                ).status_code == 200
+
+                if ping_ok and pluginlist_ok and generalinfolist_ok and generalinfo_ok:
+                    logger.info("Service ist vollständig erreichbar und bereit für Setup-Registrierung")
+                    return urls
+
+            except Exception as ex:
+                logger.info("Service noch nicht bereit (%s/%s): %s", attempt, PLUGIN_REGISTER_RETRIES, ex)
+
+            await asyncio.sleep(PLUGIN_REGISTER_DELAY_SECONDS)
+
+    raise RuntimeError("Service wurde vor der Registrierung nicht rechtzeitig erreichbar")
+
+# --------------------------
+# Plugin am Setup registrieren
+# --------------------------
+def _build_registration_payload(urls: dict) -> dict:
+    return {
+        "name": SERVICE_NAME,
+        "serviceName": SERVICE_NAME,
+        "infoUrl": urls["info"],
+        "pingUrl": urls["ping"],
+        "pluginListUrl": urls["pluginlist"],
+        "generalInfoListUrl": urls["generalinfolist"],
+        "generalInfoUrl": urls["generalinfo"],
+        "reloadPluginDtoUrl": urls["reloadplugindto"],
+    }
+async def register_plugin_in_setup() -> None:
+    if not PLUGIN_REGISTER_ON_READY:
+        logger.info("PLUGIN_REGISTER_ON_READY=false -> keine Registrierung")
+        return
+
+    if not LETTO_SETUP_URI:
+        logger.warning("letto_setup_uri/LETTO_SETUP_URI ist nicht gesetzt -> Registrierung übersprungen")
+        return
+
+    urls = await _wait_until_service_is_ready()
+    payload = _build_registration_payload(urls)
+
+    # TODO:
+    # Diesen Pfad bitte auf den exakten Java-Setup-Endpoint anpassen,
+    # falls euer Setup-Service einen anderen Registrierungs-Pfad erwartet.
+    register_url = f"{LETTO_SETUP_URI}/api/plugin/register"
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for attempt in range(1, PLUGIN_REGISTER_RETRIES + 1):
+            try:
+                response = await client.post(register_url, json=payload)
+                if 200 <= response.status_code < 300:
+                    logger.info("Plugin erfolgreich beim Setup registriert: %s", register_url)
+                    return
+
+                logger.warning(
+                    "Registrierung fehlgeschlagen (%s/%s), HTTP %s: %s",
+                    attempt,
+                    PLUGIN_REGISTER_RETRIES,
+                    response.status_code,
+                    response.text,
+                )
+            except Exception as ex:
+                logger.warning(
+                    "Fehler bei Registrierung (%s/%s): %s",
+                    attempt,
+                    PLUGIN_REGISTER_RETRIES,
+                    ex,
+                )
+
+            await asyncio.sleep(PLUGIN_REGISTER_DELAY_SECONDS)
+
+    raise RuntimeError("Plugin konnte nicht beim Setup registriert werden")
 
 # --------------------------
 # FastAPI app
 # --------------------------
-app = FastAPI(title="plugindemo (python)", version="1.0-python")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _registration_task
 
+    if PLUGIN_REGISTER_ON_READY:
+        _registration_task = asyncio.create_task(register_plugin_in_setup())
+
+    yield
+
+
+app = FastAPI(
+    title="LeTTo Plugin Demo (Python)",
+    version=CONF_VERSION,
+    lifespan=lifespan,
+)
 def mount_internal_open(router_prefix: str) -> APIRouter:
     r = APIRouter(prefix=router_prefix)
 
@@ -729,3 +890,5 @@ def extern_reload(req: LoadPluginRequestDto):
     return PluginDto(tagName=tag_name, imageUrl="data:image/png;base64," + img.base64Image, width=360, height=360)
 
 app.include_router(extern_router)
+
+
