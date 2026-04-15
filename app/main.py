@@ -8,6 +8,7 @@ import logging
 import httpx
 import platform
 import socket
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -56,6 +57,9 @@ PLUGIN_REGISTER_ON_READY      = os.getenv("PLUGIN_REGISTER_ON_READY", "true").lo
 PLUGIN_REGISTER_RETRIES       = int(os.getenv("PLUGIN_REGISTER_RETRIES", "30"))
 PLUGIN_REGISTER_DELAY_SECONDS = float(os.getenv("PLUGIN_REGISTER_DELAY_SECONDS", "1.0"))
 NW_LETTO_ADDRESS              = os.getenv("network.letto.address", os.getenv("NETWORK.LETTO.ADDRESS", "letto-plugindemopython"))
+DOCKER_CONTAINER_NAME         = os.getenv("docker.container.name", os.getenv("DOCKER.CONTAINER.NAME", "letto-plugindemopython"))
+LETTO_PLUGIN_URI_INTERN       = os.getenv("letto.plugin.uri.intern", os.getenv("LETTO.PLUGIN.URI.INTERN", f"http://{NW_LETTO_ADDRESS}.nw-letto:8080"))
+LETTO_PLUGIN_URI_EXTERN       = os.getenv("letto.plugin.uri.extern", os.getenv("LETTO.PLUGIN.URI.EXTERN", ""))
 
 # --------------------------
 # Paths (match Java project)
@@ -96,7 +100,7 @@ def get_system_info():
         "bs": f"{os_name} {os_version}",
         "ip": ip
     }
-info = get_system_info()
+
 def now_time_str() -> str:
     return datetime.now().strftime("%H:%M:%S")
 
@@ -188,6 +192,8 @@ def draw_clock_png(hh: int, mm: int, size: int = 320, bgcolor: str = "white") ->
 
 def png_b64(png: bytes) -> str:
     return base64.b64encode(png).decode("ascii")
+
+info = get_system_info()
 
 # --------------------------
 # DTOs (match Java field names)
@@ -644,7 +650,13 @@ async def _wait_until_service_is_ready() -> dict:
 # --------------------------
 # Plugin am Setup registrieren
 # --------------------------
-def _build_registration_payload(urls: dict) -> dict:
+SERVICE_START_TIME = int(time.time())  # entspricht System.currentTimeMillis()/1000
+def now_time_int() -> int:
+    return int(time.time())
+def now_time_str() -> str:
+    return datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+def _build_registration_payload(urls: dict, info: dict) -> dict:
+    last_registration_time = now_time_int()
     return {
         "name": CONF_PLUGIN_NAME,              # Name des Services
         "version": CONF_VERSION,               # Version des Services
@@ -657,28 +669,29 @@ def _build_registration_payload(urls: dict) -> dict:
         "nwLettoAddress": NW_LETTO_ADDRESS,    # Adresse innerhalb des Docker-Netzwerkes nw-letto, wenn das Service dort direkt erreichbar ist
         # Name des Docker-Containers, dieser muss eindeutig sein!!
         # Bei externen Services auf anderen Servcern gibt es keinen dockerName, dann muss die externe URI eindeutig sein
-        "dockerName": "",
+        "dockerName": DOCKER_CONTAINER_NAME,
         # interne URI mit der auf das Service ohne Authentifizierung zugegriffen werden kann.
         # die URI muss protokoll://adresse:port/basisendpunkt enthalten woran dann die Standard-Plugin-Endpoints angehängt werden.
         # Ist die uriIntern nicht gesetzt dann wird wenn extern=true ist auf der uriExtern verbunden.
         # Läuft das Service also auf einem Fremdserver muss Benutzername und Passwort angegeben sein um sich am Fremdserver zu authentifizieren oder alle Endpunkte müssen offen sein.
-        "uriIntern":"",
-        "extern":"false",             # Service ist von Extern (Browser) direkt erreichbar
+        "uriIntern": LETTO_PLUGIN_URI_INTERN,
+        "extern": False,             # Service ist von Extern (Browser) direkt erreichbar
         # externe URI mit der vom Browser auf das Service zugegriffen werden kann (wenn extern=true)
         # Hier muss die gesamte absolute Basis-URI angegeben werden unter der die Plugin-Endpoints liegen
-        "uriExtern":"",
-        "plugin":"true",             # Gibt an ob es sich bei dem Service um ein Plugin handelt
-        "scaleable":"false",         # Gibt an ob das Service skalierbar (mehrfach vorkommen kann) ist
-        "stateless":"true",          # Gibt an ob das Service nur Stateless-Endpoints hat
-        "username":"",               # Benutzername wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
-        "password":"",               # Passwort wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
-        "usePluginToken":"false",    # Wenn hier true steht, dann muss für das Plugin ein Token verwendet werden, der in der Schule gespeichert ist. Dieser Token muss für die Authentifizierung am Plugin verwendet werden. - Ist noch nicht implementiert.
-        "serviceStartTime":"",       # Datum und Uhrzeit an der das Service gestartet wurde als DateInteger
-        "lastRegistrationTime":"",   # Datum und Uhrzeit der letzten Service-Registratur
+        "uriExtern": LETTO_PLUGIN_URI_EXTERN,
+        "plugin": True,             # Gibt an ob es sich bei dem Service um ein Plugin handelt
+        "scaleable": False,         # Gibt an ob das Service skalierbar (mehrfach vorkommen kann) ist
+        "stateless": True,          # Gibt an ob das Service nur Stateless-Endpoints hat
+        "username":"",              # Benutzername wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
+        "password":"",              # Passwort wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
+        "usePluginToken":False,     # Wenn hier true steht, dann muss für das Plugin ein Token verwendet werden, der in der Schule gespeichert ist. Dieser Token muss für die Authentifizierung am Plugin verwendet werden. - Ist noch nicht implementiert.
+        "serviceStartTime":SERVICE_START_TIME,       # Datum und Uhrzeit an der das Service gestartet wurde als DateInteger
+        "lastRegistrationTime" : last_registration_time,   # Datum und Uhrzeit der letzten Service-Registratur
         "params":"",                 # zusätzliche nicht weiter definierte Parameter des Plugins
-        "htmlServiceStartTime":"",
+        "htmlServiceStartTime" : datetime.fromtimestamp(SERVICE_START_TIME).strftime("%d.%m.%Y %H:%M:%S"),
         "htmlLastRegistrationTime":now_time_str()
     }
+
 async def register_plugin_in_setup() -> None:
     if not PLUGIN_REGISTER_ON_READY:
         logger.info("PLUGIN_REGISTER_ON_READY=false -> keine Registrierung")
