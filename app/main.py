@@ -208,10 +208,11 @@ def png_b64(png: bytes) -> str:
 
 class JavascriptLibrary(BaseModel):
     model_config = ConfigDict(extra="ignore")
+    library: str = ""
     name: str = ""
-    content: str = ""
-    local: bool = True
-
+    globalName: str = ""
+    local: str = "LOCAL"
+    js_code: str = ""
 
 class PluginGeneralInfo(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -229,9 +230,6 @@ class PluginGeneralInfo(BaseModel):
     javascriptLibrariesLocal: List[JavascriptLibrary] = Field(default_factory=list)
     inputElement: str = "TextField"
     cacheable: bool = True
-    width: int = 360
-    height: int = 360
-    useQuestion: bool = True
     useVars: bool = True
     useCVars: bool = True
     useVarsMaxima: bool = True
@@ -552,7 +550,7 @@ class PluginDemo:
         # local JS libs are embedded as content in javascriptLibrariesLocal
         libs_local = []
         for lib in self.JSLIBS:
-            libs_local.append(JavascriptLibrary(name=lib, content=read_resource_text(lib), local=True))
+            libs_local.append(JavascriptLibrary(name=lib, local="JAVASCRIPT", js_code=read_resource_text(lib)))
         help_text = read_resource_text(self.HELPFILES[0])
         return PluginGeneralInfo(
             typ=typ,
@@ -562,9 +560,7 @@ class PluginDemo:
             pluginType="python.PluginDemo",
             initPluginJS=self.INIT_JS,
             javaScript=True,
-            javascriptLibrariesLocal=libs_local,
-            width=360,
-            height=360,
+            javascriptLibrariesLocal=libs_local
         )
 
     def get_image_base64(self, params: str, q: Optional[PluginQuestionDto]) -> ImageBase64Dto:
