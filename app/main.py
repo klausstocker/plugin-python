@@ -244,8 +244,20 @@ class PluginGeneralInfoList(BaseModel):
 
 class ImageInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
+    version: str = ""
+    pluginType: str = ""
     filename: str = ""
     url: str = ""
+    width: int = 0
+    height: int = 0
+    unit: str = "none"     # Einheit none,px,pt,cm,percent,em
+    imageWidth: int = 100
+    style: str = ""
+    alternate: str = "plugin image"
+    title: str = ""
+    lifetime: int = 0
+
+
 
 
 class ImageUrlDto(BaseModel):
@@ -258,8 +270,7 @@ class ImageUrlDto(BaseModel):
 class ImageBase64Dto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     base64Image: str = ""
-    width: int = 320
-    height: int = 320
+    imageInfoDto: Optional[ImageInfoDto] = None
     error: str = ""
 
 
@@ -292,8 +303,8 @@ class PluginEinheitRequestDto(BaseModel):
 
 class CalcErgebnisDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    value: Optional[str] = None
-    unit: Optional[str] = None
+    string: Optional[str] = None
+    json: Optional[str] = None
     type: str = "STRING"
 
 
@@ -312,24 +323,24 @@ class ToleranzDto(BaseModel):
 
 class PluginScoreInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    ergebnis: Optional[CalcErgebnisDto] = None
-    ze: str = ""
-    score: float = 0.0
-    maxScore: float = 0.0
-    scoreMode: str = "FALSCH"
-    feedback: str = ""
+    schuelerErgebnis: Optional[CalcErgebnisDto] = None
+    zielEinheit: str = ""
+    punkteIst: float = 0.0
+    punkteSoll: float = 0.0
+    status: str = "FALSCH"    # NotScored,OK,FALSCH,TEILWEISE_OK,EINHEITENFEHLER,OK_Lehrer,FALSCH_Lehrer,TEILWEISE_OK_Lehrer,EINHEITENFEHLER_Lehrer,ANGABEFEHLER_EH,PARSERFEHLER_SYSTEM,NichtEntschieden,MEHRFACHANTWORT_OK,MEHRFACHANTWORT_OK_LEHRER,MEHRFACHANTWORT_TW_RICHTIG,MEHRFACHANTWORT_TW_RICHTIG_LEHRER
     htmlScoreInfo: str = ""
-
+    feedback: str = ""
 
 class PluginDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    tagName: str = ""
-    imageUrl: str = ""
-    width: int = 360
-    height: int = 360
-    params: Dict[str, str] = Field(default_factory=dict)
-    jsonData: Optional[str] = None
-
+    imageUrl: str = ""                # Url eines eingebetteten Bildes - meist base64 codiert
+    pig: bool = False                 # True wenn das Plugin über ein PIG-Tag direkt in der Frage eingebunden ist
+    result: bool = False              # True wenn Plugin in einer Subquestion definiert ist
+    tagName: str = ""                 # Eindeutiger Bezeichner des PluginTags
+    width: int = 500                  # Breite des Plugin-Bereiches in Pixel
+    height: int = 500                 # Höhe des Plugin-Bereiches in Pixel
+    params: Dict[str, str] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
+    jsonData: Optional[str] = None                         # JSON-String welcher vom Plugin an Javascript weitergegeben werden soll, wird von LeTTo nicht verwendet
 
 class LoadPluginRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -368,8 +379,7 @@ class PluginRenderResultRequestDto(BaseModel):
 
 class PluginRenderDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    html: str = ""
-    latex: str = ""
+    source: str = ""
     images: Dict[str, str] = Field(default_factory=dict)
 
 
@@ -400,11 +410,16 @@ class PluginUpdateJavascriptRequestDto(BaseModel):
     pluginstring: str = ""
     data: str = ""
 
+class PluginDatasetDto(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: str = ""
+    bereich: str = ""
+    einheit: str = ""
+    useTemplate: bool = False
 
 class PluginDatasetListDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    list: List[Any] = Field(default_factory=list)
-
+    datasets: List[PluginDatasetDto] = Field(default_factory=list)
 
 class PluginConfigurationInfoRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -417,19 +432,18 @@ class PluginConfigurationInfoRequestDto(BaseModel):
 
 class PluginConfigurationInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    configurationID: str = ""
-    configurationMode: int = 0
-    useQuestion: bool = True
-    useVars: bool = True
-    useCVars: bool = True
-    useMaximaVars: bool = True
-    useMVars: bool = True
-    addDataSet: bool = False
-    calcMaxima: bool = False
-    externUrl: bool = False
-    javaScriptMethode: str = None
-    #javaScriptMethode: Optional[str] = None
-    configurationUrl: str = ""
+    configurationID: str = ""         # Konfigurations ID
+    configurationMode: int = 0        # Konfigurations-Mode 0..String, 1..JSF, 2..Javascript, 3..Url
+    useQuestion: bool = True          # Gibt an ob im Plugin für die Konfiguration die Frage benötigt wird
+    useVars: bool = True              # Gibt an ob im Plugin für die Konfiguration der Vars Varhash benötigt wird
+    useCVars: bool = True             # Gibt an ob im Plugin für die Konfiguration der cVars Varhash benötigt wird
+    useMaximaVars: bool = True        # Gibt an ob im Plugin für die Konfiguration der MaximaVars Varhash benötigt wird
+    useMVars: bool = True             # Gibt an ob im Plugin für die Konfiguration der MVars Varhash benötigt wird
+    addDataSet: bool = False          # Gibt an, ob im Plugin-Konfig-Dialog Datensätze hinzugefügt werden können  => Button AddDataset in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
+    calcMaxima: bool = False          # Gibt an ob im Plugin bei der Konfiguration die Maxima-Berechnung durchlaufen werden kann. => Button Maxima in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
+    externUrl: bool = False           # Gibt an, ob das Plugin über den Browser direkt erreichbar ist
+    javaScriptMethode: Optional[str] = None     # Java-Script-Methode, die beim Konfigurieren des Plugins aufgerufen wird.
+    configurationUrl: str = ""                  # Konfigurations-URL für den Konfigurationsdialog im Mode CONFIGMODE_URL
 
 
 class PluginConfigurationRequestDto(BaseModel):
@@ -439,14 +453,19 @@ class PluginConfigurationRequestDto(BaseModel):
 
 class PluginConfigDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    configurationID: str = ""
-    typ: str = ""
-    name: str = ""
-    config: str = ""
-    pluginDto: Optional[PluginDto] = None
-    tagName: str = ""
-    params: Dict[str, Any] = Field(default_factory=dict)
-
+    typ: str = ""                                        # Typ des Plugins
+    name: str = ""                                       # Name des Plugins im Dialog
+    config: str = ""                                     # Konfigurationsstring
+    tagName: str = ""                                    # Eindeutiger Bezeichner des PluginTags
+    width: int = 500                                     # Breite des Plugin-Bereiches in Pixel
+    height: int = 500                                    # Höhe des Plugin-Bereiches in Pixel
+    configurationID: str = ""                            # Configuration-ID
+    errorMsg: str = ""                                   # Fehlermeldung wenn das DTO nicht korrekt erzeugt wurde
+    pluginDto: Optional[PluginDto] = None                # PluginDto für die Initialisierung des Plugins
+    pluginDtoUri: str = ""                               # Uri am Question-Service für das PluginDto
+    pluginDtoToken: str = ""                             # Token welcher an der pluginDtoUri benötigt wird
+    params: Dict[str, Any] = Field(default_factory=dict) # Parameter welche vom Plugin an Javascript weitergegeben werden sollen
+    jsonData: str = ""                    # JSON-String welcher vom Plugin an Javascript weitergegeben werden soll
 
 class PluginSetConfigurationDataRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -578,7 +597,7 @@ class PluginDemo:
             except Exception:
                 pass
         png = draw_clock_png(hh, mm, 320, bgcolor=self.bgcolor)
-        return ImageBase64Dto(base64Image=png_b64(png), width=320, height=320, error=self.configMessage)
+        return ImageBase64Dto(base64Image=png_b64(png), imageInfoDto=ImageInfoDto(filename="", url=""), error=self.configMessage)
 
     def get_html(self, params: str, q: Optional[PluginQuestionDto]) -> str:
         # keep it simple: LeTTo JS renders the image from PluginDto; still return a helpful HTML snippet
@@ -597,13 +616,13 @@ class PluginDemo:
         correct_text = answerDto.answerText if answerDto else ""
         # default result = wrong
         info = PluginScoreInfoDto(
-            ergebnis=CalcErgebnisDto(value=antwort, unit=None, type="STRING"),
-            ze=ze,
-            score=0.0,
-            maxScore=float(grade),
-            scoreMode="FALSCH",
-            feedback="",
+            schuelerErgebnis=CalcErgebnisDto(string=antwort),
+            zielEinheit=ze,
+            punkteIst=0.0,
+            punkteSoll=float(grade),
+            status="FALSCH",
             htmlScoreInfo=f"Wert:{antwort}",
+            feedback=""
         )
         try:
             richtig = parse_time_seconds(correct_text)
@@ -832,7 +851,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/generatedatasets", response_model=PluginDatasetListDto)
     def generate_datasets(req: PluginRequestDto):
-        return PluginDatasetListDto(list=[])
+        return PluginDatasetListDto(datasets=[])
 
     @r.post("/maxima", response_class=PlainTextResponse)
     def maxima(req: PluginRequestDto):
@@ -851,7 +870,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     @r.post("/parserplugin", response_model=CalcErgebnisDto)
     def parser_plugin(req: PluginParserRequestDto):
         # Java returns null; keep null-ish
-        return CalcErgebnisDto(value=None, unit=None, type="STRING")
+        return CalcErgebnisDto(string=None, type="STRING")
 
     @r.post("/parserplugineinheit", response_class=PlainTextResponse)
     def parser_plugin_einheit(req: PluginEinheitRequestDto):
@@ -901,13 +920,13 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         # BasePlugin default: returns html showing image + input; we provide minimal html.
         pi = create_plugin(req.typ, req.name, req.config)
         if not pi:
-            return PluginRenderDto(html="")
+            return PluginRenderDto(source="")
         if req.tex:
-            return PluginRenderDto(latex="")
+            return PluginRenderDto(source="")
         html = pi.get_html("", None)
         if req.antwort:
             html += f"<div>Wert:{req.antwort}</div>"
-        return PluginRenderDto(html=html)
+        return PluginRenderDto(source=html)
 
     # configuration endpoints (simplified)
     _CONFIG: Dict[str, str] = {}
