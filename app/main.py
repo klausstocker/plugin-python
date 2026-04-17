@@ -208,191 +208,198 @@ def png_b64(png: bytes) -> str:
 
 class JavascriptLibrary(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    library: str = ""
-    name: str = ""
-    globalName: str = ""
-    local: str = "LOCAL"
-    js_code: str = ""
+    library: Optional[str] = None
+    name: Optional[str] = None
+    globalName: Optional[str] = None
+    local: Optional[str] = "LOCAL"
+    js_code: Optional[str] = ""
 
 class PluginGeneralInfo(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""
-    version: str = "1.0"
-    wikiHelp: str = "Plugins"
-    helpUrl: str = ""
-    help: str = ""
+    typ: Optional[str] = ""
+    version: Optional[str] = "1.0"
+    wikiHelp: Optional[str] = "Plugins"
+    helpUrl: Optional[str] = ""
+    help: Optional[str] = ""
     defaultPluginConfig: bool = True
     math: bool = False
-    pluginType: str = "python.PluginDemo"
-    initPluginJS: str = CONF_INIT_JS
+    pluginType: Optional[str] = "python.PluginDemo"
+    initPluginJS: Optional[str] = CONF_INIT_JS
     javaScript: bool = True
-    javascriptLibraries: List[JavascriptLibrary] = Field(default_factory=list)
-    javascriptLibrariesLocal: List[JavascriptLibrary] = Field(default_factory=list)
-    inputElement: str = "TextField"
+    javascriptLibraries: Optional[List[JavascriptLibrary]] = Field(default_factory=list)
+    javascriptLibrariesLocal: Optional[List[JavascriptLibrary]] = Field(default_factory=list)
+    inputElement: Optional[str] = "TextField"
     cacheable: bool = True
     useVars: bool = True
     useCVars: bool = True
     useVarsMaxima: bool = True
     useMVars: bool = True
-    pluginServiceURL: str = ""
+    pluginServiceURL: Optional[str] = ""
 
 
 class PluginGeneralInfoList(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    pluginInfos: List[PluginGeneralInfo] = Field(default_factory=list)
+    pluginInfos: Optional[List[PluginGeneralInfo]] = Field(default_factory=list)
 
 
 class ImageInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    version: str = ""
-    pluginType: str = ""
-    filename: str = ""
-    url: str = ""
+    version: Optional[str] = ""
+    pluginType: Optional[str] = ""
+    filename: Optional[str] = ""
+    url: Optional[str] = ""
     width: int = 0
     height: int = 0
-    unit: str = "none"     # Einheit none,px,pt,cm,percent,em
+    unit: Optional[str] = "none"     # Einheit none,px,pt,cm,percent,em
     imageWidth: int = 100
-    style: str = ""
-    alternate: str = "plugin image"
-    title: str = ""
+    style: Optional[str] = ""
+    alternate: Optional[str] = "plugin image"
+    title: Optional[str] = ""
     lifetime: int = 0
-
-
 
 
 class ImageUrlDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    imageUrl: str = ""
+    imageUrl: Optional[str] = None
     imageInfo: Optional[ImageInfoDto] = None
-    error: str = ""
+    error: Optional[str] = None
 
 
 class ImageBase64Dto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    base64Image: str = ""
+    base64Image: Optional[str] = None
     imageInfoDto: Optional[ImageInfoDto] = None
-    error: str = ""
+    error: Optional[str] = None
+
 
 class CalcErgebnisDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     string: Optional[str] = None
     json: Optional[str] = None
-    type: str = "STRING"
+    type: Optional[str] = "STRING"
+
 
 class ToleranzDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     toleranz: float = 1e-10
-    mode: str = "RELATIV"
+    mode: Optional[str] = "RELATIV"
+
 
 class CalcParamsDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    optmode: str = ""
+    optmode: Optional[str] = None
     toleranz: Optional[ToleranzDto] = None
     rekursiv: bool = True
     symbolicMode: bool = False
-    showpotenz: str = "AUTO"           # AUTO, POW, SQRT
-    calcmode: str = "MAXIMA"           # MAXIMA, LOESUNG, ERGEBNIS, VIEW
-    ausmultiplizieren: bool = true
-    herausheben: bool = true
-    forceOpt: bool = true
+    showpotenz: Optional[str] = "AUTO"           # AUTO, POW, SQRT
+    calcmode: Optional[str] = "MAXIMA"           # MAXIMA, LOESUNG, ERGEBNIS, VIEW
+    ausmultiplizieren: bool = True
+    herausheben: bool = True
+    forceOpt: bool = True
+
 
 class VarDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     calcErgebnisDto: Optional[CalcErgebnisDto] = None
-    ze: str = ""
+    ze: Optional[str] = None
     cp: Optional[CalcParamsDto] = None
+
 
 class VarHashDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    vars: Dict[str, VarDto] = Field(default_factory=dict)
+    vars: Optional[Dict[str, VarDto]] = Field(default_factory=dict)
+
 
 class PluginSubQuestionDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    name: str = ""            # Name der SubQuestion
-    points: float = 0.0       # die erreichbare Punkteanzahl einer Teilfrage
+    name: Optional[str] = None           # Name der SubQuestion
+    points: float = 0.0                  # die erreichbare Punkteanzahl einer Teilfrage
+
 
 class PluginQuestionDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: int = 0
-    name: str = ""
-    maximaDefs: str = ""
-    moodlemac: str = ""
+    name: Optional[str] = None
+    maximaDefs: Optional[str] = None
+    moodlemac: Optional[str] = None
     points: float = 0.0
-    subQuestions: List[PluginSubQuestionDto] = Field(default_factory=list)
-    maxima: str = ""
-    images: List[str] = Field(default_factory=list)
-    imagesContent: List[str] = Field(default_factory=list)
+    subQuestions: Optional[List[PluginSubQuestionDto]] = Field(default_factory=list)
+    maxima: Optional[str] = None
+    images: Optional[List[str]] = Field(default_factory=list)
+    imagesContent: Optional[List[str]] = Field(default_factory=list)
     dsNr: int = 0
     vars: Optional[VarHashDto] = None
     cvars: Optional[VarHashDto] = None
     varsMaxima: Optional[VarHashDto] = None
     mvars: Optional[VarHashDto] = None
 
+
 class PluginMaximaCalcModeDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     maxima: bool = False
     preCalc: bool = False
 
+
 class PluginRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
-    params: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
+    params: Optional[str] = ""
     q: Optional[PluginQuestionDto] = None
     pluginMaximaCalcMode: Optional[PluginMaximaCalcModeDto] = None
 
 
 class PluginParserRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""
-    name: str = ""
-    config: str = ""
+    typ: Optional[str] = ""
+    name: Optional[str] = ""
+    config: Optional[str] = ""
     vars: Optional[VarHashDto] = None
     cp: Optional[CalcParamsDto] = None
-    p: List[CalcErgebnisDto] = Field(default_factory=list)
+    p: Optional[List[CalcErgebnisDto]] = Field(default_factory=list)
 
 
 class PluginEinheitRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""
-    name: str = ""
-    config: str = ""
-    p: List[str] = Field(default_factory=list)
+    typ: Optional[str] = ""
+    name: Optional[str] = ""
+    config: Optional[str] = ""
+    p: Optional[List[str]] = Field(default_factory=list)
 
 class PluginAnswerDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     ergebnis: Optional[CalcErgebnisDto] = None
-    answerText: str = ""
-    ze: str = ""
+    answerText: Optional[str] = ""
+    ze: Optional[str] = ""
 
 class PluginScoreInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     schuelerErgebnis: Optional[CalcErgebnisDto] = None
-    zielEinheit: str = ""
+    zielEinheit: Optional[str] = ""
     punkteIst: float = 0.0
     punkteSoll: float = 0.0
-    status: str = "FALSCH"    # NotScored,OK,FALSCH,TEILWEISE_OK,EINHEITENFEHLER,OK_Lehrer,FALSCH_Lehrer,TEILWEISE_OK_Lehrer,EINHEITENFEHLER_Lehrer,ANGABEFEHLER_EH,PARSERFEHLER_SYSTEM,NichtEntschieden,MEHRFACHANTWORT_OK,MEHRFACHANTWORT_OK_LEHRER,MEHRFACHANTWORT_TW_RICHTIG,MEHRFACHANTWORT_TW_RICHTIG_LEHRER
-    htmlScoreInfo: str = ""
-    feedback: str = ""
+    status: Optional[str] = "FALSCH"    # NotScored,OK,FALSCH,TEILWEISE_OK,EINHEITENFEHLER,OK_Lehrer,FALSCH_Lehrer,TEILWEISE_OK_Lehrer,EINHEITENFEHLER_Lehrer,ANGABEFEHLER_EH,PARSERFEHLER_SYSTEM,NichtEntschieden,MEHRFACHANTWORT_OK,MEHRFACHANTWORT_OK_LEHRER,MEHRFACHANTWORT_TW_RICHTIG,MEHRFACHANTWORT_TW_RICHTIG_LEHRER
+    htmlScoreInfo: Optional[str] = ""
+    feedback: Optional[str] = ""
 
 class PluginDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    imageUrl: str = ""                # Url eines eingebetteten Bildes - meist base64 codiert
+    imageUrl: Optional[str] = ""      # Url eines eingebetteten Bildes - meist base64 codiert
     pig: bool = False                 # True wenn das Plugin über ein PIG-Tag direkt in der Frage eingebunden ist
     result: bool = False              # True wenn Plugin in einer Subquestion definiert ist
-    tagName: str = ""                 # Eindeutiger Bezeichner des PluginTags
+    tagName: Optional[str] = ""       # Eindeutiger Bezeichner des PluginTags
     width: int = 500                  # Breite des Plugin-Bereiches in Pixel
     height: int = 500                 # Höhe des Plugin-Bereiches in Pixel
-    params: Dict[str, str] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
+    params: Optional[Dict[str, str]] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
     jsonData: Optional[str] = None                         # JSON-String welcher vom Plugin an Javascript weitergegeben werden soll, wird von LeTTo nicht verwendet
 
 class LoadPluginRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
-    params: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
+    params: Optional[str] = ""
     q: Optional[PluginQuestionDto] = None
     nr: int = 0
     configurationID: Optional[str] = None
@@ -400,22 +407,22 @@ class LoadPluginRequestDto(BaseModel):
 
 class PluginRenderLatexRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
     pluginDto: Optional[PluginDto] = None
-    answer: str = ""
-    mode: str = "default"
+    answer: Optional[str] = ""
+    mode: Optional[str] = "default"
 
 
 class PluginRenderResultRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
     tex: bool = False
     pluginDto: Optional[PluginDto] = None
-    antwort: str = ""
+    antwort: Optional[str] = ""
     toleranz: Optional[ToleranzDto] = None
     varsQuestion: Optional[VarHashDto] = None
     answerDto: Optional[PluginAnswerDto] = None
@@ -424,17 +431,17 @@ class PluginRenderResultRequestDto(BaseModel):
 
 class PluginRenderDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    source: str = ""
-    images: Dict[str, str] = Field(default_factory=dict)
+    source: Optional[str] = ""
+    images: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 
 class PluginScoreRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
     pluginDto: Optional[PluginDto] = None
-    antwort: str = ""
+    antwort: Optional[str] = ""
     toleranz: Optional[ToleranzDto] = None
     varsQuestion: Optional[VarHashDto] = None
     answerDto: Optional[PluginAnswerDto] = None
@@ -443,44 +450,44 @@ class PluginScoreRequestDto(BaseModel):
 
 class PluginAngabeRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
-    text: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
+    text: Optional[str] = ""
     q: Optional[PluginQuestionDto] = None
 
 
 class PluginUpdateJavascriptRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""            # Typ des Plugins
-    name: str = ""           # Name des Plugins in der Frage
-    config: str = ""         # Konfigurationsstring des Plugins
-    pluginDef: str = ""      # akt. Plugin-Definition
-    jsResult: str = ""       # Rückgabe von Javascript
+    typ: Optional[str] = ""            # Typ des Plugins
+    name: Optional[str] = ""           # Name des Plugins in der Frage
+    config: Optional[str] = ""         # Konfigurationsstring des Plugins
+    pluginDef: Optional[str] = ""      # akt. Plugin-Definition
+    jsResult: Optional[str] = ""       # Rückgabe von Javascript
 
 class PluginDatasetDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    name: str = ""
-    bereich: str = ""
-    einheit: str = ""
+    name: Optional[str] = ""
+    bereich: Optional[str] = ""
+    einheit: Optional[str] = ""
     useTemplate: bool = False
 
 class PluginDatasetListDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    datasets: List[PluginDatasetDto] = Field(default_factory=list)
+    datasets: Optional[List[PluginDatasetDto]] = Field(default_factory=list)
 
 class PluginConfigurationInfoRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str
-    name: str = ""
-    config: str = ""
+    typ: Optional[str] = None
+    name: Optional[str] = ""
+    config: Optional[str] = ""
     configurationID: Optional[str] = None
     timeout: int = 300
 
 
 class PluginConfigurationInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    configurationID: str = ""         # Konfigurations ID
+    configurationID: Optional[str] = ""         # Konfigurations ID
     configurationMode: int = 0        # Konfigurations-Mode 0..String, 1..JSF, 2..Javascript, 3..Url
     useQuestion: bool = True          # Gibt an ob im Plugin für die Konfiguration die Frage benötigt wird
     useVars: bool = True              # Gibt an ob im Plugin für die Konfiguration der Vars Varhash benötigt wird
@@ -491,69 +498,69 @@ class PluginConfigurationInfoDto(BaseModel):
     calcMaxima: bool = False          # Gibt an ob im Plugin bei der Konfiguration die Maxima-Berechnung durchlaufen werden kann. => Button Maxima in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
     externUrl: bool = False           # Gibt an, ob das Plugin über den Browser direkt erreichbar ist
     javaScriptMethode: Optional[str] = None     # Java-Script-Methode, die beim Konfigurieren des Plugins aufgerufen wird.
-    configurationUrl: str = ""                  # Konfigurations-URL für den Konfigurationsdialog im Mode CONFIGMODE_URL
+    configurationUrl: Optional[str] = ""        # Konfigurations-URL für den Konfigurationsdialog im Mode CONFIGMODE_URL
 
 
 class PluginConfigurationRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""
-    configurationID: str = ""
+    typ: Optional[str] = ""
+    configurationID: Optional[str] = ""
 
 class PluginConfigDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""                                        # Typ des Plugins
-    name: str = ""                                       # Name des Plugins im Dialog
-    config: str = ""                                     # Konfigurationsstring
-    tagName: str = ""                                    # Eindeutiger Bezeichner des PluginTags
+    typ: Optional[str] = ""                                        # Typ des Plugins
+    name: Optional[str] = ""                                       # Name des Plugins im Dialog
+    config: Optional[str] = ""                                     # Konfigurationsstring
+    tagName: Optional[str] = ""                                    # Eindeutiger Bezeichner des PluginTags
     width: int = 500                                     # Breite des Plugin-Bereiches in Pixel
     height: int = 500                                    # Höhe des Plugin-Bereiches in Pixel
-    configurationID: str = ""                            # Configuration-ID
-    errorMsg: str = ""                                   # Fehlermeldung wenn das DTO nicht korrekt erzeugt wurde
+    configurationID: Optional[str] = ""                            # Configuration-ID
+    errorMsg: Optional[str] = ""                                   # Fehlermeldung wenn das DTO nicht korrekt erzeugt wurde
     pluginDto: Optional[PluginDto] = None                # PluginDto für die Initialisierung des Plugins
-    pluginDtoUri: str = ""                               # Uri am Question-Service für das PluginDto
-    pluginDtoToken: str = ""                             # Token welcher an der pluginDtoUri benötigt wird
-    params: Dict[str, Any] = Field(default_factory=dict) # Parameter welche vom Plugin an Javascript weitergegeben werden sollen
-    jsonData: str = ""                    # JSON-String welcher vom Plugin an Javascript weitergegeben werden soll
+    pluginDtoUri: Optional[str] = ""                               # Uri am Question-Service für das PluginDto
+    pluginDtoToken: Optional[str] = ""                             # Token welcher an der pluginDtoUri benötigt wird
+    params: Optional[Dict[str, Any]] = Field(default_factory=dict) # Parameter welche vom Plugin an Javascript weitergegeben werden sollen
+    jsonData: Optional[str] = ""                    # JSON-String welcher vom Plugin an Javascript weitergegeben werden soll
 
 class PluginSetConfigurationDataRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    typ: str = ""
-    configurationID: str
-    configuration: str = ""
+    typ: Optional[str] = ""
+    configurationID: Optional[str] = None
+    configuration: Optional[str] = ""
     questionDto: Optional[PluginQuestionDto] = None
 
 
 class AdminInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    applicationname: str = CONF_APPLICATION_NAME
+    applicationname: Optional[str] = CONF_APPLICATION_NAME
     pid: int = 0
-    applicationhome: str = ""
+    applicationhome: Optional[str] = ""
     startupDate: int = 0
     uptime: int = 0
-    version: str = "python"
-    servername: str = ""
-    system: str = ""
-    encoding: str = ""
-    javaVersion: str = ""
-    ip: str = ""
-    dockerName: str = ""
-    uriIntern: str = ""
+    version: Optional[str] = "python"
+    servername: Optional[str] = ""
+    system: Optional[str] = ""
+    encoding: Optional[str] = ""
+    javaVersion: Optional[str] = ""
+    ip: Optional[str] = ""
+    dockerName: Optional[str] = ""
+    uriIntern: Optional[str] = ""
     uriInternEnabled: bool = True
-    uriExtern: str = ""
+    uriExtern: Optional[str] = ""
     uriExternEnabled: bool = True
 
 
 class ServiceInfoDTO(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    serviceName: str = CONF_APPLICATION_NAME
-    version: str = CONF_VERSION
-    author: str = "LeTTo"
-    license: str = ""
-    endpoints: str = ""
-    jarfilename: str = ""
-    starttime: str = ""
+    serviceName: Optional[str] = CONF_APPLICATION_NAME
+    version: Optional[str] = CONF_VERSION
+    author: Optional[str] = "LeTTo"
+    license: Optional[str] = ""
+    endpoints: Optional[str] = ""
+    jarfilename: Optional[str] = ""
+    starttime: Optional[str] = ""
     adminInfoDto: Optional[AdminInfoDto] = None
-    jarLibs: List[str] = Field(default_factory=list)
+    jarLibs: Optional[List[str]] = Field(default_factory=list)
 
 
 # --------------------------
@@ -782,7 +789,7 @@ def _build_registration_payload(urls: dict, info: dict) -> dict:
         "dockerName": DOCKER_CONTAINER_NAME,
         # interne URI mit der auf das Service ohne Authentifizierung zugegriffen werden kann.
         # die URI muss protokoll://adresse:port/basisendpunkt enthalten woran dann die Standard-Plugin-Endpoints angehängt werden.
-        # Ist die uriIntern nicht gesetzt dann wird wenn extern=true ist auf der uriExtern verbunden.
+        # Ist die uriIntern nicht gesetzt dann wird wenn extern=True ist auf der uriExtern verbunden.
         # Läuft das Service also auf einem Fremdserver muss Benutzername und Passwort angegeben sein um sich am Fremdserver zu authentifizieren oder alle Endpunkte müssen offen sein.
         "uriIntern": LETTO_PLUGIN_URI_INTERN + "/open",
         "extern": False,     # Service ist von Extern (Browser) direkt erreichbar
@@ -795,7 +802,7 @@ def _build_registration_payload(urls: dict, info: dict) -> dict:
         "username": "",      # Benutzername wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
         "password": "",      # Passwort wenn das Service mit einer User-Authentifizierung am Plugin anmelden muss
         "usePluginToken": False,
-        # Wenn hier true steht, dann muss für das Plugin ein Token verwendet werden, der in der Schule gespeichert ist. Dieser Token muss für die Authentifizierung am Plugin verwendet werden. - Ist noch nicht implementiert.
+        # Wenn hier True steht, dann muss für das Plugin ein Token verwendet werden, der in der Schule gespeichert ist. Dieser Token muss für die Authentifizierung am Plugin verwendet werden. - Ist noch nicht implementiert.
         "serviceStartTime": SERVICE_START_TIME,  # Datum und Uhrzeit an der das Service gestartet wurde als DateInteger
         "lastRegistrationTime": last_registration_time,  # Datum und Uhrzeit der letzten Service-Registratur
         "params": {},  # zusätzliche nicht weiter definierte Parameter des Plugins
@@ -998,7 +1005,11 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     @r.post("/setconfigurationdata", response_model=PluginConfigDto)
     def set_configuration_data(req: PluginSetConfigurationDataRequestDto):
         _CONFIG[req.configurationID] = req.configuration
-        return PluginConfigDto(configurationID=req.configurationID, params={"config": req.configuration})
+        return PluginConfigDto(
+            configurationID=req.configurationID,
+            typ = req.typ,
+            params = {"config": req.configuration}
+        )
 
     @r.post("/getconfiguration", response_class=PlainTextResponse)
     def get_configuration(req: PluginConfigurationRequestDto):
