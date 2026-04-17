@@ -422,12 +422,13 @@ class PluginConfigurationInfoDto(BaseModel):
     useQuestion: bool = True
     useVars: bool = True
     useCVars: bool = True
-    useVarsMaxima: bool = True
+    useMaximaVars: bool = True
     useMVars: bool = True
-    configString: str = ""
+    addDataSet: bool = False
     calcMaxima: bool = False
     externUrl: bool = False
-    javaScriptMethode: Optional[str] = None
+    javaScriptMethode: str = None
+    #javaScriptMethode: Optional[str] = None
     configurationUrl: str = ""
 
 
