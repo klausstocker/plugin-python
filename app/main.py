@@ -987,6 +987,14 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     # configuration endpoints (simplified)
     _CONFIG: Dict[str, str] = {}
 
+    # Liefert die Informationen welche notwendig sind um einen Konfigurationsdialog zu starten<br>
+    # Ist die configurationID gesetzt wird eine Konfiguration gestartet und damit auch die restlichen Endpoints für die Konfiguration aktiviert.
+    # LeTTo/Plugintester muss die configurationID für jeden Konfigurationsdialog eindeutig setzen, sie dient als Zustandsdefinition
+    # Die Konfiguration ist NICHT stateless - der Zustand muss über die configurationID beidseitig gespeichert werden.
+    # Nach längerer Untätigkeit sollte der Zustand der ConfigurationID wieder entfernt werden (z.B. über die timeout Angabe) damit es nicht zu einem Speicherüberlauf am Plugin-Service kommt<br>
+    # Im Zustand müssen typ,name und config gespeichert werden<br>
+    # Die Konfiguration kann über die configurationID jederzeit über open-Endpoints mit den restlichen Endpoints abgefragt und verändert werden<br>
+    # Die configurationID wird also als Authentifizierung an den Open-Endpoints verwendet.<br>
     @r.post("/configurationinfo", response_model=PluginConfigurationInfoDto)
     def configuration_info(req: PluginConfigurationInfoRequestDto):
         pi = create_plugin(req.typ, req.name, req.config)
