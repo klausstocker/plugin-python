@@ -855,6 +855,91 @@ async def register_plugin_in_setup() -> None:
 
     raise RuntimeError("Plugin konnte nicht beim Setup registriert werden")
 
+# ------------------------------------------
+# Zustandsverarbeitung für die Konfiguration
+# ------------------------------------------
+class PluginConfigurationState(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    configurationID: str
+    typ: str = ""
+    name: str = ""
+    config: str = ""
+    questionDto: Optional[PluginQuestionDto] = None
+    timeout: int = 300
+    lastAccessTime: int = 0
+
+    def touch(self) -> None:
+        self.lastAccessTime = int(time.time())
+
+    def is_expired(self) -> bool:
+        if self.timeout <= 0:
+            return False
+        return (int(time.time()) - self.lastAccessTime) > self.timeout
+
+CONFIG_STATES: Dict[str, PluginConfigurationState] = {}
+
+def cleanup_configuration_states() -> None:
+    expired_ids = [cid for cid, state in CONFIG_STATES.items() if state.is_expired()]
+    for cid in expired_ids:
+        del CONFIG_STATES[cid]
+
+
+def get_configuration_state(configuration_id: Optional[str]) -> Optional[PluginConfigurationState]:
+    if not configuration_id:
+        return None
+
+    cleanup_configuration_states()
+    state = CONFIG_STATES.get(configuration_id)
+    if not state:
+        return None
+
+    if state.is_expired():
+        del CONFIG_STATES[configuration_id]
+        return None
+
+    state.touch()
+    return state
+
+
+def create_or_update_configuration_state(
+    configuration_id: str,
+    typ: str = "",
+    name: str = "",
+    config: str = "",
+    question_dto: Optional[PluginQuestionDto] = None,
+    timeout: int = 300,
+) -> PluginConfigurationState:
+    cleanup_configuration_states()
+
+    state = CONFIG_STATES.get(configuration_id)
+    if state is None:
+        state = PluginConfigurationState(
+            configurationID=configuration_id,
+            typ=typ or "",
+            name=name or "",
+            config=config or "",
+            questionDto=question_dto,
+            timeout=timeout,
+            lastAccessTime=int(time.time()),
+        )
+        CONFIG_STATES[configuration_id] = state
+        return state
+
+    if typ is not None:
+        state.typ = typ or state.typ
+    if name is not None:
+        state.name = name or state.name
+    if config is not None:
+        state.config = config
+    if question_dto is not None:
+        state.questionDto = question_dto
+    if timeout:
+        state.timeout = timeout
+
+    state.touch()
+    return state
+
 
 # --------------------------
 # FastAPI app
@@ -984,9 +1069,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             html += f"<div>Wert:{req.antwort}</div>"
         return PluginRenderDto(source=html)
 
-    # configuration endpoints (simplified)
-    _CONFIG: Dict[str, str] = {}
-
     # Liefert die Informationen welche notwendig sind um einen Konfigurationsdialog zu starten<br>
     # Ist die configurationID gesetzt wird eine Konfiguration gestartet und damit auch die restlichen Endpoints für die Konfiguration aktiviert.
     # LeTTo/Plugintester muss die configurationID für jeden Konfigurationsdialog eindeutig setzen, sie dient als Zustandsdefinition
@@ -999,33 +1081,99 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     def configuration_info(req: PluginConfigurationInfoRequestDto):
         pi = create_plugin(req.typ, req.name, req.config)
         if not pi:
-            return PluginConfigurationInfoDto(configurationID=req.configurationID or "", configurationMode=0)
+            return PluginConfigurationInfoDto(
+                configurationID=req.configurationID or "",
+                configurationMode=0,
+            )
+
         cid = req.configurationID or ""
         if cid:
-            _CONFIG.setdefault(cid, req.config or "")
+            create_or_update_configuration_state(
+                configuration_id=cid,
+                typ=req.typ or "",
+                name=req.name or "",
+                config=req.config or "",
+                question_dto=None,
+                timeout=req.timeout or 300,
+            )
+
         return PluginConfigurationInfoDto(
             configurationID=cid,
             configurationMode=pi.configurationMode,
+            useQuestion=True,
+            useVars=True,
+            useCVars=True,
+            useMaximaVars=True,
+            useMVars=True,
+            addDataSet=False,
+            calcMaxima=False,
+            externUrl=False,
             javaScriptMethode=pi.CONFIG_JS,
-            configurationUrl="",  # URL mode not implemented here
+            configurationUrl="", # URL mode not implemented here
         )
 
     @r.post("/setconfigurationdata", response_model=PluginConfigDto)
     def set_configuration_data(req: PluginSetConfigurationDataRequestDto):
-        _CONFIG[req.configurationID] = req.configuration
+        state = get_configuration_state(req.configurationID)
+        if state is None:
+            return PluginConfigDto(
+                configurationID=req.configurationID or "",
+                typ=req.typ or "",
+                errorMsg="configurationID unknown or expired",
+            )
+
+        if req.typ:
+            state.typ = req.typ
+        if req.configuration is not None:
+            state.config = req.configuration
+        if req.questionDto is not None:
+            state.questionDto = req.questionDto
+        state.touch()
+
         return PluginConfigDto(
-            configurationID=req.configurationID,
-            typ = req.typ,
-            params = {"config": req.configuration}
+            configurationID=state.configurationID,
+            typ=state.typ,
+            name=state.name,
+            config=state.config,
+            params={"config": state.config},
         )
 
     @r.post("/getconfiguration", response_class=PlainTextResponse)
     def get_configuration(req: PluginConfigurationRequestDto):
-        return _CONFIG.get(req.configurationID, "")
+        state = get_configuration_state(req.configurationID)
+        if state is None:
+            return ""
+        return state.config or ""
 
     @r.post("/reloadplugindto", response_model=PluginDto)
     def reload_plugin_dto(req: LoadPluginRequestDto):
-        return load_plugin_dto(req)
+        effective_typ = req.typ or ""
+        effective_name = req.name or ""
+        effective_config = req.config or ""
+        effective_question = req.q
+
+        if req.configurationID:
+            state = get_configuration_state(req.configurationID)
+            if state is not None:
+                effective_typ = state.typ or effective_typ
+                effective_name = state.name or effective_name
+                effective_config = state.config or effective_config
+                effective_question = state.questionDto or effective_question
+
+        pi = create_plugin(effective_typ, effective_name, effective_config)
+        if not pi:
+            return PluginDto()
+
+        img = pi.get_image_base64("", effective_question)
+        tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
+
+        return PluginDto(
+            tagName=tag_name,
+            imageUrl="data:image/png;base64," + (img.base64Image or ""),
+            width=360,
+            height=360,
+            params={"config": effective_config},
+        )
 
     return r
 
