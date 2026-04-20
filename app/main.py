@@ -49,11 +49,7 @@ CONF_wikiHelp = "Plugins"
 # Hilfe-URL für die Beschreibung des Plugins
 CONF_helpUrl=""
 # Gibt an ob die Standard-Plugin-Configuration verwendet werden soll
-CONF_defaultPluginConfig = false;
-# Konfigurationsstring des Elements
-CONF_config;
-# Typ des Plugins
-CONF_typ;
+CONF_defaultPluginConfig = False;
 # Breite des zu erzeugenden Bildes
 CONF_width = 400;
 # Höhe des zu erzeugenden Bildes
@@ -61,7 +57,7 @@ CONF_height = 400;
 # Größe des Bildes in Prozent
 CONF_imageWidthProzent = 100;
 # True wenn das Plugin CalcErgebnis und VarHash als JSON verarbeiten kann
-CONF_math = false;
+CONF_math = False;
 # Version des Plugins
 CONF_version = "1.0";
 # Plugin Hilfe als HTML für den Plugin - Dialog
@@ -71,27 +67,27 @@ CONF_javascriptLibs = {"plugins/plugintools.js"};
 # Name der JAVA-Script Methode zur Plugin-Initialisierung für die interaktive Ergebniseingabe
 CONF_initPluginJS = "";
 # gibt an ob das Plugin eine Java-Script Schnittstelle bei der Beispieldarstellung hat
-CONF_javaScript = false;
+CONF_javaScript = False;
 # Plugin ist stateless und liefert bei gleicher Angabe immer das gleiche Verhalten
-CONF_cacheable = true;
+CONF_cacheable = True;
 # Gibt an ob im Plugin die Frage benötigt wird
-CONF_useQuestion = true;
+CONF_useQuestion = True;
 # gibt an ob die Datensatz-Variable ohne Konstante benötigt werden
-CONF_useVars = true;
+CONF_useVars = True;
 # gibt an ob die Datensatz-Variable mit Konstanten benötigt werden
-CONF_useCVars = true;
+CONF_useCVars = True;
 # gibt an ob die Maxima-Durchrechnungen ohne eingesetzte Datensätze benötigt werden
-CONF_useMaximaVars = true;
+CONF_useMaximaVars = True;
 # gibt an ob die Maxima-Durchrechnungen mit eingesetzten Datensätzen benötigt werden
-CONF_useMVars = true;
+CONF_useMVars = True;
 # Konfigurations-Mode für die Konfiguration des Plugins
-CONF_configurationMode = PluginConfigurationInfoDto.CONFIGMODE_JSF;
+CONF_configurationMode = 2;
 # Gibt an, ob im Plugin-Konfig-Dialog Datensätze hinzugefügt werden können. => Button AddDataset in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
-CONF_addDataSet = true;
+CONF_addDataSet = True;
 # Gibt an, ob das Plugin über den Browser direkt erreichbar ist
-CONF_externUrl = false;
+CONF_externUrl = False;
 # Gibt an ob im Plugin bei der Konfiguration die Maxima-Berechnung durchlaufen werden kann. => Button Maxima in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
-CONF_calcMaxima = true;
+CONF_calcMaxima = True;
 # Name der JAVA-Script Methode zur Configuration des Plugins
 CONF_configPluginJS = "configPlugin";
 # URL des Plugin-Services für die direkte Kommunikation
@@ -968,15 +964,15 @@ def create_or_update_configuration_state(
     cleanup_configuration_states()
 
     state = CONFIG_STATES.get(configuration_id)
+    plugin_Config_dto = PluginConfigDto(
+        typ=typ,
+        name=name,
+        config=config,
+        tagName="name",
+        pluginDto=PluginDto(),
+        params={"config": config},
+    )
     if state is None:
-        plugin_Config_dto = PluginConfigDto(
-            typ=typ,
-            name=name,
-            config=config,
-            tagName="name",
-            pluginDto=PluginDto(),
-            params={"config": config},
-        )
         state = PluginConfigurationState(
             configurationID=configuration_id,
             typ=typ or "",
@@ -998,7 +994,7 @@ def create_or_update_configuration_state(
         state.config = config
     if plugin_Demo is not None:
         state.pluginDemo = plugin_Demo
-        state.pluginConfigurationInfoDto=pluginConfigurationInfoDto(
+        state.pluginConfigurationInfoDto=PluginConfigurationInfoDto(
             configurationID=configuration_id,
             configurationMode=plugin_Demo.configurationMode,
             useQuestion=CONF_useQuestion,
@@ -1012,15 +1008,11 @@ def create_or_update_configuration_state(
             javaScriptMethode="configPlugin",
             configurationUrl="",
         )
-    if plugin_ConfigurationInfoDto is not None:
-        state.pluginConfigurationInfoDto = plugin_ConfigurationInfoDto
-    if plugin_ConfigDto is not None:
-        state.pluginConfigDto = plugin_ConfigDto
     if question_dto is not None:
         state.questionDto = question_dto
     if timeout:
         state.timeout = timeout
-
+    state.pluginConfigDto=plugin_Config_dto
     state.touch()
     return state
 
