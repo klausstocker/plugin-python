@@ -16,7 +16,7 @@ from fastapi import FastAPI, APIRouter, Body
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # --------------------------
 # CONFIGURATION
@@ -48,56 +48,56 @@ CONF_wikiHelp = "Plugins"
 # Hilfe-URL für die Beschreibung des Plugins
 CONF_helpUrl=""
 # Gibt an ob die Standard-Plugin-Configuration verwendet werden soll
-CONF_defaultPluginConfig = False;
+CONF_defaultPluginConfig = False
 # Breite des zu erzeugenden Bildes
-CONF_width = 400;
+CONF_width = 400
 # Höhe des zu erzeugenden Bildes
-CONF_height = 400;
+CONF_height = 400
 # Größe des Bildes in Prozent
-CONF_imageWidthProzent = 100;
+CONF_imageWidthProzent = 100
 # True wenn das Plugin CalcErgebnis und VarHash als JSON verarbeiten kann
-CONF_math = False;
+CONF_math = False
 # Version des Plugins
-CONF_version = "1.0";
+CONF_version = "1.0"
 # Plugin Hilfe als HTML für den Plugin - Dialog
-CONF_helpfiles = {"plugins/plugin.html"};
+CONF_helpfiles = {"plugins/plugin.html"}
 # Javascript Libraries für das Plugin
-CONF_javascriptLibs = {"plugins/plugintools.js"};
+CONF_javascriptLibs = {"plugins/plugintools.js"}
 # Name der JAVA-Script Methode zur Plugin-Initialisierung für die interaktive Ergebniseingabe
-CONF_initPluginJS = "";
+CONF_initPluginJS = ""
 # gibt an ob das Plugin eine Java-Script Schnittstelle bei der Beispieldarstellung hat
-CONF_javaScript = False;
+CONF_javaScript = False
 # Plugin ist stateless und liefert bei gleicher Angabe immer das gleiche Verhalten
-CONF_cacheable = True;
+CONF_cacheable = True
 # Gibt an ob im Plugin die Frage benötigt wird
-CONF_useQuestion = True;
+CONF_useQuestion = True
 # gibt an ob die Datensatz-Variable ohne Konstante benötigt werden
-CONF_useVars = True;
+CONF_useVars = True
 # gibt an ob die Datensatz-Variable mit Konstanten benötigt werden
-CONF_useCVars = True;
+CONF_useCVars = True
 # gibt an ob die Maxima-Durchrechnungen ohne eingesetzte Datensätze benötigt werden
-CONF_useMaximaVars = True;
+CONF_useMaximaVars = True
 # gibt an ob die Maxima-Durchrechnungen mit eingesetzten Datensätzen benötigt werden
-CONF_useMVars = True;
+CONF_useMVars = True
 # Konfigurations-Mode für die Konfiguration des Plugins
-CONF_configurationMode = 2;
+CONF_configurationMode = 2
 # Gibt an, ob im Plugin-Konfig-Dialog Datensätze hinzugefügt werden können. => Button AddDataset in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
-CONF_addDataSet = True;
+CONF_addDataSet = True
 # Gibt an, ob das Plugin über den Browser direkt erreichbar ist
-CONF_externUrl = False;
+CONF_externUrl = False
 # Gibt an ob im Plugin bei der Konfiguration die Maxima-Berechnung durchlaufen werden kann. => Button Maxima in Fußzeile des umgebenden Dialogs, (nicht vom Plugin)
-CONF_calcMaxima = True;
+CONF_calcMaxima = True
 # Name der JAVA-Script Methode zur Configuration des Plugins
-CONF_configPluginJS = "configPlugin";
+CONF_configPluginJS = "configPlugin"
 # URL des Plugin-Services für die direkte Kommunikation
-CONF_pluginServiceURL = "";
+CONF_pluginServiceURL = ""
 
 # ----------------------------------
 # Environment aus der yml-Datei
 # ----------------------------------
 LETTO_SETUP_URI = os.getenv("letto_setup_uri", os.getenv("LETTO_SETUP_URI", "http://letto-setup.nw-letto:8096")).rstrip(
     "/")
-LETTO_SETUP_USER = "user";
+LETTO_SETUP_USER = "user"
 LETTO_SETUP_PASSWORD = os.getenv("letto_user_user_password", os.getenv("LETTO_USER_USER_PASSWORD", ""))
 PLUGIN_ENDPOINT_NAME = os.getenv("PLUGIN_ENDPOINT_NAME", "plugindemo")
 PLUGIN_REGISTER_ON_READY = os.getenv("PLUGIN_REGISTER_ON_READY", "true").lower() == "true"
@@ -164,13 +164,13 @@ def parse_time_seconds(s: str) -> float:
     s = (s or "").strip()
     m = re.match(r"^(\d+):(\d+)$", s)
     if m:
-        h = float(m.group(1));
+        h = float(m.group(1))
         mi = float(m.group(2))
         return h * 3600.0 + mi * 60.0
     m = re.match(r"^(\d+):(\d+):(\d+\.?\d*)$", s)
     if m:
-        h = float(m.group(1));
-        mi = float(m.group(2));
+        h = float(m.group(1))
+        mi = float(m.group(2))
         sec = float(m.group(3))
         return h * 3600.0 + mi * 60.0 + sec
     raise ValueError("invalid time format")
@@ -795,7 +795,6 @@ async def _wait_until_service_is_ready() -> dict:
                 if ping_ok and pluginlist_ok and generalinfolist_ok and generalinfo_ok:
                     logger.info("Service ist vollständig erreichbar und bereit für Setup-Registrierung")
                     return urls
-                logger.info("ping:"+ping_ok+" pinglist:"+pluginlist_ok+" generalinfolist:"+generalinfolist_ok+" generalinfo:"+generalinfo_ok)
             except Exception as ex:
                 logger.info("Service noch nicht bereit (%s/%s): %s", attempt, PLUGIN_REGISTER_RETRIES, ex)
 
