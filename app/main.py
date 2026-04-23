@@ -57,8 +57,6 @@ CONF_height = 500
 CONF_imageWidthProzent = 100
 # True wenn das Plugin CalcErgebnis und VarHash als JSON verarbeiten kann
 CONF_math = False
-# Version des Plugins
-CONF_version = "1.0"
 # Plugin Hilfe als HTML für den Plugin - Dialog
 CONF_helpfiles = {"plugins/plugin.html"}
 # Javascript Libraries für das Plugin
@@ -1332,6 +1330,9 @@ def info():
 def info_open():
     return info()
 
+@app.get("/version", response_class=PlainTextResponse)
+def version():
+    return CONF_VERSION
 
 # Mount internal open API at /open and (for proxy setups) also under /plugindemo/open
 app.include_router(mount_internal_open(LOCAL_API))
