@@ -58,8 +58,6 @@ CONF_height = 500
 CONF_imageWidthProzent = 100
 # True wenn das Plugin CalcErgebnis und VarHash als JSON verarbeiten kann
 CONF_math = False
-# Plugin Hilfe als HTML für den Plugin - Dialog
-CONF_helpfiles = {"plugins/plugin.html"}
 # Javascript Libraries für das Plugin
 CONF_javascriptLibs = {"plugins/plugintools.js"}
 # Name der JAVA-Script Methode zur Plugin-Initialisierung für die interaktive Ergebniseingabe
