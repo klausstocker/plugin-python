@@ -870,10 +870,26 @@ async def _wait_until_service_is_ready() -> dict:
 # --------------------------
 # Plugin am Setup registrieren
 # --------------------------
-SERVICE_START_TIME = int(time.time() * 1000)  # entspricht Java System.currentTimeMillis()
+SECONDS_BETWEEN_YEAR_0000_AND_UNIX_EPOCH = 62_167_219_200
+
+
+def _dateinteger_now() -> int:
+    """LeTTo DateInteger: seconds since 0000-01-01 00:00:00 (not Unix epoch)."""
+    return int(time.time()) + SECONDS_BETWEEN_YEAR_0000_AND_UNIX_EPOCH
+
+
+def _dateinteger_to_datetime(value: int) -> datetime:
+    """Converts LeTTo DateInteger back to local datetime for HTML fields."""
+    unix_seconds = value - SECONDS_BETWEEN_YEAR_0000_AND_UNIX_EPOCH
+    return datetime.fromtimestamp(unix_seconds)
+
+
+SERVICE_START_TIME = _dateinteger_now()
+
 
 def now_time_int() -> int:
-    return int(time.time() * 1000)
+    return _dateinteger_now()
+
 
 def now_time_str() -> str:
     return datetime.now().strftime("%d.%m.%Y %H:%M:%S")
@@ -881,7 +897,7 @@ def now_time_str() -> str:
 
 def _build_registration_payload(urls: dict, info: dict) -> dict:
     last_registration_time = now_time_int()
-    htmlServiceStart_time = datetime.fromtimestamp(SERVICE_START_TIME / 1000).strftime("%d.%m.%Y %H:%M:%S")
+    htmlServiceStart_time = _dateinteger_to_datetime(SERVICE_START_TIME).strftime("%d.%m.%Y %H:%M:%S")
     htmlLastRegistration_time = now_time_str()
     return {
         "name": CONF_PLUGIN_NAME,                # Name des Services
