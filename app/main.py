@@ -12,6 +12,7 @@ import socket
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body
 from fastapi.responses import PlainTextResponse
@@ -870,6 +871,7 @@ async def _wait_until_service_is_ready() -> dict:
 # --------------------------
 # Plugin am Setup registrieren
 # --------------------------
+REGISTRATION_TIMEZONE = ZoneInfo(os.getenv("TZ", "Europe/Berlin"))
 SECONDS_BETWEEN_YEAR_0000_AND_UNIX_EPOCH = 62_167_219_200
 
 
@@ -881,7 +883,7 @@ def _dateinteger_now() -> int:
 def _dateinteger_to_datetime(value: int) -> datetime:
     """Converts LeTTo DateInteger back to local datetime for HTML fields."""
     unix_seconds = value - SECONDS_BETWEEN_YEAR_0000_AND_UNIX_EPOCH
-    return datetime.fromtimestamp(unix_seconds)
+    return datetime.fromtimestamp(unix_seconds, tz=REGISTRATION_TIMEZONE)
 
 
 SERVICE_START_TIME = _dateinteger_now()
@@ -892,7 +894,7 @@ def now_time_int() -> int:
 
 
 def now_time_str() -> str:
-    return datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    return datetime.now(REGISTRATION_TIMEZONE).strftime("%d.%m.%Y %H:%M:%S")
 
 
 def _build_registration_payload(urls: dict, info: dict) -> dict:
