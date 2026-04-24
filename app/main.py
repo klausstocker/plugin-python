@@ -5,6 +5,7 @@ import base64
 import io
 import asyncio
 import logging
+import shutil
 import httpx
 import platform
 import socket
@@ -195,6 +196,48 @@ def read_resource_text(rel_path: str) -> str:
             return f.read()
     except FileNotFoundError:
         return f"@ERROR: resource not found: {rel_path}"
+
+
+def _copy_tree_contents(src_dir: str, dst_dir: str) -> None:
+    if not os.path.isdir(src_dir):
+        logger.warning("Resource-Quelle existiert nicht: %s", src_dir)
+        return
+    os.makedirs(dst_dir, exist_ok=True)
+    for entry in os.listdir(src_dir):
+        src = os.path.join(src_dir, entry)
+        dst = os.path.join(dst_dir, entry)
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, dst)
+
+
+def sync_resources_for_webserver() -> None:
+    """
+    Kopiert Ressourcen in Host-Volumes, damit Proxy/Webserver direkt darauf zugreifen kann.
+    Quelle: ${RESOURCE_DIR}/plugins
+    Ziele:
+      - letto_pathPlugins / LETTO_PATH_PLUGINS
+      - letto_pathImages / LETTO_PATH_IMAGES + "/plugins"
+    """
+    resource_dir = os.getenv("RESOURCE_DIR", "/app/resources")
+    source_plugins_dir = os.path.join(resource_dir, "plugins")
+
+    plugin_target = os.getenv("letto_pathPlugins", os.getenv("LETTO_PATH_PLUGINS", "")).strip()
+    image_base = os.getenv("letto_pathImages", os.getenv("LETTO_PATH_IMAGES", "")).strip()
+    image_plugins_target = os.path.join(image_base, "plugins") if image_base else ""
+
+    targets = [path for path in [plugin_target, image_plugins_target] if path]
+    if not targets:
+        logger.info("Kein Zielpfad für Web-Ressourcen gesetzt (letto_pathPlugins/letto_pathImages).")
+        return
+
+    for target in targets:
+        try:
+            _copy_tree_contents(source_plugins_dir, target)
+            logger.info("Plugin-Ressourcen nach %s synchronisiert.", target)
+        except Exception as ex:
+            logger.warning("Konnte Ressourcen nicht nach %s kopieren: %s", target, ex)
 
 
 def draw_clock_png(hh: int, mm: int, size: int = 320, bgcolor: str = "white") -> bytes:
@@ -1060,6 +1103,7 @@ def create_or_update_configuration_state(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _registration_task
+    sync_resources_for_webserver()
 
     if PLUGIN_REGISTER_ON_READY:
         _registration_task = asyncio.create_task(register_plugin_in_setup())

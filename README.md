@@ -15,7 +15,10 @@ docker build -t letto-plugin-demopython:latest -f Dockerfile .
 * Proxy Konfiguration:
   * kopiere proxy/plugindemopython.conf in /opt/letto/docker/proxy/ am LeTTo-Server 
   * restarte den Proxy (docker restart letto-proxy)
-* d
+* Ressourcen-Synchronisierung:
+  * Beim Start kopiert der Service automatisch `RESOURCE_DIR/plugins` in die gesetzten Zielpfade:
+    * `${letto_pathPlugins}` (z. B. `/opt/letto/plugins`)
+    * `${letto_pathImages}/plugins` (z. B. `/opt/letto/images/plugins`)
 
 ## Wichtige Endpoints
 - `GET /ping`  → `pong`
