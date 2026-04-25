@@ -1409,50 +1409,7 @@ def info_open():
 def version():
     return CONF_VERSION
 
-
-STUB_UPLOAD_DIR = os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads")
-
-
-def _sanitize_upload_filename(filename: str) -> str:
-    base = (filename or "").strip()
-    base = os.path.splitext(base)[0]
-    base = re.sub(r"[^A-Za-z0-9._-]+", "_", base)
-    return base or "upload"
-
-
 app.include_router(code_execution_router)
-
-
-@app.post("/upload", response_model=UploadResponseDto)
-@app.post(f"{SERVICEPATH}/upload", response_model=UploadResponseDto)
-async def upload_stub(file: UploadFile = File(...)):
-    os.makedirs(STUB_UPLOAD_DIR, exist_ok=True)
-    safe_name = _sanitize_upload_filename(file.filename or "upload")
-    destination = os.path.join(STUB_UPLOAD_DIR, safe_name)
-    content = await file.read()
-    with open(destination, "wb") as out:
-        out.write(content)
-    return UploadResponseDto(status=0, filename=safe_name)
-
-
-@app.get("/download/{filename}")
-@app.get(f"{SERVICEPATH}/download/{{filename}}")
-def download_stub(filename: str):
-    safe_name = _sanitize_upload_filename(filename)
-    path = os.path.join(STUB_UPLOAD_DIR, safe_name)
-    if not os.path.isfile(path):
-        return PlainTextResponse(f"stub: file '{safe_name}' not found", status_code=404)
-    return FileResponse(path, filename=safe_name)
-
-
-@app.get("/remove/{filename}", response_model=UploadResponseDto)
-@app.get(f"{SERVICEPATH}/remove/{{filename}}", response_model=UploadResponseDto)
-def remove_stub(filename: str):
-    safe_name = _sanitize_upload_filename(filename)
-    path = os.path.join(STUB_UPLOAD_DIR, safe_name)
-    if os.path.isfile(path):
-        os.remove(path)
-    return UploadResponseDto(status=0, filename=safe_name)
 
 # Mount internal open API at /open and (for proxy setups) also under /pluginpython/open
 app.include_router(mount_internal_open(LOCAL_API))
