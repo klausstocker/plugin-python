@@ -14,8 +14,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, APIRouter, Body
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, APIRouter, Body, UploadFile, File
+from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
@@ -657,6 +657,20 @@ class ServiceInfoDTO(BaseModel):
     starttime: Optional[str] = ""
     adminInfoDto: Optional[AdminInfoDto] = None
     jarLibs: Optional[List[str]] = Field(default_factory=list)
+
+
+class CodeExecutionRequestDto(BaseModel):
+    code: Optional[str] = ""
+    testcode: Optional[str] = ""
+
+
+class CodeExecutionResponseDto(BaseModel):
+    output: Optional[str] = ""
+
+
+class UploadResponseDto(BaseModel):
+    status: int = 0
+    filename: Optional[str] = ""
 
 
 # --------------------------
@@ -1393,6 +1407,78 @@ def info_open():
 @app.get("/version", response_class=PlainTextResponse)
 def version():
     return CONF_VERSION
+
+
+STUB_UPLOAD_DIR = os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads")
+
+
+def _sanitize_upload_filename(filename: str) -> str:
+    base = (filename or "").strip()
+    base = os.path.splitext(base)[0]
+    base = re.sub(r"[^A-Za-z0-9._-]+", "_", base)
+    return base or "upload"
+
+
+def _stub_output(title: str, req: CodeExecutionRequestDto) -> CodeExecutionResponseDto:
+    code_lines = len((req.code or "").splitlines()) if req.code else 0
+    test_lines = len((req.testcode or "").splitlines()) if req.testcode else 0
+    return CodeExecutionResponseDto(
+        output=(
+            f"[stub] {title} endpoint is wired but not implemented yet.\n"
+            f"Received code lines: {code_lines}\n"
+            f"Received test lines: {test_lines}"
+        )
+    )
+
+
+@app.post("/run", response_model=CodeExecutionResponseDto)
+@app.post(f"{SERVICEPATH}/run", response_model=CodeExecutionResponseDto)
+def run_code(req: CodeExecutionRequestDto):
+    return _stub_output("run", req)
+
+
+@app.post("/lint", response_model=CodeExecutionResponseDto)
+@app.post(f"{SERVICEPATH}/lint", response_model=CodeExecutionResponseDto)
+def lint_code(req: CodeExecutionRequestDto):
+    return _stub_output("lint", req)
+
+
+@app.post("/check", response_model=CodeExecutionResponseDto)
+@app.post(f"{SERVICEPATH}/check", response_model=CodeExecutionResponseDto)
+def check_code(req: CodeExecutionRequestDto):
+    return _stub_output("check", req)
+
+
+@app.post("/upload", response_model=UploadResponseDto)
+@app.post(f"{SERVICEPATH}/upload", response_model=UploadResponseDto)
+async def upload_stub(file: UploadFile = File(...)):
+    os.makedirs(STUB_UPLOAD_DIR, exist_ok=True)
+    safe_name = _sanitize_upload_filename(file.filename or "upload")
+    destination = os.path.join(STUB_UPLOAD_DIR, safe_name)
+    content = await file.read()
+    with open(destination, "wb") as out:
+        out.write(content)
+    return UploadResponseDto(status=0, filename=safe_name)
+
+
+@app.get("/download/{filename}")
+@app.get(f"{SERVICEPATH}/download/{{filename}}")
+def download_stub(filename: str):
+    safe_name = _sanitize_upload_filename(filename)
+    path = os.path.join(STUB_UPLOAD_DIR, safe_name)
+    if not os.path.isfile(path):
+        return PlainTextResponse(f"stub: file '{safe_name}' not found", status_code=404)
+    return FileResponse(path, filename=safe_name)
+
+
+@app.get("/remove/{filename}", response_model=UploadResponseDto)
+@app.get(f"{SERVICEPATH}/remove/{{filename}}", response_model=UploadResponseDto)
+def remove_stub(filename: str):
+    safe_name = _sanitize_upload_filename(filename)
+    path = os.path.join(STUB_UPLOAD_DIR, safe_name)
+    if os.path.isfile(path):
+        os.remove(path)
+    return UploadResponseDto(status=0, filename=safe_name)
 
 # Mount internal open API at /open and (for proxy setups) also under /pluginpython/open
 app.include_router(mount_internal_open(LOCAL_API))
