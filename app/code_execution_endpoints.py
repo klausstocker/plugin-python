@@ -31,7 +31,6 @@ def _get_session_dir(request: Request) -> Path:
     return session_dir
 
 
-@router.post('/run')
 @router.post(f"{SERVICEPATH}/run")
 async def run_code(request: Request):
     body = await request.json()
@@ -49,8 +48,6 @@ async def run_code(request: Request):
     except Exception:
         return JSONResponse({'output': 'Error running code'})
 
-
-@router.post('/lint')
 @router.post(f"{SERVICEPATH}/lint")
 async def lint_code(request: Request):
     body = await request.json()
@@ -62,7 +59,6 @@ async def lint_code(request: Request):
     return JSONResponse({'output': messagesText})
 
 
-@router.post('/check')
 @router.post(f"{SERVICEPATH}/check")
 async def check_code(request: Request):
     body = await request.json()
