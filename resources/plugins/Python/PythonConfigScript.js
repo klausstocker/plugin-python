@@ -7,7 +7,7 @@ try {
  *   Das Ergebnis der Konfiguration in ein verstecktes Textfeld der Klasse ".configform_config" übergeben werden
  *   Um Konflikte zu vermeiden werden alle Funktionen als innere Funktionen dieser Funktion realisiert!
  * ----------------------------------------------------------------------------------------------- */
-function configPluginUhrPy(dtoString) {
+function configPluginPython(dtoString) {
     // -------------------------- Verbindungskonstante zu LeTTo ---------------------------------------
     // Div Element welches im Konfigurations-Formular liegt - MUSS für LETTO SO HEISSEN!!
     const config_form_div     = "#configform_div";
@@ -159,18 +159,18 @@ function configPluginUhrPy(dtoString) {
     function loadEventHandler(){
 
         $( "#data1" ).on( "input", function() {
-            loadDataConfigUhr();
+            loadDataConfigPython();
         });
         $( "#sendbutton" ).on( "click", function(event) {
             event.preventDefault();
-            loadDataConfigUhr();
+            loadDataConfigPython();
         } );
     }
 
     /* -----------------------------------------------------------------------------------------------
      *   Trägt die Konfiguration im Hauptformular ein - Schnittstelle des Ergebnisses zu LeTTo!!!
      * ----------------------------------------------------------------------------------------------- */
-    function loadDataConfigUhr() {
+    function loadDataConfigPython() {
         const data   = $('#data1')[0].value;
         config.value = data;
         vorschau();
@@ -205,7 +205,7 @@ function configPluginUhrPy(dtoString) {
                     try {
                         if (data.tagName != null) {
                             let pluginDto = data;
-                            initPluginUhrPy(JSON.stringify(pluginDto),true);
+                            initPluginPython(JSON.stringify(pluginDto),true);
                         }
                     } catch (error) {
                     }

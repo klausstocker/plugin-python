@@ -39,13 +39,13 @@ CONF_PLUGIN = "Python"
 # Version des Plugins
 CONF_VERSION = "1.0"
 # Java-Script function für die Initialisierung des Plugins wenn es im Java-Script modus laufen sollte
-CONF_INIT_JS = "initPluginUhrPy"
+CONF_INIT_JS = "initPluginPython"
 # Java-Script function für die Konfiguration des Plugins wenn es im Java-Script konfiguriert werden sollte
-CONF_CONFIG_JS = "configPluginUhrPy"
+CONF_CONFIG_JS = "configPluginPython"
 # Hilfe als HTML-Datei
-CONF_HELPFILES = ["plugins/uhr/UhrPy.html"]
+CONF_HELPFILES = ["plugins/Python/Python.html"]
 # Javascript Dateien die für dieses Plugin von LeTTo eingebunden werden müssen
-CONF_JSLIBS = ["plugins/uhr/uhrPyScript.js", "plugins/uhr/uhrPyConfigScript.js"]
+CONF_JSLIBS = ["plugins/Python/PythonScript.js", "plugins/Python/PythonConfigScript.js"]
 # Namen der Wiki-Seite wenn eine Doku am LeTTo-Wiki vorliegt
 CONF_wikiHelp = "Plugins"
 # Hilfe-URL für die Beschreibung des Plugins
@@ -781,13 +781,13 @@ class PluginDemo:
     def get_html(self, params: str, q: Optional[PluginQuestionDto]) -> str:
         # keep it simple: LeTTo JS renders the image from PluginDto; still return a helpful HTML snippet
         return (
-            '<div class="letto-plugin-uhr">'
-            '<div class="letto-plugin-uhr-hint">Gib die Zeit im Format HH:MM ein.</div>'
+            '<div class="letto-plugin-python">'
+            '<div class="letto-plugin-python-hint">Write your program in Python</div>'
             '</div>'
         )
 
     def get_angabe(self) -> str:
-        return "Stelle die Uhr ab und gib die Zeit im Format HH:MM ein."
+        return "Here part or the whole 'Angabe' will be dsiplayed"
 
     def score(self, antwort: str, toleranz: Optional[ToleranzDto], answerDto: Optional[PluginAnswerDto],
               grade: float) -> PluginScoreInfoDto:
@@ -837,7 +837,7 @@ def _build_service_base_urls() -> dict:
     """
     Erzeugt die öffentlichen URLs, unter denen das Setup dieses Service erreicht.
     PLUGIN_PUBLIC_URL muss die aus dem Docker-Netz erreichbare URL sein,
-    z.B. http://pluginuhr-python:8080
+    z.B. http://plugin-python:8080
     """
     base = LETTO_PLUGIN_URI_INTERN.rstrip("/")
     return {
@@ -867,7 +867,7 @@ async def _wait_until_service_is_ready() -> dict:
                 generalinfo_ok = (
                                      await client.post(
                                          urls["generalinfo"],
-                                         content="Uhr",
+                                         content="Python - Plugin",
                                          headers={"Content-Type": "text/plain; charset=utf-8"},
                                      )
                                  ).status_code == 200
@@ -1193,8 +1193,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/imagetemplates")
     def image_templates(req: PluginRequestDto):
-        # PluginUhr.getImageTemplates returns Vector<String[]>
-        return [["default", "[PIG PluginVomTester \"\"]","Uhrblatt"]]
+        # PluginPython.getImageTemplates returns Vector<String[]>
+        return [["default", "[PIG PluginVomTester \"\"]","empty image"]]
 
     @r.post("/parserplugin", response_model=CalcErgebnisDto)
     def parser_plugin(req: PluginParserRequestDto):
@@ -1214,7 +1214,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/getvars")
     def get_vars(req: PluginRequestDto):
-        # PluginUhr.getVars returns Vector<String> empty
+        # PluginPython.getVars returns Vector<String> empty
         return []
 
     @r.post("/modifyangabe", response_class=PlainTextResponse)

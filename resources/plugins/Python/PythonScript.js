@@ -2,7 +2,7 @@ try {
     $ = jQuery;
 } catch (e) {}
 
-function initPluginUhrPy(dtoString, active) {
+function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
     let dtoData = {};
     try {
