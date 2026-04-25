@@ -1,6 +1,6 @@
 try {
     $ = jQuery;
-} catch (e) {}
+} catch (e) { }
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
@@ -21,20 +21,16 @@ function initPluginPython(dtoString, active) {
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
-    const unitTestEditorId = `unitTestEditor_${plugin.name}`;
     const outputId = `output_${plugin.name}`;
-    const unitTestOutputId = `unitTestOutput_${plugin.name}`;
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
-    const checkButtonId = `checkButton_${plugin.name}`;
 
-    const initialUnitTest = dtoData.validation || "# Unit tests\n";
     const answerField = $(plugin_inp)[0];
     const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
 
     drawLayout();
     ensureStyles();
-    setupEditors(initialMain, initialUnitTest);
+    setupEditors(initialMain);
     bindActions();
 
     function drawLayout() {
@@ -45,12 +41,6 @@ function initPluginPython(dtoString, active) {
 
         $(plugin_div).append(`
             <div class="${rootClass} code-runner-root" data-service-base="${plugin.serviceBase}">
-                <div class="file-info">UnitTest.py</div>
-                <div class="container">
-                    <div id="${unitTestEditorId}" class="editor-box"></div>
-                    <div id="${unitTestOutputId}" class="output-box"></div>
-                </div>
-
                 <div class="file-info">main.py</div>
                 <div class="container">
                     <div id="${mainEditorId}" class="editor-box"></div>
@@ -60,7 +50,6 @@ function initPluginPython(dtoString, active) {
                 <div class="btn-container">
                     <button class="black-button" id="${runButtonId}" ${plugin.active ? "" : "disabled"}>Run Code</button>
                     <button class="black-button" id="${lintButtonId}" ${plugin.active ? "" : "disabled"}>Lint Code</button>
-                    <button class="black-button" id="${checkButtonId}" ${plugin.active ? "" : "disabled"}>Check Code</button>
                 </div>
             </div>
         `);
@@ -148,17 +137,12 @@ function initPluginPython(dtoString, active) {
         });
     }
 
-    async function setupEditors(initialMainCode, initialUnitTestCode) {
+    async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
         if (!aceAvailable || !window.ace) {
-            fallbackTextareas(initialMainCode, initialUnitTestCode);
+            fallbackTextareas(initialMainCode);
             return;
         }
-
-        const unitTestEditor = ace.edit(unitTestEditorId);
-        unitTestEditor.setTheme("ace/theme/monokai");
-        unitTestEditor.session.setMode("ace/mode/python");
-        unitTestEditor.getSession().setValue(initialUnitTestCode);
 
         const editor = ace.edit(mainEditorId);
         editor.setTheme("ace/theme/monokai");
@@ -172,31 +156,24 @@ function initPluginPython(dtoString, active) {
         }
 
         plugin.getMainCode = () => editor.getValue();
-        plugin.getTestCode = () => unitTestEditor.getValue();
     }
 
-    function fallbackTextareas(initialMainCode, initialUnitTestCode) {
+    function fallbackTextareas(initialMainCode) {
         const mainEl = document.getElementById(mainEditorId);
-        const testEl = document.getElementById(unitTestEditorId);
         mainEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialMainCode)}</textarea>`;
-        testEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialUnitTestCode)}</textarea>`;
 
         const mainTextArea = mainEl.querySelector("textarea");
-        const testTextArea = testEl.querySelector("textarea");
         if (answerField) {
             mainTextArea.addEventListener("input", () => answerField.value = mainTextArea.value);
         }
         plugin.getMainCode = () => mainTextArea.value;
-        plugin.getTestCode = () => testTextArea.value;
     }
 
     function bindActions() {
         const out = document.getElementById(outputId);
-        const testOut = document.getElementById(unitTestOutputId);
 
         bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "" }), out);
         bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "" }), out);
-        bindRequest(checkButtonId, "/check", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", testcode: plugin.getTestCode ? plugin.getTestCode() : "" }), testOut);
     }
 
     function bindRequest(buttonId, endpoint, bodyBuilder, targetEl) {
