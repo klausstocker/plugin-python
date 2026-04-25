@@ -13,21 +13,37 @@ from fastapi.templating import Jinja2Templates
 
 
 def _ensure_shared_import_path() -> None:
-    """Ensure the repository root (containing ./shared) is importable."""
+    """Ensure the project root (the parent of ./shared) is importable."""
     current_dir = Path(__file__).resolve().parent
-    candidate_roots = [
-        current_dir.parent,
-        current_dir.parent.parent,
-        Path.cwd(),
-        Path.cwd().parent,
-    ]
+
+    candidate_roots = []
+
+    # Allow explicit configuration in container/runtime environments.
+    for env_var in ("PROJECT_ROOT", "SHARED_ROOT"):
+        env_value = os.environ.get(env_var)
+        if env_value:
+            candidate_roots.append(Path(env_value).expanduser().resolve())
+
+    # Prefer the path derived from this file and all of its parents.
+    candidate_roots.extend([current_dir.parent, *current_dir.parents])
+
+    # Fall back to cwd-derived paths for local/test runs.
+    cwd = Path.cwd().resolve()
+    candidate_roots.extend([cwd, cwd.parent, *cwd.parents])
+
+    seen = set()
     for root in candidate_roots:
+        root = root.resolve()
+        if root in seen:
+            continue
+        seen.add(root)
+
         shared_dir = root / "shared"
         if shared_dir.is_dir():
             root_str = str(root)
             if root_str not in sys.path:
                 sys.path.insert(0, root_str)
-            break
+            return
 
 
 _ensure_shared_import_path()
