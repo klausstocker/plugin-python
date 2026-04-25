@@ -8,8 +8,6 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 
 def _ensure_shared_import_path() -> None:
@@ -61,9 +59,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 SAFE_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]*$')
 
 router = APIRouter()
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
-static_files = StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static"))
-
 
 def _get_session_dir(request: Request) -> Path:
     """Get or create a session-specific upload directory."""

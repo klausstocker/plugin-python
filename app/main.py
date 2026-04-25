@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.endpoints import router, static_files
+from app.endpoints import router
 
 app = FastAPI()
 
@@ -21,5 +21,4 @@ app.add_middleware(
     secret_key=os.environ.get("SECRET_KEY", "change-me-in-production"),
 )
 
-app.mount("/static", static_files, name="static")
 app.include_router(router)
