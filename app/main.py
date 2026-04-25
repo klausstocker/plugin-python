@@ -311,7 +311,7 @@ class PluginGeneralInfo(BaseModel):
     help: Optional[str] = ""
     defaultPluginConfig: bool = True
     math: bool = False
-    pluginType: Optional[str] = "python.PluginDemo"
+    pluginType: Optional[str] = "python.PluginPython"
     initPluginJS: Optional[str] = CONF_INIT_JS
     javaScript: bool = True
     javascriptLibraries: Optional[List[JavascriptLibrary]] = Field(default_factory=list)
@@ -677,7 +677,7 @@ class UploadResponseDto(BaseModel):
 # --------------------------
 # Plugin: die eigentliche Pluginklasse
 # --------------------------
-class PluginDemo:
+class PluginPython:
     VERSION = CONF_VERSION
     HELPFILES = CONF_HELPFILES
     JSLIBS = CONF_JSLIBS
@@ -756,7 +756,7 @@ class PluginDemo:
             version=self.VERSION,
             wikiHelp="Plugins",
             help=help_text,
-            pluginType="python.PluginDemo",
+            pluginType="python.PluginPython",
             initPluginJS=self.INIT_JS,
             javaScript=True,
             javascriptLibrariesLocal=libs_local
@@ -827,9 +827,9 @@ REGISTERED_PLUGINS: Dict[str, str] = {
     CONF_PLUGIN: "Plugin Python",
 }
 
-def create_plugin(typ: str, name: str, params: str) -> Optional[PluginDemo]:
+def create_plugin(typ: str, name: str, params: str) -> Optional[PluginPython]:
     if typ == CONF_PLUGIN:
-        return PluginDemo(name, params)
+        return PluginPython(name, params)
     return None
 
 
@@ -1007,7 +1007,7 @@ class PluginConfigurationState:
     typ: str = ""                                                                # Typ des Plugins
     name: str = ""                                                               # Name des Plugins
     config: str = ""                                                             # Configurationsstring des Plugins
-    pluginDemo: Optional[PluginDemo] = None                                      # Plugin das gerade bearbeitet wird
+    pluginPython: Optional[PluginPython] = None                                  # Plugin das gerade bearbeitet wird
     pluginConfigurationInfoDto: Optional[PluginConfigurationInfoDto] = None      # Plugin Configurations-Information
     pluginConfigDto: Optional[PluginConfigDto] = None                            # PluginConfigDto welches aktuell gültig ist
     questionDto: Optional[PluginQuestionDto] = None                              # PluginQuestionDto der Frage welche zu dem Plugin gehört
@@ -1051,7 +1051,7 @@ def create_or_update_configuration_state(
     typ: str = "",
     name: str = "",
     config: str = "",
-    plugin_Demo: Optional[PluginDemo] = None,
+    plugin_python: Optional[PluginPython] = None,
     question_dto: Optional[PluginQuestionDto] = None,
     timeout: int = 300,
 ) -> PluginConfigurationState:
@@ -1065,7 +1065,7 @@ def create_or_update_configuration_state(
             typ=typ or "",
             name=name or "",
             config=config or "",
-            pluginDemo = plugin_Demo,
+            pluginPython = plugin_python,
             timeout=timeout,
             lastAccessTime=int(time.time()),
         )
@@ -1076,8 +1076,8 @@ def create_or_update_configuration_state(
         state.name = name or state.name
     if config is not None:
         state.config = config
-    if plugin_Demo is not None:
-        state.pluginDemo = plugin_Demo
+    if plugin_python is not None:
+        state.pluginPython = plugin_python
     if question_dto is not None:
         state.questionDto = question_dto
     if timeout:
@@ -1099,12 +1099,12 @@ def create_or_update_configuration_state(
 
     state.pluginConfigDto.params["config"] = state.config
 
-    if state.pluginDemo is not None:
-        state.pluginConfigDto.params["help"] = state.pluginDemo.get_help()
+    if state.pluginPython is not None:
+        state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
 
         state.pluginConfigurationInfoDto = PluginConfigurationInfoDto(
             configurationID=configuration_id,
-            configurationMode=state.pluginDemo.configurationMode,
+            configurationMode=state.pluginPython.configurationMode,
             useQuestion=CONF_useQuestion,
             useVars=CONF_useVars,
             useCVars=CONF_useCVars,
@@ -1281,7 +1281,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
                 typ=req.typ or "",
                 name=req.name or "",
                 config=req.config or "",
-                plugin_Demo=pi,
+                plugin_python=pi,
                 question_dto=None,
                 timeout=req.timeout or 300,
             )
@@ -1316,7 +1316,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             typ=req.typ or state.typ,
             name=state.name,
             config=req.configuration if req.configuration is not None else state.config,
-            plugin_Demo=state.pluginDemo,
+            plugin_python=state.pluginPython,
             question_dto=req.questionDto if req.questionDto is not None else state.questionDto,
             timeout=state.timeout,
         )
