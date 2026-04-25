@@ -48,3 +48,16 @@ services:
       letto_webPathImages: ${SERVER_NAME}/images
       letto_webPathPlugins: ${SERVER_NAME}/images/plugins
       debug: ${DEBUG_PLUGINS:-${DEBUG:-false}}
+      
+  jobe:
+    build:
+      context: ..
+      dockerfile: jobe/Dockerfile
+    image: trampgeek/jobeinabox:latest
+    container_name: letto-jobe
+    hostname: letto-jobe
+    restart: always
+    ports:
+      - "4000:80"
+    networks:
+      - nw-letto
