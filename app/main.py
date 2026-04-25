@@ -3,6 +3,7 @@ import re
 import math
 import base64
 import io
+import json
 import asyncio
 import logging
 import shutil
@@ -20,6 +21,7 @@ from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
+from shared.question_config import QuestionConfigDto
 
 # --------------------------
 # CONFIGURATION
@@ -833,6 +835,31 @@ def create_plugin(typ: str, name: str, params: str) -> Optional[PluginPython]:
     return None
 
 
+def parse_question_config(config: Optional[str] = "", params: Optional[str] = "") -> QuestionConfigDto:
+    """
+    Resolve a QuestionConfigDto from params/config payloads.
+    Priority:
+    1) JSON encoded in params["questionConfigDto"]
+    2) JSON encoded in config
+    3) empty QuestionConfigDto defaults
+    """
+    if params:
+        try:
+            params_obj = json.loads(params)
+            if isinstance(params_obj, dict) and params_obj.get("questionConfigDto") is not None:
+                return QuestionConfigDto.model_validate(params_obj["questionConfigDto"])
+        except (ValueError, TypeError):
+            pass
+
+    if config:
+        try:
+            return QuestionConfigDto.model_validate_json(config)
+        except (ValueError, TypeError):
+            pass
+
+    return QuestionConfigDto()
+
+
 def _build_service_base_urls() -> dict:
     """
     Erzeugt die öffentlichen URLs, unter denen das Setup dieses Service erreicht.
@@ -1098,6 +1125,7 @@ def create_or_update_configuration_state(
         state.pluginConfigDto.params = {}
 
     state.pluginConfigDto.params["config"] = state.config
+    state.pluginConfigDto.params["questionConfigDto"] = parse_question_config(state.config).model_dump()
 
     if state.pluginPython is not None:
         state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
@@ -1237,7 +1265,15 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         # Mimic Java PluginDto constructor behavior: embed image (base64) as data url
         img = pi.get_image_base64(req.params or "", req.q)
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
-        return PluginDto(tagName=tag_name or "", imageUrl="data:image/png;base64," + (img.base64Image or ""), width=CONF_width, height=CONF_height)
+        question_config = parse_question_config(req.config, req.params)
+        return PluginDto(
+            tagName=tag_name or "",
+            imageUrl="data:image/png;base64," + (img.base64Image or ""),
+            width=CONF_width,
+            height=CONF_height,
+            params={"config": req.config or ""},
+            jsonData=question_config.model_dump_json(),
+        )
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
     def render_latex(req: PluginRenderLatexRequestDto):
@@ -1361,13 +1397,18 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
         img = pi.get_image_base64("", effective_question)
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
+        question_config = parse_question_config(effective_config, req.params)
 
         return PluginDto(
             tagName=tag_name or "",
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
-            params={"config": effective_config},
+            params={
+                "config": effective_config,
+                "questionConfigDto": question_config.model_dump_json(),
+            },
+            jsonData=question_config.model_dump_json(),
         )
 
     return r

@@ -191,7 +191,7 @@ function configPluginPython(dtoString) {
                     data: JSON.stringify({typ: plugin.typ,
                            name: plugin.name,
                            config: config.value,
-                           params:'',
+                           params: JSON.stringify(dto.params || {}),
                            nr: 0,
                            configurationID: dto.configurationID
                     }),
