@@ -53,7 +53,7 @@ services:
     build:
       context: ..
       dockerfile: jobe/Dockerfile
-    image: lettohub/letto-plugin-python-jobe:latest
+    image: trampgeek/jobeinabox:latest
     container_name: letto-jobe
     hostname: letto-jobe
     restart: always
