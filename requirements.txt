@@ -3,4 +3,6 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.4
 pillow==10.4.0
 httpx==0.28.1
-python-multipart
+python-multipart==0.0.22
+MarkupSafe==3.0.2
+itsdangerous==2.2.0
