@@ -6,3 +6,4 @@ httpx==0.28.1
 python-multipart==0.0.22
 MarkupSafe==3.0.2
 itsdangerous==2.2.0
+pylint==3.3.7
