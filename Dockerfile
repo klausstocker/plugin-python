@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir /scripts -p
 COPY app ./app
+COPY shared ./shared
 # resources folder exists, but JS libs can be copied in later (see README)
 COPY resources       ./resources
 COPY scripts/*.sh    /scripts/

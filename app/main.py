@@ -15,6 +15,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
+from app.code_execution_endpoints import router as code_execution_router
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
@@ -1419,34 +1420,7 @@ def _sanitize_upload_filename(filename: str) -> str:
     return base or "upload"
 
 
-def _stub_output(title: str, req: CodeExecutionRequestDto) -> CodeExecutionResponseDto:
-    code_lines = len((req.code or "").splitlines()) if req.code else 0
-    test_lines = len((req.testcode or "").splitlines()) if req.testcode else 0
-    return CodeExecutionResponseDto(
-        output=(
-            f"[stub] {title} endpoint is wired but not implemented yet.\n"
-            f"Received code lines: {code_lines}\n"
-            f"Received test lines: {test_lines}"
-        )
-    )
-
-
-@app.post("/run", response_model=CodeExecutionResponseDto)
-@app.post(f"{SERVICEPATH}/run", response_model=CodeExecutionResponseDto)
-def run_code(req: CodeExecutionRequestDto):
-    return _stub_output("run", req)
-
-
-@app.post("/lint", response_model=CodeExecutionResponseDto)
-@app.post(f"{SERVICEPATH}/lint", response_model=CodeExecutionResponseDto)
-def lint_code(req: CodeExecutionRequestDto):
-    return _stub_output("lint", req)
-
-
-@app.post("/check", response_model=CodeExecutionResponseDto)
-@app.post(f"{SERVICEPATH}/check", response_model=CodeExecutionResponseDto)
-def check_code(req: CodeExecutionRequestDto):
-    return _stub_output("check", req)
+app.include_router(code_execution_router)
 
 
 @app.post("/upload", response_model=UploadResponseDto)
