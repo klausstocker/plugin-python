@@ -11,19 +11,31 @@ from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-try:
-    from shared.check import *
-    from shared.jobe_wrapper import *
-    from shared.lint import *
-    from shared.question_config import EvalConfigDto, QuestionConfigDto
-except ImportError:
-    # need to append paths
-    sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
-    sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
-    from shared.check import *
-    from shared.jobe_wrapper import *
-    from shared.lint import *
-    from shared.question_config import EvalConfigDto, QuestionConfigDto
+
+def _ensure_shared_import_path() -> None:
+    """Ensure the repository root (containing ./shared) is importable."""
+    current_dir = Path(__file__).resolve().parent
+    candidate_roots = [
+        current_dir.parent,
+        current_dir.parent.parent,
+        Path.cwd(),
+        Path.cwd().parent,
+    ]
+    for root in candidate_roots:
+        shared_dir = root / "shared"
+        if shared_dir.is_dir():
+            root_str = str(root)
+            if root_str not in sys.path:
+                sys.path.insert(0, root_str)
+            break
+
+
+_ensure_shared_import_path()
+
+from shared.check import *
+from shared.jobe_wrapper import *
+from shared.lint import *
+from shared.question_config import EvalConfigDto, QuestionConfigDto
 
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/tmp/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
