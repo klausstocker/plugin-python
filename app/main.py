@@ -10,6 +10,7 @@ import httpx
 import platform
 import socket
 import time
+from logging.handlers import RotatingFileHandler
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -124,8 +125,35 @@ INFO_OPEN = f"{SERVICEPATH}/open/info"
 # --------------------------
 # Logging
 # --------------------------
+_raw_log_level = os.getenv("PluginPythonLogLevel", "INFO")
+_resolved_log_level = getattr(logging, _raw_log_level.upper(), None)
+_invalid_log_level = _resolved_log_level is None
+if _invalid_log_level:
+    _resolved_log_level = logging.INFO
+
+_log_handlers: List[logging.Handler] = [logging.StreamHandler()]
+try:
+    os.makedirs("/log", exist_ok=True)
+    _log_handlers.append(
+        RotatingFileHandler(
+            "/log/pluginpython.log",
+            maxBytes=2 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+    )
+except Exception:
+    # Falls /log nicht beschreibbar ist, bleiben Logs auf stdout/stderr verfügbar.
+    pass
+
+logging.basicConfig(
+    level=_resolved_log_level,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    handlers=_log_handlers,
+)
 logger = logging.getLogger("plugin-registration")
-logging.basicConfig(level=logging.INFO)
+if _invalid_log_level:
+    logger.warning("Ungültiger PluginPythonLogLevel '%s' - nutze INFO.", _raw_log_level)
 
 _registration_task = None
 
