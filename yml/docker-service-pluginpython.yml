@@ -48,6 +48,7 @@ services:
       letto_webPathImages: ${SERVER_NAME}/images
       letto_webPathPlugins: ${SERVER_NAME}/images/plugins
       debug: ${DEBUG_PLUGINS:-${DEBUG:-false}}
+      PluginPythonLogLevel: ${PLUGIN_PYTHON_LOG_LEVEL:-INFO}
       
   jobe:
     build:
