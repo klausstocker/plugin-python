@@ -11,6 +11,7 @@ import platform
 import socket
 import time
 from logging.handlers import RotatingFileHandler
+from logging import Logger
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -21,6 +22,7 @@ from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
+from shared.question_config import QuestionConfigDto
 
 # --------------------------
 # CONFIGURATION
@@ -122,41 +124,34 @@ PINGOPEN = f"{SERVICEPATH}/open/ping"
 INFO = "/info"
 INFO_OPEN = f"{SERVICEPATH}/open/info"
 
-# --------------------------
-# Logging
-# --------------------------
-_raw_log_level = os.getenv("PluginPythonLogLevel", "INFO")
-_resolved_log_level = getattr(logging, _raw_log_level.upper(), None)
-_invalid_log_level = _resolved_log_level is None
-if _invalid_log_level:
-    _resolved_log_level = logging.INFO
-
-_log_handlers: List[logging.Handler] = [logging.StreamHandler()]
-try:
-    os.makedirs("/log", exist_ok=True)
-    _log_handlers.append(
-        RotatingFileHandler(
-            "/log/pluginpython.log",
-            maxBytes=2 * 1024 * 1024,
-            backupCount=3,
-            encoding="utf-8",
+def configureLogging() -> Logger:
+    log_handlers: List[logging.Handler] = [logging.StreamHandler()]
+    try:
+        resolved_log_level = logging.getLevelName(os.getenv("PluginPythonLogLevel", "INFO").upper())
+        print(f'{resolved_log_level=}')
+        os.makedirs("/log", exist_ok=True)
+        log_handlers.append(
+            RotatingFileHandler(
+                "/log/pluginpython.log",
+                maxBytes=2 * 1024 * 1024,
+                backupCount=3,
+                encoding="utf-8",
+            )
         )
-    )
-except Exception:
-    # Falls /log nicht beschreibbar ist, bleiben Logs auf stdout/stderr verfügbar.
-    pass
+    except Exception:
+        # Falls /log nicht beschreibbar ist, bleiben Logs auf stdout/stderr verfügbar.
+        pass
 
-logging.basicConfig(
-    level=_resolved_log_level,
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    handlers=_log_handlers,
-)
-logger = logging.getLogger("plugin-registration")
-if _invalid_log_level:
-    logger.warning("Ungültiger PluginPythonLogLevel '%s' - nutze INFO.", _raw_log_level)
+    logging.basicConfig(
+        level=resolved_log_level,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        handlers=log_handlers,
+    )
+    return logging.getLogger("plugin-registration")
+
+logger = configureLogging()
 
 _registration_task = None
-
 
 # --------------------------
 # Utilities
@@ -1265,7 +1260,10 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         # Mimic Java PluginDto constructor behavior: embed image (base64) as data url
         img = pi.get_image_base64(req.params or "", req.q)
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
-        return PluginDto(tagName=tag_name or "", imageUrl="data:image/png;base64," + (img.base64Image or ""), width=CONF_width, height=CONF_height)
+        return PluginDto(
+            tagName=tag_name, 
+            imageUrl="data:image/png;base64," + (img.base64Image or ""), 
+            width=CONF_width, height=CONF_height)
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
     def render_latex(req: PluginRenderLatexRequestDto):
@@ -1389,9 +1387,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
         img = pi.get_image_base64("", effective_question)
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
-
         return PluginDto(
-            tagName=tag_name or "",
+            tagName=tag_name,
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
@@ -1473,7 +1470,11 @@ def extern_reload(req: LoadPluginRequestDto):
         return PluginDto()
     img = pi.get_image_base64(req.params or "", req.q)
     tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
-    return PluginDto(tagName=tag_name or "", imageUrl="data:image/png;base64," + (img.base64Image or ""), width=CONF_width, height=CONF_height)
+    return PluginDto(
+        tagName=tag_name, 
+        imageUrl="data:image/png;base64," + (img.base64Image or ""), 
+        width=CONF_width, height=CONF_height
+        )
 
 
 app.include_router(extern_router)
