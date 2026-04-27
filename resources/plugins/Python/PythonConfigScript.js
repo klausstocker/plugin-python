@@ -1,218 +1,327 @@
 try {
-    $=jQuery;
+    $ = jQuery;
 } catch (e) {}
 
-/* -----------------------------------------------------------------------------------------------
- *   Lädt den Konfigurationsdialog in das Formular der Plugin-Konfiguration in ein vordefiniertes div-Element "#configform_div" <br>
- *   Das Ergebnis der Konfiguration in ein verstecktes Textfeld der Klasse ".configform_config" übergeben werden
- *   Um Konflikte zu vermeiden werden alle Funktionen als innere Funktionen dieser Funktion realisiert!
- * ----------------------------------------------------------------------------------------------- */
 function configPluginPython(dtoString) {
-    // -------------------------- Verbindungskonstante zu LeTTo ---------------------------------------
-    // Div Element welches im Konfigurations-Formular liegt - MUSS für LETTO SO HEISSEN!!
-    const config_form_div     = "#configform_div";
-    // verstecktes Input-Element für die Eingabe - MUSS für LETTO SO HEISSEN !!
+    const config_form_div = "#configform_div";
     const config_form_config = ".configform_config";
-    // ------------------------------------------------------------------------------------------------
 
-    // Dies ist das PluginConfigDto
-    let dto  = JSON.parse(dtoString);
-    dto.data = JSON.parse(dto.jsonData);
-    let plugin = new Object();
-    plugin.typ        = dto.typ;
-    plugin.name       = dto.tagName;
-    plugin.jimagepath = dto.imageUrl;
-    plugin.width      = dto.width;
-    plugin.height     = dto.height;
-    plugin.config     = dto.config;
+    const dto = JSON.parse(dtoString || "{}");
+    let jsonData = {};
+    try {
+        jsonData = dto.jsonData ? JSON.parse(dto.jsonData) : {};
+    } catch (e) {
+        jsonData = {};
+    }
 
-    // Textfeld in das die Konfiguration geschrieben werden muss
-    let config = $(config_form_config)[0];
+    const configField = $(config_form_config)[0];
+    const pluginTag = dto.tagName || "pluginpython";
+    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
 
-    // Klasse für das umgebende div des Konfigurationsdialogs welches in das div plugin.divForm platziert wird.
-    plugin.configContainer = "pluginConfigForm";
+    const rootClass = "pluginConfigForm";
+    const unitEditorId = `unitEditor_${pluginTag}`;
+    const unitOutputId = `unitOutput_${pluginTag}`;
+    const previewEditorId = `previewEditor_${pluginTag}`;
+    const previewOutputId = `previewOutput_${pluginTag}`;
 
-    // Parameter für die Vorschau des Plugins
-    let pluginDto = dto.pluginDto;
-    plugin.answerFieldClass = pluginDto.tagName + "_inp";
-    plugin.divName          = pluginDto.tagName + "_div";
+    const unitRunBtnId = `unitRun_${pluginTag}`;
+    const unitScoreBtnId = `unitScore_${pluginTag}`;
+    const unitLintBtnId = `unitLint_${pluginTag}`;
+    const previewRunBtnId = `previewRun_${pluginTag}`;
+    const previewLintBtnId = `previewLint_${pluginTag}`;
 
-    // Eingabeformular definieren
+    const loaded = parseConfig(configField && configField.value ? configField.value : "", jsonData);
+
     drawForm();
+    ensureStyles();
+    setupEditors(loaded.validation, loaded.indication);
+    bindButtons();
+    renderHelp();
 
-    // Event-Handler definieren - muss nach drawForm gemacht werden!!!
-    loadEventHandler();
+    function parseConfig(rawValue, fallbackData) {
+        const empty = {
+            indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
+            validation: (fallbackData && fallbackData.validation) || "# Unit test code\n"
+        };
 
-    /* -----------------------------------------------------------------------------------------------
-     *   Rendert das Eingabe-Formular für den Plugin-Config-Dialog
-     * ----------------------------------------------------------------------------------------------- */
+        if (!rawValue) return empty;
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            return {
+                indication: parsed.indication || empty.indication,
+                validation: parsed.validation || empty.validation,
+                evalConfig: parsed.evalConfig || (fallbackData && fallbackData.evalConfig) || {}
+            };
+        } catch (e) {
+            return {
+                indication: rawValue || empty.indication,
+                validation: empty.validation,
+                evalConfig: (fallbackData && fallbackData.evalConfig) || {}
+            };
+        }
+    }
+
     function drawForm() {
-        let formName = "."+plugin.configContainer;
-        if ($(formName).length>0)
-            $(formName).remove();
+        const selector = "." + rootClass;
+        if ($(selector).length > 0) {
+            $(selector).remove();
+        }
 
-        if ($(formName).length==0)
-            $(config_form_div).append( ` 
-            <style>
-                .pluginConfigForm {
-                    display: flex;
-                    flex-direction: row;
-                    width: 100%;
-                    height: 75vh; /* 75 Prozent der vollen Höhe des Viewports */
-                    box-sizing: border-box;
-                }
-                .configpane {
-                    flex: 1;
-                    padding: 10px;
-                    overflow: auto;
-                    border: 1px solid #ccc;
-                }
-                .configresizer {
-                    width: 5px;
-                    cursor: ew-resize;
-                    background-color: #ddd;
-                    height: 100%;
-                }
-                iframe {
-                    width: 150%;
-                    height: 100%;
-                    border: none;
-                }
-            </style>      
-            <div class="${plugin.configContainer}" >
-                <div class="configpane" id="leftPane">
-                    <!-- Konfigurationsbereich -->
-                    <h1>Python-Plugin</h1>  
-                    <input type="text" id="data1" value="${plugin.config}"/>   
-                    <button id="sendbutton">OK</button> <br>
-                    vars: <input typ="text" value="${dto.params['vars']}" size="40" readonly/><br>
-                    
+        $(config_form_div).append(`
+            <div class="${rootClass}">
+                <div class="config-main">
+                    <div class="config-top split-row">
+                        <div class="panel">
+                            <h3>Config: UnitTest</h3>
+                            <div id="${unitEditorId}" class="editor-box"></div>
+                            <div class="btn-row">
+                                <button id="${unitRunBtnId}" class="cfg-btn">run</button>
+                                <button id="${unitScoreBtnId}" class="cfg-btn">score</button>
+                                <button id="${unitLintBtnId}" class="cfg-btn">lint</button>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <h3>Unit test output</h3>
+                            <pre id="${unitOutputId}" class="output-box"></pre>
+                        </div>
+                    </div>
+                    <div class="config-bottom split-row">
+                        <div class="panel">
+                            <h3>Preview</h3>
+                            <div id="${previewEditorId}" class="editor-box"></div>
+                            <div class="btn-row">
+                                <button id="${previewRunBtnId}" class="cfg-btn">run</button>
+                                <button id="${previewLintBtnId}" class="cfg-btn">lint</button>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <h3>Preview output</h3>
+                            <pre id="${previewOutputId}" class="output-box"></pre>
+                        </div>
+                    </div>
                 </div>
-                <div class="configresizer" id="resizerLeft"></div>
-                <div class="configpane" id="centerPane">
-                    <!-- Vorschaubereich -->
-                    <h3>preview</h3>
-                    <textarea class="${plugin.answerFieldClass}" id="vorschau_div_0" name="configVorschau" th:text="" rows="2" cols="60"></textarea>
-                    <div id="${plugin.divName}" style="width:100%"></div>                    
-                </div>
-                <div class="configresizer" id="resizerRight"></div>
-                <div class="configpane" id="rightPane">
-                    <!-- Help -->
+                <div class="config-help">
+                    <h3>Help</h3>
                     <a href="https://doc.letto.at/wiki/Plugins" target="_blank">Wiki-Plugins</a>
                     <div id="configPluginHelp"></div>
                     <div id="configPluginWiki"></div>
                 </div>
-            </div>`
-            );
-
-        // Vorschau
-        vorschau();
-
-        // Help eintragen
-        if (dto.params['help']!=null) {
-            const helpElement = document.getElementById('configPluginHelp');
-            helpElement.innerHTML = dto.params['help'];
-        }
-
-        if (dto.params['wikiurl']!=null) {
-            const wikiElement = document.getElementById('configPluginWiki');
-            wikiElement.style.height = '75vh';
-            wikiElement.innerHTML = '<iframe src="'+dto.params['wikiurl']+'"></iframe>';
-        }
-
-        // Resizer
-        const resizers = document.querySelectorAll('.configresizer');
-        let currentResizer;
-
-        for (let resizer of resizers) {
-            resizer.addEventListener('mousedown', function(e) {
-                currentResizer = e.target;
-                document.addEventListener('mousemove', resize);
-                document.addEventListener('mouseup', stopResize);
-            });
-        }
-
-        // Funktion für die zwei Resizer zwischen den drei Spalten des Dialogs
-        function resize(e) {
-            const leftPane = currentResizer.previousElementSibling;
-            const rightPane = currentResizer.nextElementSibling;
-
-            if (currentResizer.id === 'resizerLeft') {
-                const newWidth = e.clientX - leftPane.getBoundingClientRect().left;
-                leftPane.style.flex = `0 0 ${newWidth}px`;
-            } else if (currentResizer.id === 'resizerRight') {
-                const newWidth = rightPane.getBoundingClientRect().right-e.clientX;;
-                rightPane.style.flex = `0 0 ${newWidth}px`;
-            }
-        }
-
-        // Beendet den Resize-Vorgang
-        function stopResize() {
-            document.removeEventListener('mousemove', resize);
-            document.removeEventListener('mouseup', stopResize);
-        }
+            </div>
+        `);
     }
 
-    /* -----------------------------------------------------------------------------------------------
-     *   Eventhandler für die Buttons und aktive Felder laden
-     * ----------------------------------------------------------------------------------------------- */
-    function loadEventHandler(){
+    function ensureStyles() {
+        const styleId = "pluginpython-config-style";
+        if (document.getElementById(styleId)) return;
 
-        $( "#data1" ).on( "input", function() {
-            loadDataConfigPython();
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+            .pluginConfigForm {
+                display: flex;
+                width: 100%;
+                height: 75vh;
+                box-sizing: border-box;
+                gap: 10px;
+            }
+            .pluginConfigForm .config-main {
+                flex: 2;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                min-width: 0;
+            }
+            .pluginConfigForm .config-help {
+                flex: 1;
+                border: 1px solid #ccc;
+                padding: 10px;
+                overflow: auto;
+                min-width: 0;
+            }
+            .pluginConfigForm .split-row {
+                flex: 1;
+                display: flex;
+                gap: 10px;
+                min-height: 0;
+            }
+            .pluginConfigForm .panel {
+                flex: 1;
+                border: 1px solid #ccc;
+                padding: 8px;
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                min-height: 0;
+            }
+            .pluginConfigForm h3 {
+                margin: 0 0 8px 0;
+            }
+            .pluginConfigForm .editor-box,
+            .pluginConfigForm .output-box {
+                flex: 1;
+                width: 100%;
+                min-height: 0;
+                border: 1px solid #d0d0d0;
+                box-sizing: border-box;
+                font-family: monospace;
+                font-size: 14px;
+            }
+            .pluginConfigForm .output-box {
+                margin: 0;
+                background: #101010;
+                color: #8df58d;
+                padding: 8px;
+                overflow: auto;
+                white-space: pre-wrap;
+            }
+            .pluginConfigForm .btn-row {
+                margin-top: 8px;
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .pluginConfigForm .cfg-btn {
+                border: 1px solid #b8b8b8;
+                background: #f0f0f0;
+                padding: 6px 14px;
+                border-radius: 4px;
+                cursor: pointer;
+                text-transform: lowercase;
+            }
+            .pluginConfigForm iframe {
+                width: 100%;
+                height: 60vh;
+                border: none;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function ensureAceLoaded() {
+        return new Promise((resolve) => {
+            if (window.ace) {
+                resolve(true);
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js";
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
         });
-        $( "#sendbutton" ).on( "click", function(event) {
+    }
+
+    async function setupEditors(initialUnit, initialPreview) {
+        const aceAvailable = await ensureAceLoaded();
+
+        if (aceAvailable && window.ace) {
+            const unitEditor = ace.edit(unitEditorId);
+            unitEditor.setTheme("ace/theme/monokai");
+            unitEditor.session.setMode("ace/mode/python");
+            unitEditor.session.setValue(initialUnit || "");
+
+            const previewEditor = ace.edit(previewEditorId);
+            previewEditor.setTheme("ace/theme/monokai");
+            previewEditor.session.setMode("ace/mode/python");
+            previewEditor.session.setValue(initialPreview || "");
+
+            unitEditor.session.on("change", saveConfig);
+            previewEditor.session.on("change", saveConfig);
+
+            configPluginPython._getUnitCode = () => unitEditor.getValue();
+            configPluginPython._getPreviewCode = () => previewEditor.getValue();
+        } else {
+            fallbackTextArea(unitEditorId, initialUnit, "_getUnitCode");
+            fallbackTextArea(previewEditorId, initialPreview, "_getPreviewCode");
+        }
+
+        saveConfig();
+    }
+
+    function fallbackTextArea(targetId, value, key) {
+        const target = document.getElementById(targetId);
+        target.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;font-family:monospace;">${escapeHtml(value || "")}</textarea>`;
+        const ta = target.querySelector("textarea");
+        ta.addEventListener("input", saveConfig);
+        configPluginPython[key] = () => ta.value;
+    }
+
+    function getUnitCode() {
+        return configPluginPython._getUnitCode ? configPluginPython._getUnitCode() : "";
+    }
+
+    function getPreviewCode() {
+        return configPluginPython._getPreviewCode ? configPluginPython._getPreviewCode() : "";
+    }
+
+    function saveConfig() {
+        if (!configField) return;
+        const payload = {
+            indication: getPreviewCode(),
+            validation: getUnitCode(),
+            evalConfig: loaded.evalConfig || {}
+        };
+        configField.value = JSON.stringify(payload);
+    }
+
+    function bindButtons() {
+        const unitOutput = document.getElementById(unitOutputId);
+        const previewOutput = document.getElementById(previewOutputId);
+
+        bindRequest(unitRunBtnId, "/run", () => ({ code: getUnitCode() }), unitOutput);
+        bindRequest(unitLintBtnId, "/lint", () => ({ code: getUnitCode() }), unitOutput);
+        bindRequest(unitScoreBtnId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), unitOutput);
+
+        bindRequest(previewRunBtnId, "/run", () => ({ code: getPreviewCode() }), previewOutput);
+        bindRequest(previewLintBtnId, "/lint", () => ({ code: getPreviewCode() }), previewOutput);
+    }
+
+    function bindRequest(buttonId, endpoint, bodyBuilder, outputEl) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+
+        btn.addEventListener("click", async (event) => {
             event.preventDefault();
-            loadDataConfigPython();
-        } );
-    }
+            saveConfig();
+            const oldText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "working...";
+            outputEl.textContent = "";
 
-    /* -----------------------------------------------------------------------------------------------
-     *   Trägt die Konfiguration im Hauptformular ein - Schnittstelle des Ergebnisses zu LeTTo!!!
-     * ----------------------------------------------------------------------------------------------- */
-    function loadDataConfigPython() {
-        const data   = $('#data1')[0].value;
-        config.value = data;
-        vorschau();
-    }
-
-    /* -----------------------------------------------------------------------------------------------
-     *   Holt vom Server über eine ajax-Request ein neues PluginDto
-     * ----------------------------------------------------------------------------------------------- */
-    function vorschau() {
-        // Anfrage am Rest-Endpoint
-        const restUri   = dto.pluginDtoUri;
-        const restToken = dto.pluginDtoToken;
-        try {
-            if (restToken===null || restToken==="") {
-                $.ajax({
-                    contentType: 'application/json',
-                    url: restUri,
-                    data: JSON.stringify({typ: plugin.typ,
-                           name: plugin.name,
-                           config: config.value,
-                           params:'',
-                           nr: 0,
-                           configurationID: dto.configurationID
-                    }),
-                    type: 'POST',
-                    dataType: 'json',
-                    error: function(xhr, status, error) {
-                        // Code, der bei einem Fehler ausgeführt wird
-                        console.error(error);
-                    }
-                }).then(function (data) {
-                    try {
-                        if (data.tagName != null) {
-                            let pluginDto = data;
-                            initPluginPython(JSON.stringify(pluginDto),true);
-                        }
-                    } catch (error) {
-                    }
+            try {
+                const response = await fetch(serviceBase + endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(bodyBuilder())
                 });
-            } else {
+                const data = await response.json();
+                outputEl.textContent = (data && data.output) ? data.output : JSON.stringify(data);
+            } catch (error) {
+                outputEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = oldText;
             }
-        } catch (error) {}
+        });
     }
 
+    function renderHelp() {
+        if (dto.params && dto.params.help != null) {
+            const helpElement = document.getElementById("configPluginHelp");
+            helpElement.innerHTML = dto.params.help;
+        }
+
+        if (dto.params && dto.params.wikiurl != null) {
+            const wikiElement = document.getElementById("configPluginWiki");
+            wikiElement.innerHTML = '<iframe src="' + dto.params.wikiurl + '"></iframe>';
+        }
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
 }
