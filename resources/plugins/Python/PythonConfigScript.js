@@ -28,6 +28,7 @@ function configPluginPython(dtoString) {
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
+        exampleApplyId: `exampleApply_${pluginTag}`,
         fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
@@ -103,7 +104,14 @@ function configPluginPython(dtoString) {
 
                     <div id="${ids.tabsWrapId}" class="tab-panels">
                         <div class="tab-panel active" id="tab-unittest">
-                            <h3>UnitTest editor</h3>
+                            <div class="tab-title-row">
+                                <h3>Unit test</h3>
+                                <div class="unit-example-controls">
+                                    <label for="${ids.exampleSelectId}">Example:</label>
+                                    <select id="${ids.exampleSelectId}" class="text-input unit-example-select"></select>
+                                    <button type="button" id="${ids.exampleApplyId}" class="cfg-btn">Apply</button>
+                                </div>
+                            </div>
                             <div id="${ids.unitEditorId}" class="editor-box"></div>
                         </div>
 
@@ -147,8 +155,6 @@ function configPluginPython(dtoString) {
                             <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
                             <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
                             <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
-                            <label for="${ids.exampleSelectId}">example:</label>
-                            <select id="${ids.exampleSelectId}" class="text-input" style="width:auto;min-width:120px;"></select>
                         </div>
                         <pre id="${ids.outputId}" class="output-box"></pre>
                     </div>
@@ -223,6 +229,26 @@ function configPluginPython(dtoString) {
             }
             .pluginConfigForm .tab-panel.active {
                 display: flex;
+            }
+            .pluginConfigForm .tab-title-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+            }
+            .pluginConfigForm .tab-title-row h3 {
+                margin: 0;
+            }
+            .pluginConfigForm .unit-example-controls {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .pluginConfigForm .unit-example-select {
+                width: auto;
+                min-width: 120px;
+                margin: 0;
             }
             .pluginConfigForm .editor-box {
                 flex: 1;
@@ -468,10 +494,14 @@ function configPluginPython(dtoString) {
 
     async function setupExamples() {
         const select = document.getElementById(ids.exampleSelectId);
-        if (!select) return;
+        const applyBtn = document.getElementById(ids.exampleApplyId);
+        if (!select || !applyBtn) return;
 
         const initial = await requestExample(0);
-        if (!initial || typeof initial.count !== "number") return;
+        if (!initial || typeof initial.count !== "number") {
+            applyBtn.disabled = true;
+            return;
+        }
 
         select.innerHTML = "";
         for (let i = 0; i < initial.count; i += 1) {
@@ -480,13 +510,11 @@ function configPluginPython(dtoString) {
             option.textContent = `Example ${i + 1}`;
             select.appendChild(option);
         }
+        select.disabled = initial.count === 0;
+        applyBtn.disabled = initial.count === 0;
+        select.value = "0";
 
-        if (initial.output) {
-            applyExample(initial.output);
-            select.value = "0";
-        }
-
-        select.addEventListener("change", async () => {
+        applyBtn.addEventListener("click", async () => {
             const index = Number(select.value);
             const exampleData = await requestExample(index);
             if (exampleData && exampleData.output) {
