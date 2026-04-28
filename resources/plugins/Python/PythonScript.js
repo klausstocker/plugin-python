@@ -18,6 +18,7 @@ function initPluginPython(dtoString, active) {
         active: !!active,
         serviceBase: (dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
+    const pluginToken = (dto.params && dto.params.pluginToken) || "";
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
@@ -188,7 +189,7 @@ function initPluginPython(dtoString, active) {
             try {
                 const res = await fetch(plugin.serviceBase + endpoint, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: buildHeaders(),
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -207,5 +208,13 @@ function initPluginPython(dtoString, active) {
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+    }
+
+    function buildHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        if (pluginToken) {
+            headers["Authorization"] = "Bearer " + pluginToken;
+        }
+        return headers;
     }
 }
