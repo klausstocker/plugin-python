@@ -124,6 +124,18 @@ PINGOPEN = f"{SERVICEPATH}/open/ping"
 INFO = "/info"
 INFO_OPEN = f"{SERVICEPATH}/open/info"
 
+IGNORE_PATHS = [
+    "/open/pluginlist",
+    "/open/generalinfolist",
+    "/version",
+    "/ping",
+]
+
+class HealthcheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not any(path in msg for path in IGNORE_PATHS)
+
 def configureLogging() -> Logger:
     log_handlers: List[logging.Handler] = [logging.StreamHandler()]
     try:
@@ -144,10 +156,19 @@ def configureLogging() -> Logger:
 
     logging.basicConfig(
         level=resolved_log_level,
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=log_handlers,
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.addFilter(HealthcheckFilter())
+
+    # httpx-Request-Zeilen unterdrücken
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
     return logging.getLogger("plugin-registration")
+
 
 logger = configureLogging()
 
@@ -415,20 +436,33 @@ class VarDto(BaseModel):
     ze: Optional[str] = None
     cp: Optional[CalcParamsDto] = None
 
-
-class VarHashDto(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    vars: Optional[Dict[str, VarDto]] = Field(default_factory=dict)
-
     def to_java_string(self) -> str:
-        parts = []
+        parts: List[str] = []
+
         if self.calcErgebnisDto is not None:
             parts.append(f"calcErgebnisDto={self.calcErgebnisDto}")
         if self.ze is not None:
             parts.append(f"ze={self.ze}")
         if self.cp is not None:
             parts.append(f"cp={self.cp}")
+
         return ",".join(parts)
+
+
+class VarHashDto(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    vars: Optional[Dict[str, VarDto]] = Field(default_factory=dict)
+
+    def to_java_string(self) -> str:
+        if not self.vars:
+            return ""
+
+        parts: List[str] = []
+        for name, var_dto in self.vars.items():
+            parts.append(f"{name}={var_dto.to_java_string() if var_dto else 'null'}")
+
+        return ",".join(parts)
+
 
 class PluginSubQuestionDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
