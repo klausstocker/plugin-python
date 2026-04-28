@@ -1,6 +1,7 @@
 import hmac
 import os
 import re
+import secrets
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -13,10 +14,14 @@ from shared.question_config import QuestionConfigDto
 
 SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 UPLOAD_ROOT = Path(os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads"))
-REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "false").lower() == "true"
-EXEC_TOKEN = os.getenv("PLUGIN_EXEC_TOKEN", "")
+REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "true").lower() == "true"
+EXEC_TOKEN = secrets.token_urlsafe(32)
 
 router = APIRouter()
+
+
+def get_exec_token() -> str:
+    return EXEC_TOKEN
 
 
 def _extract_exec_token(request: Request) -> str:

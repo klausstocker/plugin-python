@@ -17,7 +17,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
-from app.code_execution_endpoints import router as code_execution_router
+from app.code_execution_endpoints import get_exec_token, router as code_execution_router
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
@@ -1121,6 +1121,7 @@ def create_or_update_configuration_state(
         state.pluginConfigDto.params = {}
 
     state.pluginConfigDto.params["config"] = state.config
+    state.pluginConfigDto.params["pluginToken"] = get_exec_token()
 
     if state.pluginPython is not None:
         state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
@@ -1263,7 +1264,10 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         return PluginDto(
             tagName=tag_name, 
             imageUrl="data:image/png;base64," + (img.base64Image or ""), 
-            width=CONF_width, height=CONF_height)
+            width=CONF_width,
+            height=CONF_height,
+            params={"pluginToken": get_exec_token()},
+        )
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
     def render_latex(req: PluginRenderLatexRequestDto):
@@ -1392,7 +1396,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
-            params={"config": effective_config},
+            params={"config": effective_config, "pluginToken": get_exec_token()},
         )
 
     return r
@@ -1473,8 +1477,10 @@ def extern_reload(req: LoadPluginRequestDto):
     return PluginDto(
         tagName=tag_name, 
         imageUrl="data:image/png;base64," + (img.base64Image or ""), 
-        width=CONF_width, height=CONF_height
-        )
+        width=CONF_width,
+        height=CONF_height,
+        params={"pluginToken": get_exec_token()},
+    )
 
 
 app.include_router(extern_router)

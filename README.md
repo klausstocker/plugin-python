@@ -46,8 +46,11 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
 ## Absicherung der Code-Execution-Endpunkte
 - Betroffene Endpunkte: `POST /pluginpython/run`, `POST /pluginpython/lint`, `POST /pluginpython/check`, `POST /pluginpython/example`.
 - Optional aktivierbar über Umgebungsvariablen:
-  - `PLUGIN_EXEC_REQUIRE_TOKEN=true` aktiviert die Prüfung.
-  - `PLUGIN_EXEC_TOKEN=<geheimes-token>` definiert das erwartete Token.
+  - `PLUGIN_EXEC_REQUIRE_TOKEN` ist standardmäßig `true` (Prüfung ist damit standardmäßig aktiv).
+- Token-Quelle:
+  - Das Service erzeugt beim Start automatisch ein neues `EXEC_TOKEN` (zufällig, pro Prozessstart neu).
+  - `PLUGIN_EXEC_TOKEN` aus der Umgebung wird **nicht** verwendet.
+  - Das aktuelle Token wird in die Plugin-Daten (`params.pluginToken`) eingebettet und von den JavaScript-Clients für Requests verwendet.
 - Übergabe des Tokens:
   - Bevorzugt: `Authorization: Bearer <token>`
   - Alternativ: Header `X-Plugin-Token: <token>`
