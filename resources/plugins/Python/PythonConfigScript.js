@@ -27,6 +27,7 @@ function configPluginPython(dtoString) {
         btnRunId: `sharedRun_${pluginTag}`,
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
+        exampleSelectId: `exampleSelect_${pluginTag}`,
         fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
@@ -44,6 +45,7 @@ function configPluginPython(dtoString) {
     setupFileTab();
     setupOptionsTab();
     bindSharedButtons();
+    setupExamples();
     renderHelp();
     saveConfig();
 
@@ -145,6 +147,8 @@ function configPluginPython(dtoString) {
                             <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
                             <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
                             <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
+                            <label for="${ids.exampleSelectId}">example:</label>
+                            <select id="${ids.exampleSelectId}" class="text-input" style="width:auto;min-width:120px;"></select>
                         </div>
                         <pre id="${ids.outputId}" class="output-box"></pre>
                     </div>
@@ -341,9 +345,13 @@ function configPluginPython(dtoString) {
 
             configPluginPython._getUnitCode = () => unitEditor.getValue();
             configPluginPython._getPreviewCode = () => previewEditor.getValue();
+            configPluginPython._setUnitCode = (value) => unitEditor.session.setValue(value || "");
+            configPluginPython._setPreviewCode = (value) => previewEditor.session.setValue(value || "");
         } else {
             fallbackTextArea(ids.unitEditorId, initialUnit, "_getUnitCode");
             fallbackTextArea(ids.previewEditorId, initialPreview, "_getPreviewCode");
+            fallbackTextAreaSetter(ids.unitEditorId, "_setUnitCode");
+            fallbackTextAreaSetter(ids.previewEditorId, "_setPreviewCode");
         }
     }
 
@@ -353,6 +361,14 @@ function configPluginPython(dtoString) {
         const ta = target.querySelector("textarea");
         ta.addEventListener("input", saveConfig);
         configPluginPython[key] = () => ta.value;
+    }
+
+    function fallbackTextAreaSetter(targetId, key) {
+        configPluginPython[key] = (value) => {
+            const target = document.getElementById(targetId);
+            const ta = target ? target.querySelector("textarea") : null;
+            if (ta) ta.value = value || "";
+        };
     }
 
     function getUnitCode() {
@@ -448,6 +464,61 @@ function configPluginPython(dtoString) {
         bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
+    }
+
+    async function setupExamples() {
+        const select = document.getElementById(ids.exampleSelectId);
+        if (!select) return;
+
+        const initial = await requestExample(0);
+        if (!initial || typeof initial.count !== "number") return;
+
+        select.innerHTML = "";
+        for (let i = 0; i < initial.count; i += 1) {
+            const option = document.createElement("option");
+            option.value = String(i);
+            option.textContent = `Example ${i + 1}`;
+            select.appendChild(option);
+        }
+
+        if (initial.output) {
+            applyExample(initial.output);
+            select.value = "0";
+        }
+
+        select.addEventListener("change", async () => {
+            const index = Number(select.value);
+            const exampleData = await requestExample(index);
+            if (exampleData && exampleData.output) {
+                applyExample(exampleData.output);
+            }
+        });
+    }
+
+    async function requestExample(index) {
+        try {
+            const response = await fetch(serviceBase + "/example", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ index: index })
+            });
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function applyExample(example) {
+        if (!example) return;
+        state.files = example.files || {};
+        state.evalConfig = example.evalConfig || { runAtTest: true, unitTestAtTest: false, lintAtTest: true };
+
+        if (configPluginPython._setUnitCode) configPluginPython._setUnitCode(example.validation || "");
+        if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
+
+        setupFileTab();
+        setupOptionsTab();
+        saveConfig();
     }
 
     function getActiveEditorCode() {
