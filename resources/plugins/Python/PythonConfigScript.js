@@ -18,89 +18,142 @@ function configPluginPython(dtoString) {
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
 
-    const rootClass = "pluginConfigForm";
-    const unitEditorId = `unitEditor_${pluginTag}`;
-    const unitOutputId = `unitOutput_${pluginTag}`;
-    const previewEditorId = `previewEditor_${pluginTag}`;
-    const previewOutputId = `previewOutput_${pluginTag}`;
+    const ids = {
+        rootClass: "pluginConfigForm",
+        tabsWrapId: `tabsWrap_${pluginTag}`,
+        unitEditorId: `unitEditor_${pluginTag}`,
+        previewEditorId: `previewEditor_${pluginTag}`,
+        outputId: `sharedOutput_${pluginTag}`,
+        btnRunId: `sharedRun_${pluginTag}`,
+        btnLintId: `sharedLint_${pluginTag}`,
+        btnCheckId: `sharedCheck_${pluginTag}`,
+        fileNameId: `fileName_${pluginTag}`,
+        fileContentId: `fileContent_${pluginTag}`,
+        fileListId: `fileList_${pluginTag}`,
+        fileUploadId: `fileUpload_${pluginTag}`,
+        optRunAtTestId: `optRunAtTest_${pluginTag}`,
+        optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
+        optLintAtTestId: `optLintAtTest_${pluginTag}`
+    };
 
-    const unitRunBtnId = `unitRun_${pluginTag}`;
-    const unitScoreBtnId = `unitScore_${pluginTag}`;
-    const unitLintBtnId = `unitLint_${pluginTag}`;
-    const previewRunBtnId = `previewRun_${pluginTag}`;
-    const previewLintBtnId = `previewLint_${pluginTag}`;
-
-    const loaded = parseConfig(configField && configField.value ? configField.value : "", jsonData);
+    const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
 
     drawForm();
     ensureStyles();
-    setupEditors(loaded.validation, loaded.indication);
-    bindButtons();
+    setupTabs();
+    setupEditors(state.validation, state.indication);
+    setupFileTab();
+    setupOptionsTab();
+    bindSharedButtons();
     renderHelp();
+    saveConfig();
 
     function parseConfig(rawValue, fallbackData) {
-        const empty = {
+        const defaults = {
             indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
-            validation: (fallbackData && fallbackData.validation) || "# Unit test code\n"
+            validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
+            files: (fallbackData && fallbackData.files) || {},
+            evalConfig: {
+                runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
+                unitTestAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.unitTestAtTest : false,
+                lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
+            }
         };
 
-        if (!rawValue) return empty;
+        if (!rawValue) return defaults;
 
         try {
             const parsed = JSON.parse(rawValue);
             return {
-                indication: parsed.indication || empty.indication,
-                validation: parsed.validation || empty.validation,
-                evalConfig: parsed.evalConfig || (fallbackData && fallbackData.evalConfig) || {}
+                indication: parsed.indication || defaults.indication,
+                validation: parsed.validation || defaults.validation,
+                files: parsed.files || defaults.files,
+                evalConfig: {
+                    runAtTest: parsed.evalConfig && typeof parsed.evalConfig.runAtTest === "boolean" ? parsed.evalConfig.runAtTest : defaults.evalConfig.runAtTest,
+                    unitTestAtTest: parsed.evalConfig && typeof parsed.evalConfig.unitTestAtTest === "boolean" ? parsed.evalConfig.unitTestAtTest : defaults.evalConfig.unitTestAtTest,
+                    lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
+                }
             };
         } catch (e) {
             return {
-                indication: rawValue || empty.indication,
-                validation: empty.validation,
-                evalConfig: (fallbackData && fallbackData.evalConfig) || {}
+                indication: rawValue,
+                validation: defaults.validation,
+                files: defaults.files,
+                evalConfig: defaults.evalConfig
             };
         }
     }
 
     function drawForm() {
-        const selector = "." + rootClass;
+        const selector = "." + ids.rootClass;
         if ($(selector).length > 0) {
             $(selector).remove();
         }
 
         $(config_form_div).append(`
-            <div class="${rootClass}">
+            <div class="${ids.rootClass}">
                 <div class="config-main">
-                    <div class="config-top split-row">
-                        <div class="panel">
-                            <h3>Config: UnitTest</h3>
-                            <div id="${unitEditorId}" class="editor-box"></div>
-                            <div class="btn-row">
-                                <button id="${unitRunBtnId}" class="cfg-btn">run</button>
-                                <button id="${unitScoreBtnId}" class="cfg-btn">score</button>
-                                <button id="${unitLintBtnId}" class="cfg-btn">lint</button>
+                    <div class="tab-buttons">
+                        <button type="button" class="tab-btn active" data-tab="tab-unittest">UnitTest</button>
+                        <button type="button" class="tab-btn" data-tab="tab-preview">Preview</button>
+                        <button type="button" class="tab-btn" data-tab="tab-files">Files</button>
+                        <button type="button" class="tab-btn" data-tab="tab-options">Configuration</button>
+                    </div>
+
+                    <div id="${ids.tabsWrapId}" class="tab-panels">
+                        <div class="tab-panel active" id="tab-unittest">
+                            <h3>UnitTest editor</h3>
+                            <div id="${ids.unitEditorId}" class="editor-box"></div>
+                        </div>
+
+                        <div class="tab-panel" id="tab-preview">
+                            <h3>Preview editor</h3>
+                            <div id="${ids.previewEditorId}" class="editor-box"></div>
+                        </div>
+
+                        <div class="tab-panel" id="tab-files">
+                            <h3>File management</h3>
+                            <div class="files-grid">
+                                <div>
+                                    <label>File name</label>
+                                    <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
+                                    <label>File content</label>
+                                    <textarea id="${ids.fileContentId}" class="code-input" placeholder="# file content"></textarea>
+                                    <div class="btn-row small-gap">
+                                        <button type="button" class="cfg-btn" data-file-action="save">save/update</button>
+                                        <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
+                                        <button type="button" class="cfg-btn" data-file-action="download">download</button>
+                                    </div>
+                                    <div class="btn-row small-gap">
+                                        <input id="${ids.fileUploadId}" type="file" />
+                                        <button type="button" class="cfg-btn" data-file-action="upload">import</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>Stored files</label>
+                                    <div id="${ids.fileListId}" class="file-list"></div>
+                                </div>
                             </div>
                         </div>
-                        <div class="panel">
-                            <h3>Unit test output</h3>
-                            <pre id="${unitOutputId}" class="output-box"></pre>
+
+                        <div class="tab-panel" id="tab-options">
+                            <h3>Configuration flags</h3>
+                            <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> runAtTest</label>
+                            <label class="checkbox-row"><input id="${ids.optUnitTestAtTestId}" type="checkbox" /> unitTestAtTest</label>
+                            <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lintAtTest</label>
                         </div>
                     </div>
-                    <div class="config-bottom split-row">
-                        <div class="panel">
-                            <h3>Preview</h3>
-                            <div id="${previewEditorId}" class="editor-box"></div>
-                            <div class="btn-row">
-                                <button id="${previewRunBtnId}" class="cfg-btn">run</button>
-                                <button id="${previewLintBtnId}" class="cfg-btn">lint</button>
-                            </div>
+
+                    <div class="shared-actions">
+                        <div class="btn-row">
+                            <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
+                            <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
+                            <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
                         </div>
-                        <div class="panel">
-                            <h3>Preview output</h3>
-                            <pre id="${previewOutputId}" class="output-box"></pre>
-                        </div>
+                        <pre id="${ids.outputId}" class="output-box"></pre>
                     </div>
                 </div>
+
                 <div class="config-help">
                     <h3>Help</h3>
                     <a href="https://doc.letto.at/wiki/Plugins" target="_blank">Wiki-Plugins</a>
@@ -139,55 +192,103 @@ function configPluginPython(dtoString) {
                 overflow: auto;
                 min-width: 0;
             }
-            .pluginConfigForm .split-row {
-                flex: 1;
+            .pluginConfigForm .tab-buttons {
                 display: flex;
-                gap: 10px;
-                min-height: 0;
-            }
-            .pluginConfigForm .panel {
-                flex: 1;
-                border: 1px solid #ccc;
-                padding: 8px;
-                display: flex;
-                flex-direction: column;
-                min-width: 0;
-                min-height: 0;
-            }
-            .pluginConfigForm h3 {
-                margin: 0 0 8px 0;
-            }
-            .pluginConfigForm .editor-box,
-            .pluginConfigForm .output-box {
-                flex: 1;
-                width: 100%;
-                min-height: 0;
-                border: 1px solid #d0d0d0;
-                box-sizing: border-box;
-                font-family: monospace;
-                font-size: 14px;
-            }
-            .pluginConfigForm .output-box {
-                margin: 0;
-                background: #101010;
-                color: #8df58d;
-                padding: 8px;
-                overflow: auto;
-                white-space: pre-wrap;
-            }
-            .pluginConfigForm .btn-row {
-                margin-top: 8px;
-                display: flex;
-                gap: 8px;
+                gap: 6px;
                 flex-wrap: wrap;
             }
+            .pluginConfigForm .tab-btn,
             .pluginConfigForm .cfg-btn {
                 border: 1px solid #b8b8b8;
                 background: #f0f0f0;
                 padding: 6px 14px;
                 border-radius: 4px;
                 cursor: pointer;
-                text-transform: lowercase;
+            }
+            .pluginConfigForm .tab-btn.active {
+                background: #dce9ff;
+            }
+            .pluginConfigForm .tab-panels {
+                flex: 1;
+                min-height: 0;
+                border: 1px solid #ccc;
+                padding: 8px;
+            }
+            .pluginConfigForm .tab-panel {
+                display: none;
+                height: 100%;
+                min-height: 0;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .pluginConfigForm .tab-panel.active {
+                display: flex;
+            }
+            .pluginConfigForm .editor-box {
+                flex: 1;
+                min-height: 0;
+                border: 1px solid #d0d0d0;
+            }
+            .pluginConfigForm .shared-actions {
+                border: 1px solid #ccc;
+                padding: 8px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                min-height: 180px;
+            }
+            .pluginConfigForm .output-box {
+                margin: 0;
+                flex: 1;
+                min-height: 120px;
+                border: 1px solid #d0d0d0;
+                background: #101010;
+                color: #8df58d;
+                padding: 8px;
+                overflow: auto;
+                white-space: pre-wrap;
+                font-family: monospace;
+                font-size: 13px;
+            }
+            .pluginConfigForm .files-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                min-height: 0;
+                height: 100%;
+            }
+            .pluginConfigForm .text-input,
+            .pluginConfigForm .code-input {
+                width: 100%;
+                box-sizing: border-box;
+                margin: 4px 0 8px;
+                font-family: monospace;
+            }
+            .pluginConfigForm .code-input {
+                min-height: 180px;
+            }
+            .pluginConfigForm .file-list {
+                border: 1px solid #d0d0d0;
+                min-height: 220px;
+                max-height: 100%;
+                overflow: auto;
+                padding: 6px;
+                font-family: monospace;
+            }
+            .pluginConfigForm .file-item {
+                padding: 4px;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+            }
+            .pluginConfigForm .file-item:hover {
+                background: #f5f5f5;
+            }
+            .pluginConfigForm .checkbox-row {
+                display: block;
+                margin: 8px 0;
+            }
+            .pluginConfigForm .small-gap {
+                gap: 6px;
             }
             .pluginConfigForm iframe {
                 width: 100%;
@@ -196,6 +297,23 @@ function configPluginPython(dtoString) {
             }
         `;
         document.head.appendChild(style);
+    }
+
+    function setupTabs() {
+        const root = document.getElementById(ids.tabsWrapId).closest(".config-main");
+        const tabButtons = root.querySelectorAll(".tab-btn");
+        const panels = root.querySelectorAll(".tab-panel");
+
+        tabButtons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const target = btn.getAttribute("data-tab");
+                tabButtons.forEach((b) => b.classList.remove("active"));
+                panels.forEach((p) => p.classList.remove("active"));
+                btn.classList.add("active");
+                const panel = document.getElementById(target);
+                if (panel) panel.classList.add("active");
+            });
+        });
     }
 
     function ensureAceLoaded() {
@@ -216,12 +334,12 @@ function configPluginPython(dtoString) {
         const aceAvailable = await ensureAceLoaded();
 
         if (aceAvailable && window.ace) {
-            const unitEditor = ace.edit(unitEditorId);
+            const unitEditor = ace.edit(ids.unitEditorId);
             unitEditor.setTheme("ace/theme/monokai");
             unitEditor.session.setMode("ace/mode/python");
             unitEditor.session.setValue(initialUnit || "");
 
-            const previewEditor = ace.edit(previewEditorId);
+            const previewEditor = ace.edit(ids.previewEditorId);
             previewEditor.setTheme("ace/theme/monokai");
             previewEditor.session.setMode("ace/mode/python");
             previewEditor.session.setValue(initialPreview || "");
@@ -232,11 +350,9 @@ function configPluginPython(dtoString) {
             configPluginPython._getUnitCode = () => unitEditor.getValue();
             configPluginPython._getPreviewCode = () => previewEditor.getValue();
         } else {
-            fallbackTextArea(unitEditorId, initialUnit, "_getUnitCode");
-            fallbackTextArea(previewEditorId, initialPreview, "_getPreviewCode");
+            fallbackTextArea(ids.unitEditorId, initialUnit, "_getUnitCode");
+            fallbackTextArea(ids.previewEditorId, initialPreview, "_getPreviewCode");
         }
-
-        saveConfig();
     }
 
     function fallbackTextArea(targetId, value, key) {
@@ -255,26 +371,110 @@ function configPluginPython(dtoString) {
         return configPluginPython._getPreviewCode ? configPluginPython._getPreviewCode() : "";
     }
 
-    function saveConfig() {
-        if (!configField) return;
-        const payload = {
-            indication: getPreviewCode(),
-            validation: getUnitCode(),
-            evalConfig: loaded.evalConfig || {}
-        };
-        configField.value = JSON.stringify(payload);
+    function setupFileTab() {
+        const fileNameInput = document.getElementById(ids.fileNameId);
+        const fileContentInput = document.getElementById(ids.fileContentId);
+        const fileList = document.getElementById(ids.fileListId);
+        const fileUpload = document.getElementById(ids.fileUploadId);
+
+        function renderFileList() {
+            const names = Object.keys(state.files || {}).sort();
+            if (!names.length) {
+                fileList.innerHTML = "<em>No files stored.</em>";
+                return;
+            }
+            fileList.innerHTML = names.map((name) => `<div class="file-item" data-file="${escapeHtmlAttr(name)}">${escapeHtml(name)}</div>`).join("");
+            fileList.querySelectorAll(".file-item").forEach((row) => {
+                row.addEventListener("click", () => {
+                    const name = row.getAttribute("data-file");
+                    fileNameInput.value = name;
+                    fileContentInput.value = state.files[name] || "";
+                });
+            });
+        }
+
+        document.querySelectorAll("[data-file-action]").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+                const action = btn.getAttribute("data-file-action");
+                const name = (fileNameInput.value || "").trim();
+
+                if (action === "save") {
+                    if (!name) return;
+                    state.files[name] = fileContentInput.value || "";
+                    renderFileList();
+                    saveConfig();
+                    return;
+                }
+
+                if (action === "delete") {
+                    if (!name || !state.files[name]) return;
+                    delete state.files[name];
+                    fileContentInput.value = "";
+                    renderFileList();
+                    saveConfig();
+                    return;
+                }
+
+                if (action === "download") {
+                    if (!name || state.files[name] == null) return;
+                    const blob = new Blob([state.files[name]], { type: "text/plain" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = name;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    return;
+                }
+
+                if (action === "upload") {
+                    const file = fileUpload.files && fileUpload.files[0];
+                    if (!file) return;
+                    const text = await file.text();
+                    state.files[file.name] = text;
+                    fileNameInput.value = file.name;
+                    fileContentInput.value = text;
+                    fileUpload.value = "";
+                    renderFileList();
+                    saveConfig();
+                }
+            });
+        });
+
+        renderFileList();
     }
 
-    function bindButtons() {
-        const unitOutput = document.getElementById(unitOutputId);
-        const previewOutput = document.getElementById(previewOutputId);
+    function setupOptionsTab() {
+        const runAtTest = document.getElementById(ids.optRunAtTestId);
+        const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
+        const lintAtTest = document.getElementById(ids.optLintAtTestId);
 
-        bindRequest(unitRunBtnId, "/run", () => ({ code: getUnitCode() }), unitOutput);
-        bindRequest(unitLintBtnId, "/lint", () => ({ code: getUnitCode() }), unitOutput);
-        bindRequest(unitScoreBtnId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), unitOutput);
+        runAtTest.checked = !!state.evalConfig.runAtTest;
+        unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
+        lintAtTest.checked = !!state.evalConfig.lintAtTest;
 
-        bindRequest(previewRunBtnId, "/run", () => ({ code: getPreviewCode() }), previewOutput);
-        bindRequest(previewLintBtnId, "/lint", () => ({ code: getPreviewCode() }), previewOutput);
+        [runAtTest, unitTestAtTest, lintAtTest].forEach((el) => {
+            el.addEventListener("change", () => {
+                state.evalConfig.runAtTest = !!runAtTest.checked;
+                state.evalConfig.unitTestAtTest = !!unitTestAtTest.checked;
+                state.evalConfig.lintAtTest = !!lintAtTest.checked;
+                saveConfig();
+            });
+        });
+    }
+
+    function bindSharedButtons() {
+        const outputEl = document.getElementById(ids.outputId);
+
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
+    }
+
+    function getActiveEditorCode() {
+        const activeTab = document.querySelector(".pluginConfigForm .tab-panel.active");
+        if (!activeTab) return getPreviewCode();
+        if (activeTab.id === "tab-unittest") return getUnitCode();
+        return getPreviewCode();
     }
 
     function bindRequest(buttonId, endpoint, bodyBuilder, outputEl) {
@@ -296,13 +496,23 @@ function configPluginPython(dtoString) {
                     body: JSON.stringify(bodyBuilder())
                 });
                 const data = await response.json();
-                outputEl.textContent = (data && data.output) ? data.output : JSON.stringify(data);
+                outputEl.textContent = data && data.output ? data.output : JSON.stringify(data);
             } catch (error) {
                 outputEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
             } finally {
                 btn.disabled = false;
                 btn.textContent = oldText;
             }
+        });
+    }
+
+    function saveConfig() {
+        if (!configField) return;
+        configField.value = JSON.stringify({
+            indication: getPreviewCode(),
+            validation: getUnitCode(),
+            files: state.files || {},
+            evalConfig: state.evalConfig || {}
         });
     }
 
@@ -321,6 +531,14 @@ function configPluginPython(dtoString) {
     function escapeHtml(s) {
         return String(s)
             .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    function escapeHtmlAttr(s) {
+        return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
     }
