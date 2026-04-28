@@ -160,12 +160,15 @@ def configureLogging() -> Logger:
         handlers=log_handlers,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.addFilter(HealthcheckFilter())
+
     # httpx-Request-Zeilen unterdrücken
     logging.getLogger("httpx").setLevel(logging.WARNING)
+
     return logging.getLogger("plugin-registration")
 
-access_logger = logging.getLogger("uvicorn.access")
-access_logger.addFilter(HealthcheckFilter())
 
 logger = configureLogging()
 
