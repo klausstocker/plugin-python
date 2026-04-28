@@ -123,21 +123,35 @@ INFO_OPEN = f"{SERVICEPATH}/open/info"
 # --------------------------
 # Logging
 # --------------------------
-logger = logging.getLogger("plugin-registration")
-logging.basicConfig(level=logging.INFO)
+LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-_registration_task = None
+logging.basicConfig(
+    level=logging.INFO,
+    format=LOG_FORMAT,
+    datefmt=DATE_FORMAT,
+    force=True,
+)
+
+logger = logging.getLogger("plugin-registration")
 
 IGNORE_PATHS = [
     "/open/pluginlist",
+    "/open/generalinfolist",
     "/version",
-    "/ping"
+    "/ping",
 ]
 
 class HealthcheckFilter(logging.Filter):
-    def filter(self, record):
+    def filter(self, record: logging.LogRecord) -> bool:
         msg = record.getMessage()
-        return not any(p in msg for p in IGNORE_PATHS)
+        return not any(path in msg for path in IGNORE_PATHS)
+
+access_logger = logging.getLogger("uvicorn.access")
+access_logger.addFilter(HealthcheckFilter())
+
+# httpx-Request-Zeilen unterdrücken
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # --------------------------
 # Utilities
