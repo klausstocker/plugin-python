@@ -42,3 +42,14 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
 - `GET  /pluginpython/api/open/generalinfolist`
 - `POST /pluginpython/api/open/generalinfo`
 - `POST /pluginpython/api/open/reloadplugindto`
+
+## Absicherung der Code-Execution-Endpunkte
+- Betroffene Endpunkte: `POST /pluginpython/run`, `POST /pluginpython/lint`, `POST /pluginpython/check`, `POST /pluginpython/example`.
+- Optional aktivierbar über Umgebungsvariablen:
+  - `PLUGIN_EXEC_REQUIRE_TOKEN=true` aktiviert die Prüfung.
+  - `PLUGIN_EXEC_TOKEN=<geheimes-token>` definiert das erwartete Token.
+- Übergabe des Tokens:
+  - Bevorzugt: `Authorization: Bearer <token>`
+  - Alternativ: Header `X-Plugin-Token: <token>`
+  - Alternativ: Query-Parameter `?token=<token>`
+- Die JavaScript-Clients (`initPluginPython`/`configPluginPython`) senden automatisch den Bearer-Token, wenn `dto.params.pluginToken` oder `dto.pluginToken` gesetzt ist.

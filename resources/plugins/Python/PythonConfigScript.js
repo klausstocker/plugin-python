@@ -17,6 +17,7 @@ function configPluginPython(dtoString) {
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
+    const pluginToken = (dto.params && dto.params.pluginToken) || dto.pluginToken || "";
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -571,7 +572,7 @@ function configPluginPython(dtoString) {
             try {
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: buildHeaders(),
                     body: JSON.stringify(bodyBuilder())
                 });
                 const data = await response.json();
@@ -620,5 +621,13 @@ function configPluginPython(dtoString) {
             .replace(/"/g, "&quot;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+    }
+
+    function buildHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        if (pluginToken) {
+            headers["Authorization"] = "Bearer " + pluginToken;
+        }
+        return headers;
     }
 }

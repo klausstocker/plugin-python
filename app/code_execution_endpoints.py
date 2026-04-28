@@ -1,8 +1,9 @@
+import hmac
 import os
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from shared.check import checkCode
@@ -12,8 +13,32 @@ from shared.question_config import QuestionConfigDto
 
 SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 UPLOAD_ROOT = Path(os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads"))
+REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "false").lower() == "true"
+EXEC_TOKEN = os.getenv("PLUGIN_EXEC_TOKEN", "")
 
 router = APIRouter()
+
+
+def _extract_exec_token(request: Request) -> str:
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return (
+        request.headers.get("x-plugin-token")
+        or request.query_params.get("token")
+        or ""
+    ).strip()
+
+
+def _ensure_authorized(request: Request) -> None:
+    if not REQUIRE_EXEC_TOKEN:
+        return
+    presented_token = _extract_exec_token(request)
+    if not EXEC_TOKEN or not hmac.compare_digest(presented_token, EXEC_TOKEN):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid plugin execution token",
+        )
 
 
 def _safe_session_name(value: str) -> str:
@@ -34,6 +59,7 @@ def _get_session_dir(request: Request) -> Path:
 
 @router.post(f"{SERVICEPATH}/run")
 async def run_code(request: Request):
+    _ensure_authorized(request)
     body = await request.json()
     code = body['code']
     try:
@@ -49,8 +75,10 @@ async def run_code(request: Request):
     except Exception:
         return JSONResponse({'output': 'Error running code'})
 
+
 @router.post(f"{SERVICEPATH}/lint")
 async def lint_code(request: Request):
+    _ensure_authorized(request)
     body = await request.json()
     code = body['code']
     score, messages = lintCode(code)
@@ -62,6 +90,7 @@ async def lint_code(request: Request):
 
 @router.post(f"{SERVICEPATH}/check")
 async def check_code(request: Request):
+    _ensure_authorized(request)
     body = await request.json()
     code = body['code']
     score, messages = lintCode(code)
@@ -76,6 +105,7 @@ async def check_code(request: Request):
 
 @router.post(f"{SERVICEPATH}/example")
 async def get_example(request: Request):
+    _ensure_authorized(request)
     body = await request.json()
     index = body.get("index", 0)
 
