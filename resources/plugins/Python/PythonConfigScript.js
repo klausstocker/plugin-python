@@ -17,7 +17,7 @@ function configPluginPython(dtoString) {
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
-    const pluginToken = (dto.params && dto.params.pluginToken) || dto.pluginToken || "";
+    const pluginToken = (dto.params && dto.params.pluginToken) || "";
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -528,7 +528,7 @@ function configPluginPython(dtoString) {
         try {
             const response = await fetch(serviceBase + "/example", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: buildHeaders(),
                 body: JSON.stringify({ index: index })
             });
             return await response.json();
