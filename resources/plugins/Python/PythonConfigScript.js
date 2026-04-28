@@ -28,7 +28,6 @@ function configPluginPython(dtoString) {
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
         fileNameId: `fileName_${pluginTag}`,
-        fileContentId: `fileContent_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
@@ -117,10 +116,7 @@ function configPluginPython(dtoString) {
                                 <div>
                                     <label>File name</label>
                                     <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                    <label>File content</label>
-                                    <textarea id="${ids.fileContentId}" class="code-input" placeholder="# file content"></textarea>
                                     <div class="btn-row small-gap">
-                                        <button type="button" class="cfg-btn" data-file-action="save">save/update</button>
                                         <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
                                         <button type="button" class="cfg-btn" data-file-action="download">download</button>
                                     </div>
@@ -257,15 +253,11 @@ function configPluginPython(dtoString) {
                 min-height: 0;
                 height: 100%;
             }
-            .pluginConfigForm .text-input,
-            .pluginConfigForm .code-input {
+            .pluginConfigForm .text-input {
                 width: 100%;
                 box-sizing: border-box;
                 margin: 4px 0 8px;
                 font-family: monospace;
-            }
-            .pluginConfigForm .code-input {
-                min-height: 180px;
             }
             .pluginConfigForm .file-list {
                 border: 1px solid #d0d0d0;
@@ -373,7 +365,6 @@ function configPluginPython(dtoString) {
 
     function setupFileTab() {
         const fileNameInput = document.getElementById(ids.fileNameId);
-        const fileContentInput = document.getElementById(ids.fileContentId);
         const fileList = document.getElementById(ids.fileListId);
         const fileUpload = document.getElementById(ids.fileUploadId);
 
@@ -388,7 +379,6 @@ function configPluginPython(dtoString) {
                 row.addEventListener("click", () => {
                     const name = row.getAttribute("data-file");
                     fileNameInput.value = name;
-                    fileContentInput.value = state.files[name] || "";
                 });
             });
         }
@@ -398,18 +388,9 @@ function configPluginPython(dtoString) {
                 const action = btn.getAttribute("data-file-action");
                 const name = (fileNameInput.value || "").trim();
 
-                if (action === "save") {
-                    if (!name) return;
-                    state.files[name] = fileContentInput.value || "";
-                    renderFileList();
-                    saveConfig();
-                    return;
-                }
-
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
                     delete state.files[name];
-                    fileContentInput.value = "";
                     renderFileList();
                     saveConfig();
                     return;
@@ -432,7 +413,6 @@ function configPluginPython(dtoString) {
                     const text = await file.text();
                     state.files[file.name] = text;
                     fileNameInput.value = file.name;
-                    fileContentInput.value = text;
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
