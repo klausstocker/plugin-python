@@ -27,6 +27,8 @@ function configPluginPython(dtoString) {
         btnRunId: `sharedRun_${pluginTag}`,
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
+        exampleSelectId: `exampleSelect_${pluginTag}`,
+        exampleApplyId: `exampleApply_${pluginTag}`,
         fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
@@ -44,6 +46,7 @@ function configPluginPython(dtoString) {
     setupFileTab();
     setupOptionsTab();
     bindSharedButtons();
+    setupExamples();
     renderHelp();
     saveConfig();
 
@@ -101,7 +104,14 @@ function configPluginPython(dtoString) {
 
                     <div id="${ids.tabsWrapId}" class="tab-panels">
                         <div class="tab-panel active" id="tab-unittest">
-                            <h3>UnitTest editor</h3>
+                            <div class="tab-title-row">
+                                <h3>Unit test</h3>
+                                <div class="unit-example-controls">
+                                    <label for="${ids.exampleSelectId}">Example:</label>
+                                    <select id="${ids.exampleSelectId}" class="text-input unit-example-select"></select>
+                                    <button type="button" id="${ids.exampleApplyId}" class="cfg-btn">Apply</button>
+                                </div>
+                            </div>
                             <div id="${ids.unitEditorId}" class="editor-box"></div>
                         </div>
 
@@ -219,6 +229,26 @@ function configPluginPython(dtoString) {
             }
             .pluginConfigForm .tab-panel.active {
                 display: flex;
+            }
+            .pluginConfigForm .tab-title-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+            }
+            .pluginConfigForm .tab-title-row h3 {
+                margin: 0;
+            }
+            .pluginConfigForm .unit-example-controls {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .pluginConfigForm .unit-example-select {
+                width: auto;
+                min-width: 120px;
+                margin: 0;
             }
             .pluginConfigForm .editor-box {
                 flex: 1;
@@ -341,9 +371,13 @@ function configPluginPython(dtoString) {
 
             configPluginPython._getUnitCode = () => unitEditor.getValue();
             configPluginPython._getPreviewCode = () => previewEditor.getValue();
+            configPluginPython._setUnitCode = (value) => unitEditor.session.setValue(value || "");
+            configPluginPython._setPreviewCode = (value) => previewEditor.session.setValue(value || "");
         } else {
             fallbackTextArea(ids.unitEditorId, initialUnit, "_getUnitCode");
             fallbackTextArea(ids.previewEditorId, initialPreview, "_getPreviewCode");
+            fallbackTextAreaSetter(ids.unitEditorId, "_setUnitCode");
+            fallbackTextAreaSetter(ids.previewEditorId, "_setPreviewCode");
         }
     }
 
@@ -353,6 +387,14 @@ function configPluginPython(dtoString) {
         const ta = target.querySelector("textarea");
         ta.addEventListener("input", saveConfig);
         configPluginPython[key] = () => ta.value;
+    }
+
+    function fallbackTextAreaSetter(targetId, key) {
+        configPluginPython[key] = (value) => {
+            const target = document.getElementById(targetId);
+            const ta = target ? target.querySelector("textarea") : null;
+            if (ta) ta.value = value || "";
+        };
     }
 
     function getUnitCode() {
@@ -448,6 +490,63 @@ function configPluginPython(dtoString) {
         bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
+    }
+
+    async function setupExamples() {
+        const select = document.getElementById(ids.exampleSelectId);
+        const applyBtn = document.getElementById(ids.exampleApplyId);
+        if (!select || !applyBtn) return;
+
+        const initial = await requestExample(0);
+        if (!initial || typeof initial.count !== "number") {
+            applyBtn.disabled = true;
+            return;
+        }
+
+        select.innerHTML = "";
+        for (let i = 0; i < initial.count; i += 1) {
+            const option = document.createElement("option");
+            option.value = String(i);
+            option.textContent = `Example ${i + 1}`;
+            select.appendChild(option);
+        }
+        select.disabled = initial.count === 0;
+        applyBtn.disabled = initial.count === 0;
+        select.value = "0";
+
+        applyBtn.addEventListener("click", async () => {
+            const index = Number(select.value);
+            const exampleData = await requestExample(index);
+            if (exampleData && exampleData.output) {
+                applyExample(exampleData.output);
+            }
+        });
+    }
+
+    async function requestExample(index) {
+        try {
+            const response = await fetch(serviceBase + "/example", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ index: index })
+            });
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function applyExample(example) {
+        if (!example) return;
+        state.files = example.files || {};
+        state.evalConfig = example.evalConfig || { runAtTest: true, unitTestAtTest: false, lintAtTest: true };
+
+        if (configPluginPython._setUnitCode) configPluginPython._setUnitCode(example.validation || "");
+        if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
+
+        setupFileTab();
+        setupOptionsTab();
+        saveConfig();
     }
 
     function getActiveEditorCode() {

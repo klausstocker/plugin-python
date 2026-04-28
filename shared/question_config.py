@@ -14,7 +14,7 @@ class QuestionConfigDto(BaseModel):
     evalConfig: EvalConfigDto = EvalConfigDto()
 
     @staticmethod
-    def examples() ->list[QuestionConfigDto]:
+    def examples():
         return [QuestionConfigDto(
         indication="""
 def calculate_sum(a, b):
@@ -26,6 +26,8 @@ def correctImplementation(arg1, arg2):
     sum = arg1 + arg2
     print(f'the sum is {sum}')
     return sum
+
+import unittest
 
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # names must start with 'test_'
