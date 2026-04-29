@@ -11,6 +11,7 @@ from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
 from shared.question_config import QuestionConfigDto
+from shared.question_examples import QuestionConfigDtoExamples
 
 SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 UPLOAD_ROOT = Path(os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads"))
@@ -114,7 +115,7 @@ async def get_example(request: Request):
     body = await request.json()
     index = body.get("index", 0)
 
-    examples = QuestionConfigDto.examples()
+    examples = QuestionConfigDtoExamples()
     count = len(examples)
 
     if count == 0:
