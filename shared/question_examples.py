@@ -76,18 +76,22 @@ import unittest
 class Checker(unittest.TestCase): # do not rename
     def test_example(self): # test method names must start with test_
         rotations = ["L68", "L30", "R48", "L5", "R60", "L55", "L1", "L99", "R14", "L82"]
-        self.assertEqual(count_zero_stops(50, rotations), 3)
+        #self.assertEqual(count_zero_stops(50, rotations), 3)
+        self.assertEqual(countPointingAt0(50, rotations), 3)
 
     def test_wraparound(self):
-        self.assertEqual(count_zero_stops(5, ["L10", "R5"]), 1)
+        #self.assertEqual(count_zero_stops(5, ["L10", "R5"]), 1)
+        self.assertEqual(countPointingAt0(5, ["L10", "R5"]), 1)
         
     def test_two_zero_stops(self):
         rotations = ["R50", "L1", "R1"]
-        self.assertEqual(count_zero_stops(50, rotations), 2)
+        #self.assertEqual(count_zero_stops(50, rotations), 2)
+        self.assertEqual(countPointingAt0(50, rotations), 2)
 
     def test_five_zero_stops(self):
         rotations = ["R50", "R100", "L100", "R200", "L300"]
-        self.assertEqual(count_zero_stops(50, rotations), 5)
+        #self.assertEqual(count_zero_stops(50, rotations), 5)
+        self.assertEqual(countPointingAt0(50, rotations), 5)
 
 """
     )]
