@@ -34,9 +34,8 @@ function configPluginPython(dtoString) {
         btnCheckId: `sharedCheck_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
-        fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
-        fileUploadId: `fileUpload_${pluginTag}`,
+        fileDropId: `fileDrop_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`
@@ -161,24 +160,9 @@ function configPluginPython(dtoString) {
 
                         <div class="tab-panel" id="tab-files">
                             <h3>File management</h3>
-                            <div class="files-grid">
-                                <div>
-                                    <label>File name</label>
-                                    <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                    <div class="btn-row small-gap">
-                                        <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                        <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                                    </div>
-                                    <div class="btn-row small-gap">
-                                        <input id="${ids.fileUploadId}" type="file" />
-                                        <button type="button" class="cfg-btn" data-file-action="upload">import</button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label>Stored files</label>
-                                    <div id="${ids.fileListId}" class="file-list"></div>
-                                </div>
-                            </div>
+                            <div id="${ids.fileDropId}" class="file-drop-zone">Drop files here to upload</div>
+                            <label>Stored files</label>
+                            <div id="${ids.fileListId}" class="file-list"></div>
                         </div>
 
                         <div class="tab-panel" id="tab-options">
@@ -445,9 +429,36 @@ function configPluginPython(dtoString) {
     }
 
     function setupFileTab() {
-        const fileNameInput = document.getElementById(ids.fileNameId);
         const fileList = document.getElementById(ids.fileListId);
-        const fileUpload = document.getElementById(ids.fileUploadId);
+        const fileDrop = document.getElementById(ids.fileDropId);
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append("file", file, file.name);
+            const response = await fetch(serviceBase + "/upload", {
+                method: "POST",
+                headers: buildAuthHeaders(),
+                body: formData
+            });
+            if (!response.ok) throw new Error("upload failed");
+            const uploadResult = await response.json();
+            state.files[file.name] = uploadResult.unique_name;
+        }
+
+        async function deleteFile(name) {
+            await fetch(serviceBase + "/delete", {
+                method: "POST",
+                headers: buildHeaders(),
+                body: JSON.stringify({ unique_name: state.files[name] })
+            });
+            delete state.files[name];
+        }
+
+        function downloadFile(name) {
+            const uniqueName = encodeURIComponent(state.files[name]);
+            const filename = encodeURIComponent(name);
+            window.open(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, "_blank");
+        }
 
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
@@ -455,60 +466,62 @@ function configPluginPython(dtoString) {
                 fileList.innerHTML = "<em>No files stored.</em>";
                 return;
             }
-            fileList.innerHTML = names.map((name) => `<div class="file-item" data-file="${escapeHtmlAttr(name)}">${escapeHtml(name)}</div>`).join("");
-            fileList.querySelectorAll(".file-item").forEach((row) => {
-                row.addEventListener("click", () => {
-                    const name = row.getAttribute("data-file");
-                    fileNameInput.value = name;
+            fileList.innerHTML = names.map((name) => (
+                `<div class="file-item" data-file="${escapeHtmlAttr(name)}">` +
+                `<span>${escapeHtml(name)}</span>` +
+                `<div class="file-actions">` +
+                `<span class="file-action" data-action="rename" title="Rename">✏️</span>` +
+                `<span class="file-action" data-action="download" title="Download">⬇️</span>` +
+                `<span class="file-action" data-action="delete" title="Delete">🗑️</span>` +
+                `</div></div>`
+            )).join("");
+
+            fileList.querySelectorAll(".file-action").forEach((btn) => {
+                btn.addEventListener("click", async (event) => {
+                    const row = event.target.closest(".file-item");
+                    const name = row ? row.getAttribute("data-file") : "";
+                    const action = event.target.getAttribute("data-action");
+                    if (!name || !state.files[name]) return;
+
+                    if (action === "delete") {
+                        await deleteFile(name);
+                    } else if (action === "download") {
+                        downloadFile(name);
+                    } else if (action === "rename") {
+                        const newName = window.prompt("New filename", name);
+                        if (!newName) return;
+                        const trimmed = newName.trim();
+                        if (!trimmed || trimmed === name) return;
+                        state.files[trimmed] = state.files[name];
+                        delete state.files[name];
+                    }
+                    renderFileList();
+                    saveConfig();
                 });
             });
         }
 
-        document.querySelectorAll("[data-file-action]").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-                const action = btn.getAttribute("data-file-action");
-                const name = (fileNameInput.value || "").trim();
-
-                if (action === "delete") {
-                    if (!name || !state.files[name]) return;
-                    await fetch(serviceBase + "/delete", {
-                        method: "POST",
-                        headers: buildHeaders(),
-                        body: JSON.stringify({ unique_name: state.files[name] })
-                    });
-                    delete state.files[name];
-                    renderFileList();
-                    saveConfig();
-                    return;
-                }
-
-                if (action === "download") {
-                    if (!name || !state.files[name]) return;
-                    const uniqueName = encodeURIComponent(state.files[name]);
-                    const filename = encodeURIComponent(name);
-                    window.open(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, "_blank");
-                    return;
-                }
-
-                if (action === "upload") {
-                    const file = fileUpload.files && fileUpload.files[0];
-                    if (!file) return;
-                    const formData = new FormData();
-                    formData.append("file", file, file.name);
-                    const response = await fetch(serviceBase + "/upload", {
-                        method: "POST",
-                        headers: buildAuthHeaders(),
-                        body: formData
-                    });
-                    if (!response.ok) throw new Error("upload failed");
-                    const uploadResult = await response.json();
-                    state.files[file.name] = uploadResult.unique_name;
-                    fileNameInput.value = file.name;
-                    fileUpload.value = "";
-                    renderFileList();
-                    saveConfig();
-                }
+        ["dragenter", "dragover"].forEach((eventName) => {
+            fileDrop.addEventListener(eventName, (event) => {
+                event.preventDefault();
+                fileDrop.classList.add("drag-over");
             });
+        });
+
+        ["dragleave", "drop"].forEach((eventName) => {
+            fileDrop.addEventListener(eventName, (event) => {
+                event.preventDefault();
+                fileDrop.classList.remove("drag-over");
+            });
+        });
+
+        fileDrop.addEventListener("drop", async (event) => {
+            const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
+            for (const file of files) {
+                await uploadFile(file);
+            }
+            renderFileList();
+            saveConfig();
         });
 
         renderFileList();
