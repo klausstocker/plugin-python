@@ -630,6 +630,7 @@ function configPluginPython(dtoString) {
         };
 
         questionConfigDto.validation = pluginConfig.validation;
+        questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.config = JSON.stringify(pluginConfig);
 
         configField.value = JSON.stringify(questionConfigDto);
