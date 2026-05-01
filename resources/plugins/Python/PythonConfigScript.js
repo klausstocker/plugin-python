@@ -501,21 +501,32 @@ function configPluginPython(dtoString) {
             });
         }
 
+        function preventBrowserFileOpen(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+            document.addEventListener(eventName, preventBrowserFileOpen);
+        });
+
         ["dragenter", "dragover"].forEach((eventName) => {
             fileDrop.addEventListener(eventName, (event) => {
-                event.preventDefault();
+                preventBrowserFileOpen(event);
+                if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
                 fileDrop.classList.add("drag-over");
             });
         });
 
         ["dragleave", "drop"].forEach((eventName) => {
             fileDrop.addEventListener(eventName, (event) => {
-                event.preventDefault();
+                preventBrowserFileOpen(event);
                 fileDrop.classList.remove("drag-over");
             });
         });
 
         fileDrop.addEventListener("drop", async (event) => {
+            preventBrowserFileOpen(event);
             const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
             for (const file of files) {
                 await uploadFile(file);
