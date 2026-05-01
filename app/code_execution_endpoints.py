@@ -2,23 +2,29 @@ import hmac
 import os
 import re
 import secrets
+import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Request, status, UploadFile, File
+from fastapi.responses import JSONResponse, FileResponse
+from pydantic import BaseModel
 
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
-from shared.question_config import QuestionConfigDto
 from shared.question_examples import QuestionConfigDtoExamples
 
 SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 UPLOAD_ROOT = Path(os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads"))
+PLUGIN_FILES_DIR = Path(os.getenv("PLUGIN_FILES_DIR", "/opt/letto/plugins/files"))
 REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "true").lower() == "true"
 EXEC_TOKEN = secrets.token_urlsafe(32)
 
 router = APIRouter()
+
+
+class DeleteFileRequest(BaseModel):
+    unique_name: str
 
 
 def get_exec_token() -> str:
@@ -52,6 +58,13 @@ def _safe_session_name(value: str) -> str:
     return token or "default"
 
 
+def _sanitize_unique_name(value: str) -> str:
+    value = (value or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", value):
+        raise HTTPException(status_code=400, detail="Invalid unique file name")
+    return value
+
+
 def _get_session_dir(request: Request) -> Path:
     session_id = (
         request.headers.get("x-session-id")
@@ -61,6 +74,47 @@ def _get_session_dir(request: Request) -> Path:
     session_dir = UPLOAD_ROOT / _safe_session_name(session_id)
     session_dir.mkdir(parents=True, exist_ok=True)
     return session_dir
+
+
+def _plugin_file_path(unique_name: str) -> Path:
+    clean = _sanitize_unique_name(unique_name)
+    return PLUGIN_FILES_DIR / clean
+
+
+@router.post(f"{SERVICEPATH}/upload")
+async def upload_file(request: Request, file: UploadFile = File(...)):
+    _ensure_authorized(request)
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing file name")
+
+    suffix = Path(file.filename).suffix
+    unique_name = f"{uuid.uuid4().hex}{suffix}" if suffix else uuid.uuid4().hex
+    PLUGIN_FILES_DIR.mkdir(parents=True, exist_ok=True)
+
+    content = await file.read()
+    target = _plugin_file_path(unique_name)
+    target.write_bytes(content)
+
+    return JSONResponse({"filename": file.filename, "unique_name": unique_name})
+
+
+@router.get(f"{SERVICEPATH}/download")
+async def download_file(request: Request, unique_name: str, filename: str | None = None):
+    _ensure_authorized(request)
+    target = _plugin_file_path(unique_name)
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    out_name = filename or target.name
+    return FileResponse(target, filename=out_name, media_type="application/octet-stream")
+
+
+@router.post(f"{SERVICEPATH}/delete")
+async def delete_file(request: Request, body: DeleteFileRequest):
+    _ensure_authorized(request)
+    target = _plugin_file_path(body.unique_name)
+    if target.exists():
+        target.unlink()
+    return JSONResponse({"deleted": body.unique_name})
 
 
 @router.post(f"{SERVICEPATH}/run")

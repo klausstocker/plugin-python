@@ -43,6 +43,7 @@ function configPluginPython(dtoString) {
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
+    if (!state.files || typeof state.files !== "object") state.files = {};
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
 
     drawForm();
@@ -470,6 +471,11 @@ function configPluginPython(dtoString) {
 
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
+                    await fetch(serviceBase + "/delete", {
+                        method: "POST",
+                        headers: buildHeaders(),
+                        body: JSON.stringify({ unique_name: state.files[name] })
+                    });
                     delete state.files[name];
                     renderFileList();
                     saveConfig();
@@ -477,21 +483,26 @@ function configPluginPython(dtoString) {
                 }
 
                 if (action === "download") {
-                    if (!name || state.files[name] == null) return;
-                    const blob = new Blob([state.files[name]], { type: "text/plain" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = name;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
+                    if (!name || !state.files[name]) return;
+                    const uniqueName = encodeURIComponent(state.files[name]);
+                    const filename = encodeURIComponent(name);
+                    window.open(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, "_blank");
                     return;
                 }
 
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    state.files[file.name] = text;
+                    const formData = new FormData();
+                    formData.append("file", file, file.name);
+                    const response = await fetch(serviceBase + "/upload", {
+                        method: "POST",
+                        headers: buildAuthHeaders(),
+                        body: formData
+                    });
+                    if (!response.ok) throw new Error("upload failed");
+                    const uploadResult = await response.json();
+                    state.files[file.name] = uploadResult.unique_name;
                     fileNameInput.value = file.name;
                     fileUpload.value = "";
                     renderFileList();
@@ -667,11 +678,15 @@ function configPluginPython(dtoString) {
             .replace(/>/g, "&gt;");
     }
 
-    function buildHeaders() {
-        const headers = { "Content-Type": "application/json" };
+    function buildAuthHeaders() {
+        const headers = {};
         if (pluginToken) {
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
+    }
+
+    function buildHeaders() {
+        return { ...buildAuthHeaders(), "Content-Type": "application/json" };
     }
 }
