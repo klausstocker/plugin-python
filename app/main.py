@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
 from app.code_execution_endpoints import get_exec_token, router as code_execution_router
 from fastapi.responses import PlainTextResponse, FileResponse
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
 from shared.question_config import QuestionConfigDto
@@ -452,6 +452,37 @@ class VarDto(BaseModel):
 class VarHashDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     vars: Optional[Dict[str, VarDto]] = Field(default_factory=dict)
+
+    @field_validator("vars", mode="before")
+    @classmethod
+    def normalize_vars(cls, value: Any) -> Dict[str, VarDto]:
+        if value is None:
+            return {}
+        if isinstance(value, VarHashDto):
+            return value.vars or {}
+        if not isinstance(value, dict):
+            return {}
+
+        normalized: Dict[str, VarDto] = {}
+        for name, raw_var in value.items():
+            if isinstance(raw_var, VarDto):
+                normalized[name] = raw_var
+            elif isinstance(raw_var, VarHashDto):
+                # Some clients accidentally nest VarHashDto objects where a VarDto is expected.
+                # Keep first leaf variable if available so serialization remains stable.
+                nested_vars = raw_var.vars or {}
+                normalized[name] = next(iter(nested_vars.values()), VarDto())
+            elif isinstance(raw_var, dict):
+                if "vars" in raw_var and isinstance(raw_var.get("vars"), dict):
+                    nested_vars = raw_var.get("vars") or {}
+                    first_leaf = next(iter(nested_vars.values()), None)
+                    normalized[name] = VarDto.model_validate(first_leaf or {})
+                else:
+                    normalized[name] = VarDto.model_validate(raw_var)
+            else:
+                normalized[name] = VarDto()
+
+        return normalized
 
     def to_java_string(self) -> str:
         if not self.vars:
