@@ -34,7 +34,6 @@ function configPluginPython(dtoString) {
         btnCheckId: `sharedCheck_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
-        fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
@@ -160,22 +159,17 @@ function configPluginPython(dtoString) {
                         </div>
 
                         <div class="tab-panel" id="tab-files">
-                            <div class="files-grid">
-                                <div>
-                            <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                            <div class="btn-row small-gap">
-                                <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                            </div>
-                                    <div class="btn-row small-gap">
-                                        <input id="${ids.fileUploadId}" type="file" />
-                                        <button type="button" class="cfg-btn" data-file-action="upload">import</button>
-                                    </div>
+                            <div class="files-panel">
+                                <div class="btn-row small-gap">
+                                    <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
+                                    <button type="button" class="cfg-btn" data-file-action="download">download</button>
                                 </div>
-                            <div>
+                                <div class="btn-row small-gap">
+                                    <input id="${ids.fileUploadId}" type="file" />
+                                    <button type="button" class="cfg-btn" data-file-action="upload">import</button>
+                                </div>
                                 <label>Stored files</label>
                                 <div id="${ids.fileListId}" class="file-list"></div>
-                            </div>
                             </div>
                         </div>
 
@@ -313,9 +307,9 @@ function configPluginPython(dtoString) {
                 font-family: monospace;
                 font-size: 13px;
             }
-            .pluginConfigForm .files-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
+            .pluginConfigForm .files-panel {
+                display: flex;
+                flex-direction: column;
                 gap: 10px;
                 min-height: 0;
                 height: 100%;
@@ -359,6 +353,9 @@ function configPluginPython(dtoString) {
             }
             .pluginConfigForm .file-item:hover {
                 background: #f5f5f5;
+            }
+            .pluginConfigForm .file-item.selected {
+                background: #e6f2ff;
             }
             .pluginConfigForm .checkbox-row {
                 display: block;
@@ -461,9 +458,9 @@ function configPluginPython(dtoString) {
     }
 
     function setupFileTab() {
-        const fileNameInput = document.getElementById(ids.fileNameId);
         const fileList = document.getElementById(ids.fileListId);
         const fileUpload = document.getElementById(ids.fileUploadId);
+        let selectedFileName = "";
 
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
@@ -474,8 +471,9 @@ function configPluginPython(dtoString) {
             fileList.innerHTML = names.map((name) => `<div class="file-item" data-file="${escapeHtmlAttr(name)}">${escapeHtml(name)}</div>`).join("");
             fileList.querySelectorAll(".file-item").forEach((row) => {
                 row.addEventListener("click", () => {
-                    const name = row.getAttribute("data-file");
-                    fileNameInput.value = name;
+                    selectedFileName = row.getAttribute("data-file") || "";
+                    fileList.querySelectorAll(".file-item").forEach((el) => el.classList.remove("selected"));
+                    row.classList.add("selected");
                 });
             });
         }
@@ -483,7 +481,7 @@ function configPluginPython(dtoString) {
         document.querySelectorAll("[data-file-action]").forEach((btn) => {
             btn.addEventListener("click", async () => {
                 const action = btn.getAttribute("data-file-action");
-                const name = (fileNameInput.value || "").trim();
+                const name = (selectedFileName || "").trim();
 
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
@@ -519,7 +517,7 @@ function configPluginPython(dtoString) {
                     if (!response.ok) throw new Error("upload failed");
                     const uploadResult = await response.json();
                     state.files[file.name] = uploadResult.unique_name;
-                    fileNameInput.value = file.name;
+                    selectedFileName = file.name;
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
