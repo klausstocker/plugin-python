@@ -3,8 +3,12 @@ try {
 } catch (e) {}
 
 function configPluginPython(dtoString) {
+    // -------------------------- Verbindungskonstante zu LeTTo ---------------------------------------
+    // Div Element welches im Konfigurations-Formular liegt - MUSS für LETTO SO HEISSEN!!
     const config_form_div = "#configform_div";
+    // verstecktes Input-Element für die Eingabe - MUSS für LETTO SO HEISSEN !!
     const config_form_config = ".configform_config";
+    // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
     let jsonData = {};

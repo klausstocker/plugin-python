@@ -1296,8 +1296,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         img = pi.get_image_base64(req.params or "", req.q)
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
         return PluginDto(
-            tagName=tag_name, 
-            imageUrl="data:image/png;base64," + (img.base64Image or ""), 
+            tagName=tag_name,
+            imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
             params={"pluginToken": get_exec_token()},
@@ -1438,7 +1438,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
 # Info endpoints (both internal and external convenience)
 @app.get(PING, response_class=PlainTextResponse)
-def ping():
+def ping() -> str:
     return "pong"
 
 
@@ -1449,7 +1449,7 @@ def ping_servicepath() -> str:
 
 
 @app.get(PINGOPEN, response_class=PlainTextResponse)
-def ping_open():
+def ping_open() -> str:
     return "pong"
 
 
@@ -1457,8 +1457,8 @@ def ping_open():
 def info():
     return ServiceInfoDTO(
         serviceName="pluginpython",
-        version="python",
-        author="LeTTo",
+        version="0.1",
+        author="Klaus Stocker",
         starttime=datetime.now().isoformat(),
         adminInfoDto=AdminInfoDto(applicationname="pluginpython"),
     )
@@ -1509,8 +1509,8 @@ def extern_reload(req: LoadPluginRequestDto):
     img = pi.get_image_base64(req.params or "", req.q)
     tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
     return PluginDto(
-        tagName=tag_name, 
-        imageUrl="data:image/png;base64," + (img.base64Image or ""), 
+        tagName=tag_name,
+        imageUrl="data:image/png;base64," + (img.base64Image or ""),
         width=CONF_width,
         height=CONF_height,
         params={"pluginToken": get_exec_token()},
