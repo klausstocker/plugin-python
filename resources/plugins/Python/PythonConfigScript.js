@@ -160,24 +160,22 @@ function configPluginPython(dtoString) {
                         </div>
 
                         <div class="tab-panel" id="tab-files">
-                            <h3>File management</h3>
                             <div class="files-grid">
                                 <div>
-                                    <label>File name</label>
-                                    <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                    <div class="btn-row small-gap">
-                                        <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                        <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                                    </div>
+                            <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
+                            <div class="btn-row small-gap">
+                                <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
+                                <button type="button" class="cfg-btn" data-file-action="download">download</button>
+                            </div>
                                     <div class="btn-row small-gap">
                                         <input id="${ids.fileUploadId}" type="file" />
                                         <button type="button" class="cfg-btn" data-file-action="upload">import</button>
                                     </div>
                                 </div>
-                                <div>
-                                    <label>Stored files</label>
-                                    <div id="${ids.fileListId}" class="file-list"></div>
-                                </div>
+                            <div>
+                                <label>Stored files</label>
+                                <div id="${ids.fileListId}" class="file-list"></div>
+                            </div>
                             </div>
                         </div>
 
@@ -327,6 +325,24 @@ function configPluginPython(dtoString) {
                 box-sizing: border-box;
                 margin: 4px 0 8px;
                 font-family: monospace;
+            }
+            .pluginConfigForm .file-input {
+                width: 100%;
+                box-sizing: border-box;
+                margin: 4px 0 8px;
+                color: #111;
+                background: #fff;
+                border: 1px solid #b8b8b8;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            .pluginConfigForm .file-input::file-selector-button {
+                margin-right: 8px;
+                border: 1px solid #b8b8b8;
+                background: #f0f0f0;
+                padding: 4px 10px;
+                border-radius: 4px;
+                cursor: pointer;
             }
             .pluginConfigForm .file-list {
                 border: 1px solid #d0d0d0;
