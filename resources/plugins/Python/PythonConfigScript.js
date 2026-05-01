@@ -166,7 +166,7 @@ function configPluginPython(dtoString) {
                                 </div>
                                 <div class="btn-row small-gap">
                                     <input id="${ids.fileUploadId}" type="file" />
-                                    <button type="button" class="cfg-btn" data-file-action="upload">import</button>
+                                    <button type="button" class="cfg-btn" data-file-action="upload">upload</button>
                                 </div>
                                 <label>Stored files</label>
                                 <div id="${ids.fileListId}" class="file-list"></div>
