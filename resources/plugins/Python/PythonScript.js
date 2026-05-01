@@ -18,7 +18,7 @@ function initPluginPython(dtoString, active) {
         active: !!active,
         serviceBase: (dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
-    const pluginToken = (dto.params && dto.params.pluginToken) || "";
+    const pluginToken = (dto.params && dto.params.pluginToken) || dto.pluginToken || "";
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
