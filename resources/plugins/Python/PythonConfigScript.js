@@ -36,6 +36,7 @@ function configPluginPython(dtoString) {
         exampleApplyId: `exampleApply_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileDropId: `fileDrop_${pluginTag}`,
+        fileInputId: `fileInput_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`
@@ -160,7 +161,8 @@ function configPluginPython(dtoString) {
 
                         <div class="tab-panel" id="tab-files">
                             <h3>File management</h3>
-                            <div id="${ids.fileDropId}" class="file-drop-zone">Drop files here to upload</div>
+                            <div id="${ids.fileDropId}" class="file-drop-zone" tabindex="0">Drop files here or click to browse</div>
+                            <input id="${ids.fileInputId}" type="file" multiple style="display:none" />
                             <label>Stored files</label>
                             <div id="${ids.fileListId}" class="file-list"></div>
                         </div>
@@ -431,6 +433,7 @@ function configPluginPython(dtoString) {
     function setupFileTab() {
         const fileList = document.getElementById(ids.fileListId);
         const fileDrop = document.getElementById(ids.fileDropId);
+        const fileInput = document.getElementById(ids.fileInputId);
 
         async function uploadFile(file) {
             const formData = new FormData();
@@ -443,6 +446,16 @@ function configPluginPython(dtoString) {
             if (!response.ok) throw new Error("upload failed");
             const uploadResult = await response.json();
             state.files[file.name] = uploadResult.unique_name;
+        }
+
+        async function handleFiles(fileListLike) {
+            const files = Array.from(fileListLike || []);
+            if (!files.length) return;
+            for (const file of files) {
+                await uploadFile(file);
+            }
+            renderFileList();
+            saveConfig();
         }
 
         async function deleteFile(name) {
@@ -460,7 +473,7 @@ function configPluginPython(dtoString) {
             window.open(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, "_blank");
         }
 
-        function renderFileList() {
+        function renderFileList() { /* unchanged */
             const names = Object.keys(state.files || {}).sort();
             if (!names.length) {
                 fileList.innerHTML = "<em>No files stored.</em>";
@@ -501,41 +514,40 @@ function configPluginPython(dtoString) {
             });
         }
 
-        function preventBrowserFileOpen(event) {
-            event.preventDefault();
-        }
-
-        ["dragover", "drop"].forEach((eventName) => {
-            window.addEventListener(eventName, preventBrowserFileOpen);
+        fileDrop.addEventListener("click", () => fileInput.click());
+        fileDrop.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                fileInput.click();
+            }
         });
 
-        ["dragenter", "dragover"].forEach((eventName) => {
+        fileInput.addEventListener("change", async () => {
+            await handleFiles(fileInput.files);
+            fileInput.value = "";
+        });
+
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
             fileDrop.addEventListener(eventName, (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+            });
+        });
+
+        ["dragenter", "dragover"].forEach((eventName) => {
+            fileDrop.addEventListener(eventName, () => {
                 fileDrop.classList.add("drag-over");
             });
         });
 
         ["dragleave", "drop"].forEach((eventName) => {
-            fileDrop.addEventListener(eventName, (event) => {
-                event.preventDefault();
-                event.stopPropagation();
+            fileDrop.addEventListener(eventName, () => {
                 fileDrop.classList.remove("drag-over");
             });
         });
 
         fileDrop.addEventListener("drop", async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
-            if (!files.length) return;
-            for (const file of files) {
-                await uploadFile(file);
-            }
-            renderFileList();
-            saveConfig();
+            await handleFiles(event.dataTransfer ? event.dataTransfer.files : []);
         });
 
         renderFileList();
