@@ -39,6 +39,7 @@ function configPluginPython(dtoString) {
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
+    const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
 
     drawForm();
     ensureStyles();
@@ -52,6 +53,7 @@ function configPluginPython(dtoString) {
     saveConfig();
 
     function parseConfig(rawValue, fallbackData) {
+        const configRawValue = extractRawConfig(rawValue);
         const defaults = {
             indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
             validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
@@ -63,10 +65,10 @@ function configPluginPython(dtoString) {
             }
         };
 
-        if (!rawValue) return defaults;
+        if (!configRawValue) return defaults;
 
         try {
-            const parsed = JSON.parse(rawValue);
+            const parsed = JSON.parse(configRawValue);
             return {
                 indication: parsed.indication || defaults.indication,
                 validation: parsed.validation || defaults.validation,
@@ -79,12 +81,43 @@ function configPluginPython(dtoString) {
             };
         } catch (e) {
             return {
-                indication: rawValue,
+                indication: configRawValue,
                 validation: defaults.validation,
                 files: defaults.files,
                 evalConfig: defaults.evalConfig
             };
         }
+    }
+
+
+    function parseQuestionConfigDto(rawValue, sourceDto) {
+        const fallback = sourceDto && sourceDto.questionConfigDto && typeof sourceDto.questionConfigDto === "object"
+            ? { ...sourceDto.questionConfigDto }
+            : {};
+
+        if (!rawValue) return fallback;
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            if (parsed && typeof parsed === "object" && Object.prototype.hasOwnProperty.call(parsed, "config")) {
+                return { ...fallback, ...parsed };
+            }
+        } catch (e) {}
+
+        return fallback;
+    }
+
+    function extractRawConfig(rawValue) {
+        if (!rawValue) return "";
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            if (parsed && typeof parsed === "object" && typeof parsed.config === "string") {
+                return parsed.config;
+            }
+        } catch (e) {}
+
+        return rawValue;
     }
 
     function drawForm() {
@@ -588,12 +621,18 @@ function configPluginPython(dtoString) {
 
     function saveConfig() {
         if (!configField) return;
-        configField.value = JSON.stringify({
+
+        const pluginConfig = {
             indication: getPreviewCode(),
             validation: getUnitCode(),
             files: state.files || {},
             evalConfig: state.evalConfig || {}
-        });
+        };
+
+        questionConfigDto.validation = pluginConfig.validation;
+        questionConfigDto.config = JSON.stringify(pluginConfig);
+
+        configField.value = JSON.stringify(questionConfigDto);
     }
 
     function renderHelp() {
