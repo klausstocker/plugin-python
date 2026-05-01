@@ -42,7 +42,7 @@ services:
       letto_user_gast_password: ${SERVICE_GAST_PASSWORD}
       letto_setup_uri: ${LETTO_SETUP_URI:-http://letto-setup.nw-letto:8096}
       letto_plugin_uri_intern: ${LETTO_PLUGIN_URI_INTERN:-http://letto-pluginpython.nw-letto:8080}
-      letto_plugin_uri_extern: ${LETTO_PLUGIN_URI_EXTERN:-https://${SERVER_NAME}}/${SERVICEPATH}
+      letto_plugin_uri_extern: ${LETTO_PLUGIN_URI_EXTERN:-https://${SERVER_NAME}}${SERVICEPATH}
       letto_pathImages: /opt/letto/images
       letto_pathPlugins: /opt/letto/plugins
       letto_webPathImages: ${SERVER_NAME}/images
