@@ -27,6 +27,11 @@ class DeleteFileRequest(BaseModel):
     unique_name: str
 
 
+class AnswerDto(BaseModel):
+    code: str
+    files: dict[str, str] = {}
+
+
 def get_exec_token() -> str:
     return EXEC_TOKEN
 
@@ -81,6 +86,19 @@ def _plugin_file_path(unique_name: str) -> Path:
     return PLUGIN_FILES_DIR / clean
 
 
+def _resolve_uploaded_files(files: dict[str, str]) -> dict[str, bytes]:
+    file_data: dict[str, bytes] = {}
+    for filename, unique_name in files.items():
+        path = _plugin_file_path(unique_name)
+        if not path.is_file():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Uploaded file not found for '{filename}' ({unique_name})",
+            )
+        file_data[filename] = path.read_bytes()
+    return file_data
+
+
 @router.post(f"{SERVICEPATH}/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     _ensure_authorized(request)
@@ -120,18 +138,15 @@ async def delete_file(request: Request, body: DeleteFileRequest):
 @router.post(f"{SERVICEPATH}/run")
 async def run_code(request: Request):
     _ensure_authorized(request)
-    body = await request.json()
-    code = body['code']
+    body = AnswerDto.model_validate(await request.json())
     try:
-        session_dir = _get_session_dir(request)
-        file_data = {}
-        for filepath in session_dir.iterdir():
-            if filepath.is_file():
-                file_data[filepath.name] = filepath.read_bytes()
+        file_data = _resolve_uploaded_files(body.files)
         files = JobeWrapper.createFiles(file_data)
         jobe = JobeWrapper('jobe:80')
-        result = jobe.run_test('python3', code, 'test.py', files)
+        result = jobe.run_test('python3', body.code, 'test.py', files)
         return JSONResponse({'output': result.__repr__()})
+    except HTTPException:
+        raise
     except Exception:
         return JSONResponse({'output': 'Error running code'})
 
@@ -152,7 +167,8 @@ async def lint_code(request: Request):
 async def check_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
-    code = body['code']
+    answer = AnswerDto.model_validate(body)
+    code = answer.code
     score, messages = lintCode(code)
     messagesText = f'Your code has been rated: {score:.2f}/10.0'
     testcode = body['testcode']

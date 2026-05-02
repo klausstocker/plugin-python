@@ -479,7 +479,7 @@ function configPluginPython(dtoString) {
         }
 
         document.querySelectorAll("[data-file-action]").forEach((btn) => {
-            btn.addEventListener("click", async () => {
+            btn.onclick = async () => {
                 const action = btn.getAttribute("data-file-action");
                 const name = (selectedFileName || "").trim();
 
@@ -522,7 +522,7 @@ function configPluginPython(dtoString) {
                     renderFileList();
                     saveConfig();
                 }
-            });
+            };
         });
 
         renderFileList();
@@ -550,7 +550,7 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), files: state.files || {} }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
     }
