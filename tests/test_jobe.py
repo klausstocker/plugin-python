@@ -37,10 +37,10 @@ def correctImplementation(arg1, arg2):
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # names must start with 'test_'
         args = (1, 2)
-        student_result = calculate_sum(*args) # call to students implementation 
+        student_result = calculate_sum(*args) # call to students implementation
         expected_result = correctImplementation(*args)
         self.assertEqual(student_result, expected_result)
-        
+
     def test_output(self):
         args = (3, 4)
         with RedirectedStdout() as student_out:
@@ -60,14 +60,15 @@ class Checker(unittest.TestCase): # do not rename
         self.assertTrue(jobe.check_file(fileId))
 
     def testWithFiles(self):
-        files = {'file1': ('The first file\nLine 2').encode(),
-                 'file2': ('Second file').encode()}
+        files = [
+            ('e4f31939e9be48d5bb5a9b4bb82d68cd', 'file1', ('The first file\nLine 2').encode()),
+            ('e4f31939e9be48d5bb5a9b4bb82d68ce', 'file2', ('Second file').encode()),
+        ]
         code = """
 print(open('file1').read())
 print(open('file2').read())
 """
-        fileSpec = JobeWrapper.createFiles(files)
         jobe = JobeWrapper('localhost:4000')
-        result = jobe.run_test('python3', code, 'test.py', fileSpec)
+        result = jobe.run_test('python3', code, 'test.py', files)
         self.assertTrue(result.success())
         self.assertEqual(result.stdout, "The first file\nLine 2\nSecond file\n")
