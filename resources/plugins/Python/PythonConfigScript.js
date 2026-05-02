@@ -43,7 +43,6 @@ function configPluginPython(dtoString) {
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     if (!state.files || typeof state.files !== "object") state.files = {};
-    const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
 
     drawForm();
     ensureStyles();
@@ -93,23 +92,6 @@ function configPluginPython(dtoString) {
         }
     }
 
-
-    function parseQuestionConfigDto(rawValue, sourceDto) {
-        const fallback = sourceDto && sourceDto.questionConfigDto && typeof sourceDto.questionConfigDto === "object"
-            ? { ...sourceDto.questionConfigDto }
-            : {};
-
-        if (!rawValue) return fallback;
-
-        try {
-            const parsed = JSON.parse(rawValue);
-            if (parsed && typeof parsed === "object" && Object.prototype.hasOwnProperty.call(parsed, "config")) {
-                return { ...fallback, ...parsed };
-            }
-        } catch (e) {}
-
-        return fallback;
-    }
 
     function extractRawConfig(rawValue) {
         if (!rawValue) return "";
@@ -671,11 +653,8 @@ function configPluginPython(dtoString) {
             evalConfig: state.evalConfig || {}
         };
 
-        questionConfigDto.validation = pluginConfig.validation;
-        questionConfigDto.indication = pluginConfig.indication;
-        questionConfigDto.config = JSON.stringify(pluginConfig);
-
-        configField.value = JSON.stringify(questionConfigDto);
+        // Persist exactly as QuestionConfigDto (no nested "config" JSON string).
+        configField.value = JSON.stringify(pluginConfig);
     }
 
     function renderHelp() {
