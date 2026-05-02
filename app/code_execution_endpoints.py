@@ -86,8 +86,8 @@ def _plugin_file_path(unique_name: str) -> Path:
     return PLUGIN_FILES_DIR / clean
 
 
-def _resolve_uploaded_files(files: dict[str, str]) -> dict[str, bytes]:
-    file_data: dict[str, bytes] = {}
+def _resolve_uploaded_files(files: dict[str, str]) -> list[tuple[str, str, bytes]]:
+    file_data: list[tuple[str, str, bytes]] = []
     for filename, unique_name in files.items():
         path = _plugin_file_path(unique_name)
         if not path.is_file():
@@ -95,7 +95,7 @@ def _resolve_uploaded_files(files: dict[str, str]) -> dict[str, bytes]:
                 status_code=404,
                 detail=f"Uploaded file not found for '{filename}' ({unique_name})",
             )
-        file_data[filename] = path.read_bytes()
+        file_data.append((unique_name, filename, path.read_bytes()))
     return file_data
 
 

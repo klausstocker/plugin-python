@@ -2,7 +2,6 @@ from urllib.error import HTTPError
 import json
 import http.client
 import base64
-import uuid
 
 RESOURCE_BASE = '/jobe/index.php/restapi'
 
@@ -75,13 +74,8 @@ class JobeWrapper():
         self.server = server
 
     @staticmethod
-    def createFiles(files: dict):
-        commonId = uuid.uuid4().hex
-        filesWithId = []
-        for name, content in files.items():
-            fileId = f'{commonId[:10]}{name}'
-            filesWithId.append((fileId, name, content))
-        return filesWithId
+    def createFiles(files: list[tuple[str, str, bytes]]):
+        return files
 
     def http_request(self, method, resource, data, headers):
         '''Send a request to Jobe with given HTTP method to given resource on

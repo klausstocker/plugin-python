@@ -60,8 +60,10 @@ class Checker(unittest.TestCase): # do not rename
         self.assertTrue(jobe.check_file(fileId))
 
     def testWithFiles(self):
-        files = {'file1': ('The first file\nLine 2').encode(),
-                 'file2': ('Second file').encode()}
+        files = [
+            ('file1', 'file1', ('The first file\nLine 2').encode()),
+            ('file2', 'file2', ('Second file').encode()),
+        ]
         code = """
 print(open('file1').read())
 print(open('file2').read())
