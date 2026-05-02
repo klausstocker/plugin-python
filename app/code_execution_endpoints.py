@@ -86,6 +86,19 @@ def _plugin_file_path(unique_name: str) -> Path:
     return PLUGIN_FILES_DIR / clean
 
 
+def _resolve_uploaded_files(files: dict[str, str]) -> dict[str, bytes]:
+    file_data: dict[str, bytes] = {}
+    for filename, unique_name in files.items():
+        path = _plugin_file_path(unique_name)
+        if not path.is_file():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Uploaded file not found for '{filename}' ({unique_name})",
+            )
+        file_data[filename] = path.read_bytes()
+    return file_data
+
+
 @router.post(f"{SERVICEPATH}/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     _ensure_authorized(request)
@@ -127,13 +140,13 @@ async def run_code(request: Request):
     _ensure_authorized(request)
     body = AnswerDto.model_validate(await request.json())
     try:
-        file_data = {}
-        for filename, unique_name in body.files.items():
-            file_data[filename] = _plugin_file_path(unique_name).read_bytes()
+        file_data = _resolve_uploaded_files(body.files)
         files = JobeWrapper.createFiles(file_data)
         jobe = JobeWrapper('jobe:80')
         result = jobe.run_test('python3', body.code, 'test.py', files)
         return JSONResponse({'output': result.__repr__()})
+    except HTTPException:
+        raise
     except Exception:
         return JSONResponse({'output': 'Error running code'})
 
