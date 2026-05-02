@@ -105,8 +105,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing file name")
 
-    suffix = Path(file.filename).suffix
-    unique_name = f"{uuid.uuid4().hex}{suffix}" if suffix else uuid.uuid4().hex
+    unique_name = f"{uuid.uuid4().hex}"
     PLUGIN_FILES_DIR.mkdir(parents=True, exist_ok=True)
 
     content = await file.read()
@@ -141,9 +140,8 @@ async def run_code(request: Request):
     body = AnswerDto.model_validate(await request.json())
     try:
         file_data = _resolve_uploaded_files(body.files)
-        files = JobeWrapper.createFiles(file_data)
         jobe = JobeWrapper('jobe:80')
-        result = jobe.run_test('python3', body.code, 'test.py', files)
+        result = jobe.run_test('python3', body.code, 'test.py', file_data)
         return JSONResponse({'output': result.__repr__()})
     except HTTPException:
         raise
