@@ -10,6 +10,7 @@ import httpx
 import platform
 import socket
 import time
+from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from logging import Logger
 from contextlib import asynccontextmanager
@@ -731,6 +732,13 @@ class UploadResponseDto(BaseModel):
     filename: Optional[str] = ""
 
 
+class ConfigurationMode(IntEnum):
+    STRING = 0
+    JSF = 1
+    JAVASCRIPT = 2
+    URL = 3
+
+
 # --------------------------
 # Plugin: die eigentliche Pluginklasse
 # --------------------------
@@ -749,11 +757,7 @@ class PluginPython:
         self.bgcolor = "white"
         self.configMessage = ""
         # configuration modes from Java PluginConfigurationInfoDto
-        self.CONFIGMODE_STRING = 0
-        self.CONFIGMODE_JSF = 1
-        self.CONFIGMODE_JAVASCRIPT = 2
-        self.CONFIGMODE_URL = 3
-        self.configurationMode = self.CONFIGMODE_JAVASCRIPT
+        self.configurationMode = ConfigurationMode.JAVASCRIPT
 
         # parse semicolon params like in Java
         for p in (self.config.split(";") if self.config else []):
@@ -766,13 +770,13 @@ class PluginPython:
                 continue
             key = p.replace(" ", "")
             if key == "mode=iframe":
-                self.configurationMode = self.CONFIGMODE_URL
+                self.configurationMode = ConfigurationMode.URL
             elif key == "mode=string":
-                self.configurationMode = self.CONFIGMODE_STRING
+                self.configurationMode = ConfigurationMode.STRING
             elif key == "mode=jsf":
-                self.configurationMode = self.CONFIGMODE_JSF
+                self.configurationMode = ConfigurationMode.JSF
             elif key == "mode=js":
-                self.configurationMode = self.CONFIGMODE_JAVASCRIPT
+                self.configurationMode = ConfigurationMode.JAVASCRIPT
             else:
                 self._parse_param(p)
 
