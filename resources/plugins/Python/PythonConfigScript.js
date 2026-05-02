@@ -479,7 +479,7 @@ function configPluginPython(dtoString) {
         }
 
         document.querySelectorAll("[data-file-action]").forEach((btn) => {
-            btn.addEventListener("click", async () => {
+            btn.onclick = async () => {
                 const action = btn.getAttribute("data-file-action");
                 const name = (selectedFileName || "").trim();
 
@@ -522,7 +522,7 @@ function configPluginPython(dtoString) {
                     renderFileList();
                     saveConfig();
                 }
-            });
+            };
         });
 
         renderFileList();
