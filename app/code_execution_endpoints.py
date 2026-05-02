@@ -145,8 +145,8 @@ async def run_code(request: Request):
         return JSONResponse({'output': result.__repr__()})
     except HTTPException:
         raise
-    except Exception:
-        return JSONResponse({'output': 'Error running code'})
+    except Exception as e:
+        return JSONResponse({'output': f'Error running code: {e}'})
 
 
 @router.post(f"{SERVICEPATH}/lint")
