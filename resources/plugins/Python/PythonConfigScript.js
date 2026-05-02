@@ -500,7 +500,20 @@ function configPluginPython(dtoString) {
                     if (!name || !state.files[name]) return;
                     const uniqueName = encodeURIComponent(state.files[name]);
                     const filename = encodeURIComponent(name);
-                    window.open(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, "_blank");
+                    const response = await fetch(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, {
+                        method: "GET",
+                        headers: buildAuthHeaders()
+                    });
+                    if (!response.ok) throw new Error("download failed");
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = name;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
                     return;
                 }
 
