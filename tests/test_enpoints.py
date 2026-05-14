@@ -27,8 +27,8 @@ class TestEndpoints(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["name"], "pluginpython")
-        self.assertEqual(body["servicename"], "pluginpython")
+        self.assertEqual(body["serviceName"], "pluginpython")
+        self.assertEqual(body["author"], "Klaus Stocker")
 
     def test_post_configurationinfo_returns_configuration_dto_shape(self):
         payload = {
