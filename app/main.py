@@ -22,6 +22,7 @@ from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
+from enum import IntEnum
 from shared.question_config import QuestionConfigDto
 
 # --------------------------
@@ -658,6 +659,14 @@ class PluginDatasetListDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     datasets: Optional[List[PluginDatasetDto]] = Field(default_factory=list)
 
+
+
+class ConfigurationMode(IntEnum):
+    STRING = 0
+    JSF = 1
+    JAVASCRIPT = 2
+    URL = 3
+
 class PluginConfigurationInfoRequestDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     typ: Optional[str] = None
@@ -670,7 +679,7 @@ class PluginConfigurationInfoRequestDto(BaseModel):
 class PluginConfigurationInfoDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     configurationID: Optional[str] = ""         # Konfigurations ID
-    configurationMode: int = 0        # Konfigurations-Mode 0..String, 1..JSF, 2..Javascript, 3..Url
+    configurationMode: ConfigurationMode = ConfigurationMode.STRING  # Konfigurations-Mode 0..String, 1..JSF, 2..Javascript, 3..Url
     useQuestion: bool = True          # Gibt an ob im Plugin für die Konfiguration die Frage benötigt wird
     useVars: bool = True              # Gibt an ob im Plugin für die Konfiguration der Vars Varhash benötigt wird
     useCVars: bool = True             # Gibt an ob im Plugin für die Konfiguration der cVars Varhash benötigt wird
@@ -777,11 +786,7 @@ class PluginPython:
         self.bgcolor = "white"
         self.configMessage = ""
         # configuration modes from Java PluginConfigurationInfoDto
-        self.CONFIGMODE_STRING = 0
-        self.CONFIGMODE_JSF = 1
-        self.CONFIGMODE_JAVASCRIPT = 2
-        self.CONFIGMODE_URL = 3
-        self.configurationMode = self.CONFIGMODE_JAVASCRIPT
+        self.configurationMode = ConfigurationMode.JAVASCRIPT
 
         # parse semicolon params like in Java
         for p in (self.config.split(";") if self.config else []):
@@ -794,13 +799,13 @@ class PluginPython:
                 continue
             key = p.replace(" ", "")
             if key == "mode=iframe":
-                self.configurationMode = self.CONFIGMODE_URL
+                self.configurationMode = ConfigurationMode.URL
             elif key == "mode=string":
-                self.configurationMode = self.CONFIGMODE_STRING
+                self.configurationMode = ConfigurationMode.STRING
             elif key == "mode=jsf":
-                self.configurationMode = self.CONFIGMODE_JSF
+                self.configurationMode = ConfigurationMode.JSF
             elif key == "mode=js":
-                self.configurationMode = self.CONFIGMODE_JAVASCRIPT
+                self.configurationMode = ConfigurationMode.JAVASCRIPT
             else:
                 self._parse_param(p)
 
@@ -1363,7 +1368,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         if not pi:
             return PluginConfigurationInfoDto(
                 configurationID=req.configurationID or "",
-                configurationMode=0,
+                configurationMode=ConfigurationMode.STRING,
             )
 
         cid = req.configurationID or ""
