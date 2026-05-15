@@ -172,6 +172,34 @@ def configureLogging() -> Logger:
 
 logger = configureLogging()
 
+
+def log_external_uri_configuration() -> None:
+    """Log external URI related env vars and derived endpoint composition."""
+    logger.info(
+        "External URI env config: SERVICEPATH=%r, LETTO_PLUGIN_URI_EXTERN=%r, "
+        "letto_plugin_uri_extern=%r, LETTO_PLUGIN_URI_INTERN=%r, letto_plugin_uri_intern=%r, "
+        "PLUGIN_ENDPOINT_NAME=%r",
+        os.getenv("SERVICEPATH"),
+        os.getenv("LETTO_PLUGIN_URI_EXTERN"),
+        os.getenv("letto_plugin_uri_extern"),
+        os.getenv("LETTO_PLUGIN_URI_INTERN"),
+        os.getenv("letto_plugin_uri_intern"),
+        os.getenv("PLUGIN_ENDPOINT_NAME"),
+    )
+    logger.info(
+        "External URI derived values: SERVICEPATH=%r, EXTERN_OPEN=%r, PINGOPEN=%r, INFO_OPEN=%r, "
+        "pluginDtoUri=%r, register_url=%r",
+        SERVICEPATH,
+        EXTERN_OPEN,
+        PINGOPEN,
+        INFO_OPEN,
+        f"{LETTO_PLUGIN_URI_EXTERN}{EXTERN_OPEN}/reloadplugindto",
+        f"{LETTO_SETUP_URI}{SETUP_ENDPOINT_REGISTER}",
+    )
+
+
+log_external_uri_configuration()
+
 _registration_task = None
 
 # --------------------------
