@@ -118,9 +118,54 @@ class Checker(unittest.TestCase): # do not rename
         self.assertEqual(count_larger_mean([0, 1, 1]), 2)
 
 """
+    ),
+    QuestionConfigDto(
+        indication="""
+import sys
+import math
+
+def minimalDistance(points: list[tuple[float,float]]):
+    if not points:
+        return None
+
+    min_dist = sys.float_info.max
+
+    for p1 in points:
+        for p2 in points:
+            dist = math.sqrt((p2[0] - p1[1]) ** 2 + (p2[1] - p1[1]) ** 2)
+            if dist < min_dist:
+                min_dist = dist
+    return min_dist
+
+""",
+        validation="""
+import unittest
+import random
+
+def correctImplementation(points: list[tuple[float,float]]):
+    if not points:
+        return None
+
+    min_dist = sys.float_info.max
+
+    for p1 in points:
+        for p2 in points:
+            dist = math.sqrt((p2[0] - p1[1]) ** 2 + (p2[1] - p1[1]) ** 2)
+            if dist < min_dist:
+                min_dist = dist
+    return min_dist
+
+class Checker(unittest.TestCase): # do not rename
+    def test_return(self): # test method names must start with 'test_'
+        points = []
+        for i in range(10):
+            points.append((random.random() * 10., random.random() * 10.))
+        self.assertAlmostEqual(minimalDistance(points), correctImplementation(points))
+
+"""
     )]
 
 
 def QuestionConfigDtoExamplesWorkingIndication():
-    examples = QuestionConfigDtoExamples()
-    return [examples[0], examples[2]]
+    ex = QuestionConfigDtoExamples()
+    return [ex[0], ex[2], ex[3]]
