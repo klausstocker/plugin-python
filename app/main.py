@@ -207,9 +207,6 @@ def encode_question_config_base64(config_raw: Optional[str]) -> str:
     if not config_raw:
         question_config = QuestionConfigDto()
     else:
-        if validation_code:
-            info.feedback = validation_code
-
         try:
             question_config = QuestionConfigDto.model_validate_json(config_raw)
         except (ValidationError, ValueError):
@@ -1621,4 +1618,3 @@ def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_confi
                 return m.group(1).encode('utf-8').decode('unicode_escape')
 
     return ""
-
