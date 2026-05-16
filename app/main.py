@@ -26,6 +26,7 @@ from PIL import Image, ImageDraw
 from dataclasses import dataclass
 from enum import IntEnum
 from shared.question_config import QuestionConfigDto
+from shared.check import checkCode
 from pydantic import ValidationError
 
 # --------------------------
@@ -901,7 +902,6 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
-        correct_text = answerDto.answerText if answerDto else ""
         # default result = wrong
         info = PluginScoreInfoDto(
             schuelerErgebnis=CalcErgebnisDto(string=antwort),
@@ -913,18 +913,11 @@ class PluginPython:
             feedback=""
         )
         try:
-            richtig = parse_time_seconds(correct_text or "")
-            eingabe = parse_time_seconds(antwort or "")
-            if toleranz is not None:
-                t: float = float(toleranz.toleranz)
-                mode: str = toleranz.mode or "RELATIV"
-            else:
-                t = 1e-10
-                mode = "RELATIV"
-            if equals_with_tolerance(richtig, eingabe, t, mode  or ""):
+            result = checkCode('jobe:80', antwort or "", validation_code or "")
+            if result.wasSuccessful():
                 info.punkteIst  = float(grade)
                 info.status  = "OK"
-        except ValueError:
+        except Exception:
             pass
         return info
 
