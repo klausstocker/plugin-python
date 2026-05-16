@@ -10,6 +10,7 @@ import httpx
 import platform
 import socket
 import time
+from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from logging import Logger
 from contextlib import asynccontextmanager
@@ -779,6 +780,13 @@ class CodeExecutionResponseDto(BaseModel):
 class UploadResponseDto(BaseModel):
     status: int = 0
     filename: Optional[str] = ""
+
+
+class ConfigurationMode(IntEnum):
+    STRING = 0
+    JSF = 1
+    JAVASCRIPT = 2
+    URL = 3
 
 
 # --------------------------

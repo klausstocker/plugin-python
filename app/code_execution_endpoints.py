@@ -2,23 +2,34 @@ import hmac
 import os
 import re
 import secrets
+import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Request, status, UploadFile, File
+from fastapi.responses import JSONResponse, FileResponse
+from pydantic import BaseModel
 
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
-from shared.question_config import QuestionConfigDto
 from shared.question_examples import QuestionConfigDtoExamples
 
 SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 UPLOAD_ROOT = Path(os.getenv("PLUGIN_STUB_UPLOAD_DIR", "/tmp/pluginpython_uploads"))
+PLUGIN_FILES_DIR = Path(os.getenv("PLUGIN_FILES_DIR", "/opt/letto/plugins/files"))
 REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "true").lower() == "true"
 EXEC_TOKEN = secrets.token_urlsafe(32)
 
 router = APIRouter()
+
+
+class DeleteFileRequest(BaseModel):
+    unique_name: str
+
+
+class AnswerDto(BaseModel):
+    code: str
+    files: dict[str, str] = {}
 
 
 def get_exec_token() -> str:
@@ -52,6 +63,13 @@ def _safe_session_name(value: str) -> str:
     return token or "default"
 
 
+def _sanitize_unique_name(value: str) -> str:
+    value = (value or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", value):
+        raise HTTPException(status_code=400, detail="Invalid unique file name")
+    return value
+
+
 def _get_session_dir(request: Request) -> Path:
     session_id = (
         request.headers.get("x-session-id")
@@ -63,23 +81,72 @@ def _get_session_dir(request: Request) -> Path:
     return session_dir
 
 
+def _plugin_file_path(unique_name: str) -> Path:
+    clean = _sanitize_unique_name(unique_name)
+    return PLUGIN_FILES_DIR / clean
+
+
+def _resolve_uploaded_files(files: dict[str, str]) -> list[tuple[str, str, bytes]]:
+    file_data: list[tuple[str, str, bytes]] = []
+    for filename, unique_name in files.items():
+        path = _plugin_file_path(unique_name)
+        if not path.is_file():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Uploaded file not found for '{filename}' ({unique_name})",
+            )
+        file_data.append((unique_name, filename, path.read_bytes()))
+    return file_data
+
+
+@router.post(f"{SERVICEPATH}/upload")
+async def upload_file(request: Request, file: UploadFile = File(...)):
+    _ensure_authorized(request)
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing file name")
+
+    unique_name = f"{uuid.uuid4().hex}"
+    PLUGIN_FILES_DIR.mkdir(parents=True, exist_ok=True)
+
+    content = await file.read()
+    target = _plugin_file_path(unique_name)
+    target.write_bytes(content)
+
+    return JSONResponse({"filename": file.filename, "unique_name": unique_name})
+
+
+@router.get(f"{SERVICEPATH}/download")
+async def download_file(request: Request, unique_name: str, filename: str | None = None):
+    _ensure_authorized(request)
+    target = _plugin_file_path(unique_name)
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    out_name = filename or target.name
+    return FileResponse(target, filename=out_name, media_type="application/octet-stream")
+
+
+@router.post(f"{SERVICEPATH}/delete")
+async def delete_file(request: Request, body: DeleteFileRequest):
+    _ensure_authorized(request)
+    target = _plugin_file_path(body.unique_name)
+    if target.exists():
+        target.unlink()
+    return JSONResponse({"deleted": body.unique_name})
+
+
 @router.post(f"{SERVICEPATH}/run")
 async def run_code(request: Request):
     _ensure_authorized(request)
-    body = await request.json()
-    code = body['code']
+    body = AnswerDto.model_validate(await request.json())
     try:
-        session_dir = _get_session_dir(request)
-        file_data = {}
-        for filepath in session_dir.iterdir():
-            if filepath.is_file():
-                file_data[filepath.name] = filepath.read_bytes()
-        files = JobeWrapper.createFiles(file_data)
+        file_data = _resolve_uploaded_files(body.files)
         jobe = JobeWrapper('jobe:80')
-        result = jobe.run_test('python3', code, 'test.py', files)
+        result = jobe.run_test('python3', body.code, 'test.py', file_data)
         return JSONResponse({'output': result.__repr__()})
-    except Exception:
-        return JSONResponse({'output': 'Error running code'})
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse({'output': f'Error running code: {e}'})
 
 
 @router.post(f"{SERVICEPATH}/lint")
@@ -98,7 +165,8 @@ async def lint_code(request: Request):
 async def check_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
-    code = body['code']
+    answer = AnswerDto.model_validate(body)
+    code = answer.code
     score, messages = lintCode(code)
     messagesText = f'Your code has been rated: {score:.2f}/10.0'
     testcode = body['testcode']

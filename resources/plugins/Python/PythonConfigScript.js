@@ -34,7 +34,6 @@ function configPluginPython(dtoString) {
         btnCheckId: `sharedCheck_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
-        fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
@@ -43,7 +42,7 @@ function configPluginPython(dtoString) {
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
-    const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
+    if (!state.files || typeof state.files !== "object") state.files = {};
 
     drawForm();
     ensureStyles();
@@ -94,23 +93,6 @@ function configPluginPython(dtoString) {
     }
 
 
-    function parseQuestionConfigDto(rawValue, sourceDto) {
-        const fallback = sourceDto && sourceDto.questionConfigDto && typeof sourceDto.questionConfigDto === "object"
-            ? { ...sourceDto.questionConfigDto }
-            : {};
-
-        if (!rawValue) return fallback;
-
-        try {
-            const parsed = JSON.parse(rawValue);
-            if (parsed && typeof parsed === "object" && Object.prototype.hasOwnProperty.call(parsed, "config")) {
-                return { ...fallback, ...parsed };
-            }
-        } catch (e) {}
-
-        return fallback;
-    }
-
     function extractRawConfig(rawValue) {
         if (!rawValue) return "";
 
@@ -159,24 +141,17 @@ function configPluginPython(dtoString) {
                         </div>
 
                         <div class="tab-panel" id="tab-files">
-                            <h3>File management</h3>
-                            <div class="files-grid">
-                                <div>
-                                    <label>File name</label>
-                                    <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                    <div class="btn-row small-gap">
-                                        <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                        <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                                    </div>
-                                    <div class="btn-row small-gap">
-                                        <input id="${ids.fileUploadId}" type="file" />
-                                        <button type="button" class="cfg-btn" data-file-action="upload">import</button>
-                                    </div>
+                            <div class="files-panel">
+                                <div class="btn-row small-gap">
+                                    <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
+                                    <button type="button" class="cfg-btn" data-file-action="download">download</button>
                                 </div>
-                                <div>
-                                    <label>Stored files</label>
-                                    <div id="${ids.fileListId}" class="file-list"></div>
+                                <div class="btn-row small-gap">
+                                    <input id="${ids.fileUploadId}" type="file" />
+                                    <button type="button" class="cfg-btn" data-file-action="upload">upload</button>
                                 </div>
+                                <label>Stored files</label>
+                                <div id="${ids.fileListId}" class="file-list"></div>
                             </div>
                         </div>
 
@@ -314,9 +289,9 @@ function configPluginPython(dtoString) {
                 font-family: monospace;
                 font-size: 13px;
             }
-            .pluginConfigForm .files-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
+            .pluginConfigForm .files-panel {
+                display: flex;
+                flex-direction: column;
                 gap: 10px;
                 min-height: 0;
                 height: 100%;
@@ -326,6 +301,24 @@ function configPluginPython(dtoString) {
                 box-sizing: border-box;
                 margin: 4px 0 8px;
                 font-family: monospace;
+            }
+            .pluginConfigForm .file-input {
+                width: 100%;
+                box-sizing: border-box;
+                margin: 4px 0 8px;
+                color: #111;
+                background: #fff;
+                border: 1px solid #b8b8b8;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            .pluginConfigForm .file-input::file-selector-button {
+                margin-right: 8px;
+                border: 1px solid #b8b8b8;
+                background: #f0f0f0;
+                padding: 4px 10px;
+                border-radius: 4px;
+                cursor: pointer;
             }
             .pluginConfigForm .file-list {
                 border: 1px solid #d0d0d0;
@@ -342,6 +335,9 @@ function configPluginPython(dtoString) {
             }
             .pluginConfigForm .file-item:hover {
                 background: #f5f5f5;
+            }
+            .pluginConfigForm .file-item.selected {
+                background: #e6f2ff;
             }
             .pluginConfigForm .checkbox-row {
                 display: block;
@@ -444,9 +440,9 @@ function configPluginPython(dtoString) {
     }
 
     function setupFileTab() {
-        const fileNameInput = document.getElementById(ids.fileNameId);
         const fileList = document.getElementById(ids.fileListId);
         const fileUpload = document.getElementById(ids.fileUploadId);
+        let selectedFileName = "";
 
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
@@ -457,19 +453,25 @@ function configPluginPython(dtoString) {
             fileList.innerHTML = names.map((name) => `<div class="file-item" data-file="${escapeHtmlAttr(name)}">${escapeHtml(name)}</div>`).join("");
             fileList.querySelectorAll(".file-item").forEach((row) => {
                 row.addEventListener("click", () => {
-                    const name = row.getAttribute("data-file");
-                    fileNameInput.value = name;
+                    selectedFileName = row.getAttribute("data-file") || "";
+                    fileList.querySelectorAll(".file-item").forEach((el) => el.classList.remove("selected"));
+                    row.classList.add("selected");
                 });
             });
         }
 
         document.querySelectorAll("[data-file-action]").forEach((btn) => {
-            btn.addEventListener("click", async () => {
+            btn.onclick = async () => {
                 const action = btn.getAttribute("data-file-action");
-                const name = (fileNameInput.value || "").trim();
+                const name = (selectedFileName || "").trim();
 
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
+                    await fetch(serviceBase + "/delete", {
+                        method: "POST",
+                        headers: buildHeaders(),
+                        body: JSON.stringify({ unique_name: state.files[name] })
+                    });
                     delete state.files[name];
                     renderFileList();
                     saveConfig();
@@ -477,27 +479,45 @@ function configPluginPython(dtoString) {
                 }
 
                 if (action === "download") {
-                    if (!name || state.files[name] == null) return;
-                    const blob = new Blob([state.files[name]], { type: "text/plain" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = name;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
+                    if (!name || !state.files[name]) return;
+                    const uniqueName = encodeURIComponent(state.files[name]);
+                    const filename = encodeURIComponent(name);
+                    const response = await fetch(serviceBase + `/download?unique_name=${uniqueName}&filename=${filename}`, {
+                        method: "GET",
+                        headers: buildAuthHeaders()
+                    });
+                    if (!response.ok) throw new Error("download failed");
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = name;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
                     return;
                 }
 
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    state.files[file.name] = text;
-                    fileNameInput.value = file.name;
+                    const formData = new FormData();
+                    formData.append("file", file, file.name);
+                    const response = await fetch(serviceBase + "/upload", {
+                        method: "POST",
+                        headers: buildAuthHeaders(),
+                        body: formData
+                    });
+                    if (!response.ok) throw new Error("upload failed");
+                    const uploadResult = await response.json();
+                    state.files[file.name] = uploadResult.unique_name;
+                    selectedFileName = file.name;
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
                 }
-            });
+            };
         });
 
         renderFileList();
@@ -525,7 +545,7 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), files: state.files || {} }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
     }
@@ -633,11 +653,8 @@ function configPluginPython(dtoString) {
             evalConfig: state.evalConfig || {}
         };
 
-        questionConfigDto.validation = pluginConfig.validation;
-        questionConfigDto.indication = pluginConfig.indication;
-        questionConfigDto.config = JSON.stringify(pluginConfig);
-
-        configField.value = JSON.stringify(questionConfigDto);
+        // Persist exactly as QuestionConfigDto (no nested "config" JSON string).
+        configField.value = JSON.stringify(pluginConfig);
     }
 
     function renderHelp() {
@@ -667,11 +684,15 @@ function configPluginPython(dtoString) {
             .replace(/>/g, "&gt;");
     }
 
-    function buildHeaders() {
-        const headers = { "Content-Type": "application/json" };
+    function buildAuthHeaders() {
+        const headers = {};
         if (pluginToken) {
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
+    }
+
+    function buildHeaders() {
+        return { ...buildAuthHeaders(), "Content-Type": "application/json" };
     }
 }

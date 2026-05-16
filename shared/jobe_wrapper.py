@@ -2,7 +2,6 @@ from urllib.error import HTTPError
 import json
 import http.client
 import base64
-import uuid
 
 RESOURCE_BASE = '/jobe/index.php/restapi'
 
@@ -35,10 +34,10 @@ class RunResult():
         if self._outcome in RunResult.outcomes:
             return self._outcome, RunResult.outcomes[self._outcome]
         return 2, 'unknown error while running code'
-    
+
     def success(self) -> bool:
         return self._outcome in [0, 15]
-    
+
     def __init__(self, ro: dict):
         if not isinstance(ro, dict) or 'outcome' not in ro:
             print("Bad result object", ro)
@@ -74,15 +73,6 @@ class JobeWrapper():
     def __init__(self, server):
         self.server = server
 
-    @staticmethod
-    def createFiles(files: dict):
-        commonId = uuid.uuid4().hex
-        filesWithId = []
-        for name, content in files.items():
-            fileId = f'{commonId[:10]}{name}'
-            filesWithId.append((fileId, name, content))
-        return filesWithId
-
     def http_request(self, method, resource, data, headers):
         '''Send a request to Jobe with given HTTP method to given resource on
         the currently configured Jobe server and given data and headers.
@@ -100,8 +90,9 @@ class JobeWrapper():
             'sourcecode': code,
             'file_list': []
         }
-        
+
         for fileId, name, content in files:
+            print(f'appending {fileId} {name} {len(content)} bytes')
             if self.put_file(fileId, content):
                 return RunResult({'outcome': 99, 'stderr': f'could not upload file {name}'})
             exists = self.check_file(fileId)
@@ -148,7 +139,7 @@ class JobeWrapper():
         lang_versions = self.do_http('GET', resource)
         ret = {lang: version for lang, version in lang_versions}
         return ret
-    
+
     def put_file(self, file_id: str, contents: bytes):
         ret = None
         contentsb64 = base64.b64encode(contents).decode()
@@ -185,7 +176,7 @@ class JobeWrapper():
             pass
         return False
 
-        
+
 
 def main():
     '''Demo or get languages, a run of Python3 then C++ then Java'''
