@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw
 from dataclasses import dataclass
 from enum import IntEnum
 from shared.question_config import QuestionConfigDto
+from pydantic import ValidationError
 
 # --------------------------
 # CONFIGURATION
@@ -223,6 +224,16 @@ def get_system_info():
         "bs": f"{os_name} {os_version}",
         "ip": ip
     }
+
+
+def parse_question_config(config_raw: Optional[str]) -> QuestionConfigDto:
+    if not config_raw:
+        return QuestionConfigDto()
+    try:
+        parsed = QuestionConfigDto.model_validate_json(config_raw)
+        return parsed
+    except (ValidationError, ValueError):
+        return QuestionConfigDto()
 
 
 def parse_time_seconds(s: str) -> float:
@@ -1328,12 +1339,14 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         # Mimic Java PluginDto constructor behavior: embed image (base64) as data url
         img = pi.get_image_base64(req.params or "", req.q)
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
+        question_config = parse_question_config(req.config)
         return PluginDto(
             tagName=tag_name,
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
             params={"pluginToken": get_exec_token()},
+            jsonData=question_config.model_dump_json(),
         )
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
@@ -1458,12 +1471,14 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
         img = pi.get_image_base64("", effective_question)
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
+        question_config = parse_question_config(effective_config)
         return PluginDto(
             tagName=tag_name,
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
             params={"config": effective_config, "pluginToken": get_exec_token()},
+            jsonData=question_config.model_dump_json(),
         )
 
     return r
