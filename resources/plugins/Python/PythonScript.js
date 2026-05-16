@@ -6,7 +6,16 @@ function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
     let dtoData = {};
     try {
-        dtoData = dto.jsonData ? JSON.parse(dto.jsonData) : {};
+        if (dto.jsonData) {
+            try {
+                const decoded = atob(dto.jsonData);
+                dtoData = JSON.parse(decoded);
+            } catch (decodeError) {
+                dtoData = JSON.parse(dto.jsonData);
+            }
+        } else {
+            dtoData = {};
+        }
     } catch (e) {
         dtoData = {};
     }

@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
 from app.code_execution_endpoints import get_exec_token, router as code_execution_router
 from fastapi.responses import PlainTextResponse, FileResponse
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
 from enum import IntEnum
@@ -199,6 +199,18 @@ def log_external_uri_configuration() -> None:
         f"{LETTO_SETUP_URI}{SETUP_ENDPOINT_REGISTER}",
     )
 
+
+def encode_question_config_base64(config_raw: Optional[str]) -> str:
+    if not config_raw:
+        question_config = QuestionConfigDto()
+    else:
+        try:
+            question_config = QuestionConfigDto.model_validate_json(config_raw)
+        except (ValidationError, ValueError):
+            question_config = QuestionConfigDto(indication=config_raw)
+
+    json_payload = question_config.model_dump_json()
+    return base64.b64encode(json_payload.encode("utf-8")).decode("ascii")
 
 log_external_uri_configuration()
 
@@ -1311,6 +1323,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     def score(req: PluginScoreRequestDto):
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
+            jsonData=encode_question_config_base64(req.config),
             return PluginScoreInfoDto()
         return pi.score(req.antwort or "", req.toleranz, req.answerDto, req.grade)
 
@@ -1439,6 +1452,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
                 q=updated_state.questionDto or None,
                 configurationID=updated_state.configurationID,
             )
+            jsonData=encode_question_config_base64(effective_config),
         )
 
         return updated_state.pluginConfigDto
