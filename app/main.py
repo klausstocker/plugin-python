@@ -1,7 +1,9 @@
 import os
 import re
+import json
 import math
 import base64
+import ast
 import io
 import asyncio
 import logging
@@ -204,6 +206,9 @@ def encode_question_config_base64(config_raw: Optional[str]) -> str:
     if not config_raw:
         question_config = QuestionConfigDto()
     else:
+        if validation_code:
+            info.feedback = validation_code
+
         try:
             question_config = QuestionConfigDto.model_validate_json(config_raw)
         except (ValidationError, ValueError):
@@ -893,8 +898,9 @@ class PluginPython:
         return "Here part or the whole 'Angabe' will be dsiplayed"
 
     def score(self, antwort: str, toleranz: Optional[ToleranzDto], answerDto: Optional[PluginAnswerDto],
-              grade: float) -> PluginScoreInfoDto:
+              grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
+        validation_code = _extract_validation_code(answerDto, config, pluginDto)
         correct_text = answerDto.answerText if answerDto else ""
         # default result = wrong
         info = PluginScoreInfoDto(
@@ -1321,7 +1327,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginScoreInfoDto()
-        return pi.score(req.antwort or "", req.toleranz, req.answerDto, req.grade)
+        return pi.score(req.antwort or "", req.toleranz, req.answerDto, req.grade, req.config or "", req.pluginDto)
 
     @r.post("/getvars")
     def get_vars(req: PluginRequestDto):
@@ -1569,3 +1575,57 @@ def extern_reload(req: LoadPluginRequestDto):
 
 
 app.include_router(extern_router)
+
+def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> str:
+    """Extract validation unittest code from possible nested payload formats."""
+
+    def _parse_json_string(raw: str) -> Optional[dict]:
+        if not raw:
+            return None
+        try:
+            obj = json.loads(raw)
+            return obj if isinstance(obj, dict) else None
+        except Exception:
+            return None
+
+    def _extract_from_dict(data: dict) -> str:
+        validation = data.get("validation")
+        if isinstance(validation, str) and validation.strip():
+            return validation
+        nested = data.get("config")
+        if isinstance(nested, str):
+            nested_data = _parse_json_string(nested)
+            if nested_data:
+                validation2 = nested_data.get("validation")
+                if isinstance(validation2, str) and validation2.strip():
+                    return validation2
+        return ""
+
+    if plugin_dto and plugin_dto.jsonData:
+        try:
+            payload = base64.b64decode(plugin_dto.jsonData).decode("utf-8")
+            data = _parse_json_string(payload)
+            if data:
+                found = _extract_from_dict(data)
+                if found:
+                    return found
+        except Exception:
+            pass
+
+    config_obj = _parse_json_string(plugin_config or "")
+    if config_obj:
+        found = _extract_from_dict(config_obj)
+        if found:
+            return found
+
+    if answer_dto:
+        raw = repr(answer_dto)
+        m = re.search(r"validation='(.*?)'", raw, re.DOTALL)
+        if m:
+            try:
+                return ast.literal_eval(f"'{m.group(1)}'")
+            except Exception:
+                return m.group(1).encode('utf-8').decode('unicode_escape')
+
+    return ""
+
