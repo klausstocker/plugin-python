@@ -35,13 +35,23 @@ function initPluginPython(dtoString, active) {
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
 
-    const answerField = $(plugin_inp)[0];
-    const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
+    const defaultMain = dtoData.indication || "# Write your Python code here\n";
+    const initialMain = (getAnswerFieldValue() || defaultMain);
 
     drawLayout();
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
+
+
+    function getAnswerField() {
+        return $(plugin_inp)[0] || null;
+    }
+
+    function getAnswerFieldValue() {
+        const field = getAnswerField();
+        return field ? field.value : "";
+    }
 
     function drawLayout() {
         const clsName = "." + rootClass;
@@ -147,6 +157,13 @@ function initPluginPython(dtoString, active) {
         });
     }
 
+
+    function syncAnswerField(code) {
+        const field = getAnswerField();
+        if (!field) return;
+        field.value = code || "";
+    }
+
     async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
         if (!aceAvailable || !window.ace) {
@@ -158,12 +175,11 @@ function initPluginPython(dtoString, active) {
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
+        syncAnswerField(initialMainCode);
 
-        if (answerField) {
-            editor.session.on("change", function () {
-                answerField.value = editor.getValue();
-            });
-        }
+        editor.session.on("change", function () {
+            syncAnswerField(editor.getValue());
+        });
 
         plugin.getMainCode = () => editor.getValue();
     }
@@ -173,9 +189,9 @@ function initPluginPython(dtoString, active) {
         mainEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialMainCode)}</textarea>`;
 
         const mainTextArea = mainEl.querySelector("textarea");
-        if (answerField) {
-            mainTextArea.addEventListener("input", () => answerField.value = mainTextArea.value);
-        }
+        syncAnswerField(initialMainCode);
+        mainTextArea.addEventListener("input", () => syncAnswerField(mainTextArea.value));
+        mainTextArea.addEventListener("change", () => syncAnswerField(mainTextArea.value));
         plugin.getMainCode = () => mainTextArea.value;
     }
 
