@@ -894,6 +894,8 @@ class PluginPython:
 
     def score(self, antwort: str, toleranz: Optional[ToleranzDto], answerDto: Optional[PluginAnswerDto],
               grade: float) -> PluginScoreInfoDto:
+        logger.debug(f'{antwort=}')
+        logger.debug(f'{answerDto}')
         ze = answerDto.ze if answerDto else ""
         correct_text = answerDto.answerText if answerDto else ""
         # default result = wrong
@@ -1318,6 +1320,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/score", response_model=PluginScoreInfoDto)
     def score(req: PluginScoreRequestDto):
+        logger.debug(f"{req}")
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginScoreInfoDto()

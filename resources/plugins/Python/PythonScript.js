@@ -159,17 +159,23 @@ function initPluginPython(dtoString, active) {
 
 
     function syncAnswerField(code) {
+        console.log("syncAnswerField");
+        console.log(getAnswerField());
+        console.log(code);
         const field = getAnswerField();
         if (!field) return;
         field.value = code || "";
+        console.log(field.value);
     }
 
     async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
         if (!aceAvailable || !window.ace) {
+            console.log("ace unavailable");
             fallbackTextareas(initialMainCode);
             return;
         }
+        console.log("ace available");
 
         const editor = ace.edit(mainEditorId);
         editor.setTheme("ace/theme/monokai");
