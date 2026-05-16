@@ -43,7 +43,6 @@ function initPluginPython(dtoString, active) {
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
-    syncAnswerField(initialMain);
 
     function drawLayout() {
         const clsName = "." + rootClass;
@@ -153,9 +152,6 @@ function initPluginPython(dtoString, active) {
     function syncAnswerField(code) {
         if (!answerField) return;
         answerField.value = code || "";
-        // Some LeTTo forms react on input/change of the hidden subquestion field.
-        answerField.dispatchEvent(new Event("input", { bubbles: true }));
-        answerField.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     async function setupEditors(initialMainCode) {
