@@ -1345,12 +1345,10 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginDto()
-        # Mimic Java PluginDto constructor behavior: embed image (base64) as data url
-        img = pi.get_image_base64(req.params or "", req.q)
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
         return PluginDto(
             tagName=tag_name,
-            imageUrl="data:image/png;base64," + (img.base64Image or ""),
+            imageUrl="",
             width=CONF_width,
             height=CONF_height,
             params={"pluginToken": get_exec_token()},
@@ -1477,11 +1475,10 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         if not pi:
             return PluginDto()
 
-        img = pi.get_image_base64("", effective_question)
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
         return PluginDto(
             tagName=tag_name,
-            imageUrl="data:image/png;base64," + (img.base64Image or ""),
+            imageUrl="",
             width=CONF_width,
             height=CONF_height,
             params={"config": effective_config, "pluginToken": get_exec_token()},
@@ -1561,11 +1558,10 @@ def extern_reload(req: LoadPluginRequestDto):
     pi = create_plugin(req.typ or "", req.name or "", req.config or "")
     if not pi:
         return PluginDto()
-    img = pi.get_image_base64(req.params or "", req.q)
     tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
     return PluginDto(
         tagName=tag_name,
-        imageUrl="data:image/png;base64," + (img.base64Image or ""),
+        imageUrl="",
         width=CONF_width,
         height=CONF_height,
         params={"pluginToken": get_exec_token()},
