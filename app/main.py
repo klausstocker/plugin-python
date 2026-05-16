@@ -19,11 +19,12 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
 from app.code_execution_endpoints import get_exec_token, router as code_execution_router
 from fastapi.responses import PlainTextResponse, FileResponse
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from PIL import Image, ImageDraw
 from dataclasses import dataclass
 from enum import IntEnum
 from shared.question_config import QuestionConfigDto
+from pydantic import ValidationError
 
 # --------------------------
 # CONFIGURATION
@@ -71,7 +72,7 @@ CONF_initPluginJS = ""
 # gibt an ob das Plugin eine Java-Script Schnittstelle bei der Beispieldarstellung hat
 CONF_javaScript = False
 # Plugin ist stateless und liefert bei gleicher Angabe immer das gleiche Verhalten
-CONF_cacheable = True
+CONF_cacheable = False
 # Gibt an ob im Plugin die Frage benötigt wird
 CONF_useQuestion = True
 # gibt an ob die Datensatz-Variable ohne Konstante benötigt werden
@@ -168,7 +169,7 @@ def configureLogging() -> Logger:
     # httpx-Request-Zeilen unterdrücken
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
-    return logging.getLogger("plugin-registration")
+    return logging.getLogger("plugin-python")
 
 
 logger = configureLogging()
@@ -198,6 +199,18 @@ def log_external_uri_configuration() -> None:
         f"{LETTO_SETUP_URI}{SETUP_ENDPOINT_REGISTER}",
     )
 
+
+def encode_question_config_base64(config_raw: Optional[str]) -> str:
+    if not config_raw:
+        question_config = QuestionConfigDto()
+    else:
+        try:
+            question_config = QuestionConfigDto.model_validate_json(config_raw)
+        except (ValidationError, ValueError):
+            question_config = QuestionConfigDto(indication=config_raw)
+
+    json_payload = question_config.model_dump_json()
+    return base64.b64encode(json_payload.encode("utf-8")).decode("ascii")
 
 log_external_uri_configuration()
 
@@ -569,9 +582,9 @@ class PluginScoreInfoDto(BaseModel):
 class PluginDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     imageUrl: Optional[str] = ""      # Url eines eingebetteten Bildes - meist base64 codiert
-    pig: bool = False                 # True wenn das Plugin über ein PIG-Tag direkt in der Frage eingebunden ist
-    result: bool = False              # True wenn Plugin in einer Subquestion definiert ist
-    tagName: Optional[str] = ""       # Eindeutiger Bezeichner des PluginTags
+    pig: bool = True                 # True wenn das Plugin über ein PIG-Tag direkt in der Frage eingebunden ist
+    result: bool = True               # True wenn Plugin in einer Subquestion definiert ist
+    tagName: Optional[str] = "plugintag"       # Eindeutiger Bezeichner des PluginTags
     width: int = CONF_width           # Breite des Plugin-Bereiches in Pixel
     height: int = CONF_height          # Höhe des Plugin-Bereiches in Pixel
     params: Optional[Dict[str, str]] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
@@ -1284,8 +1297,15 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/imagetemplates")
     def image_templates(req: PluginRequestDto):
-        # PluginPython.getImageTemplates returns Vector<String[]>
-        return [["default", "[PIG PluginVomTester \"\"]","empty image"]]
+        """# PluginPython.getImageTemplates returns Vector<String[]>
+        	Liefert eine Liste aller möglichen Varianten von Bildern
+	        Element 0 : beschreibender Text
+	        Element 1 : PIG Tag
+	        Element 2 : Hilfetext
+            @return Liefert eine Liste aller möglichen Varianten von Bildern
+        """
+        logger.debug(f'imagetemplates: {req}')
+        return [["Code-Editor", f'[PIG {req.name} ""]', "Code-Editor"]]
 
     @r.post("/parserplugin", response_model=CalcErgebnisDto)
     def parser_plugin(req: PluginParserRequestDto):
@@ -1334,6 +1354,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             width=CONF_width,
             height=CONF_height,
             params={"pluginToken": get_exec_token()},
+            jsonData=encode_question_config_base64(req.config)
         )
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
@@ -1464,6 +1485,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             width=CONF_width,
             height=CONF_height,
             params={"config": effective_config, "pluginToken": get_exec_token()},
+            jsonData=encode_question_config_base64(effective_config),
         )
 
     return r
