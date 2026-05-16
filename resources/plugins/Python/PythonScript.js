@@ -36,12 +36,14 @@ function initPluginPython(dtoString, active) {
     const lintButtonId = `lintButton_${plugin.name}`;
 
     const answerField = $(plugin_inp)[0];
-    const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
+    const defaultMain = dtoData.indication || "# Write your Python code here\n";
+    const initialMain = (answerField && answerField.value) || defaultMain;
 
     drawLayout();
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
+    syncAnswerField(initialMain);
 
     function drawLayout() {
         const clsName = "." + rootClass;
@@ -147,6 +149,15 @@ function initPluginPython(dtoString, active) {
         });
     }
 
+
+    function syncAnswerField(code) {
+        if (!answerField) return;
+        answerField.value = code || "";
+        // Some LeTTo forms react on input/change of the hidden subquestion field.
+        answerField.dispatchEvent(new Event("input", { bubbles: true }));
+        answerField.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
     async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
         if (!aceAvailable || !window.ace) {
@@ -158,10 +169,11 @@ function initPluginPython(dtoString, active) {
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
+        syncAnswerField(initialMainCode);
 
         if (answerField) {
             editor.session.on("change", function () {
-                answerField.value = editor.getValue();
+                syncAnswerField(editor.getValue());
             });
         }
 
@@ -173,8 +185,9 @@ function initPluginPython(dtoString, active) {
         mainEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialMainCode)}</textarea>`;
 
         const mainTextArea = mainEl.querySelector("textarea");
+        syncAnswerField(initialMainCode);
         if (answerField) {
-            mainTextArea.addEventListener("input", () => answerField.value = mainTextArea.value);
+            mainTextArea.addEventListener("input", () => syncAnswerField(mainTextArea.value));
         }
         plugin.getMainCode = () => mainTextArea.value;
     }
