@@ -72,7 +72,7 @@ CONF_initPluginJS = ""
 # gibt an ob das Plugin eine Java-Script Schnittstelle bei der Beispieldarstellung hat
 CONF_javaScript = False
 # Plugin ist stateless und liefert bei gleicher Angabe immer das gleiche Verhalten
-CONF_cacheable = True
+CONF_cacheable = False
 # Gibt an ob im Plugin die Frage benötigt wird
 CONF_useQuestion = True
 # gibt an ob die Datensatz-Variable ohne Konstante benötigt werden
@@ -169,7 +169,7 @@ def configureLogging() -> Logger:
     # httpx-Request-Zeilen unterdrücken
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
-    return logging.getLogger("plugin-registration")
+    return logging.getLogger("plugin-python")
 
 
 logger = configureLogging()
@@ -236,16 +236,6 @@ def get_system_info():
         "bs": f"{os_name} {os_version}",
         "ip": ip
     }
-
-
-def parse_question_config(config_raw: Optional[str]) -> QuestionConfigDto:
-    if not config_raw:
-        return QuestionConfigDto()
-    try:
-        parsed = QuestionConfigDto.model_validate_json(config_raw)
-        return parsed
-    except (ValidationError, ValueError):
-        return QuestionConfigDto()
 
 
 def parse_time_seconds(s: str) -> float:
@@ -592,9 +582,9 @@ class PluginScoreInfoDto(BaseModel):
 class PluginDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     imageUrl: Optional[str] = ""      # Url eines eingebetteten Bildes - meist base64 codiert
-    pig: bool = False                 # True wenn das Plugin über ein PIG-Tag direkt in der Frage eingebunden ist
-    result: bool = False              # True wenn Plugin in einer Subquestion definiert ist
-    tagName: Optional[str] = ""       # Eindeutiger Bezeichner des PluginTags
+    pig: bool = True                 # True wenn das Plugin über ein PIG-Tag direkt in der Frage eingebunden ist
+    result: bool = True               # True wenn Plugin in einer Subquestion definiert ist
+    tagName: Optional[str] = "plugintag"       # Eindeutiger Bezeichner des PluginTags
     width: int = CONF_width           # Breite des Plugin-Bereiches in Pixel
     height: int = CONF_height          # Höhe des Plugin-Bereiches in Pixel
     params: Optional[Dict[str, str]] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
@@ -1307,8 +1297,15 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/imagetemplates")
     def image_templates(req: PluginRequestDto):
-        # PluginPython.getImageTemplates returns Vector<String[]>
-        return [["default", "[PIG PluginVomTester \"\"]","empty image"]]
+        """# PluginPython.getImageTemplates returns Vector<String[]>
+        	Liefert eine Liste aller möglichen Varianten von Bildern
+	        Element 0 : beschreibender Text
+	        Element 1 : PIG Tag
+	        Element 2 : Hilfetext
+            @return Liefert eine Liste aller möglichen Varianten von Bildern
+        """
+        logger.debug(f'imagetemplates: {req}')
+        return [["Code-Editor", f'[PIG {req.name} ""]', "Code-Editor"]]
 
     @r.post("/parserplugin", response_model=CalcErgebnisDto)
     def parser_plugin(req: PluginParserRequestDto):
@@ -1323,7 +1320,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     def score(req: PluginScoreRequestDto):
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
-            jsonData=encode_question_config_base64(req.config),
             return PluginScoreInfoDto()
         return pi.score(req.antwort or "", req.toleranz, req.answerDto, req.grade)
 
@@ -1352,14 +1348,13 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         # Mimic Java PluginDto constructor behavior: embed image (base64) as data url
         img = pi.get_image_base64(req.params or "", req.q)
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
-        question_config = parse_question_config(req.config)
         return PluginDto(
             tagName=tag_name,
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
             params={"pluginToken": get_exec_token()},
-            jsonData=question_config.model_dump_json(),
+            jsonData=encode_question_config_base64(req.config)
         )
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
@@ -1452,7 +1447,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
                 q=updated_state.questionDto or None,
                 configurationID=updated_state.configurationID,
             )
-            jsonData=encode_question_config_base64(effective_config),
         )
 
         return updated_state.pluginConfigDto
@@ -1485,14 +1479,13 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
         img = pi.get_image_base64("", effective_question)
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
-        question_config = parse_question_config(effective_config)
         return PluginDto(
             tagName=tag_name,
             imageUrl="data:image/png;base64," + (img.base64Image or ""),
             width=CONF_width,
             height=CONF_height,
             params={"config": effective_config, "pluginToken": get_exec_token()},
-            jsonData=question_config.model_dump_json(),
+            jsonData=encode_question_config_base64(effective_config),
         )
 
     return r
