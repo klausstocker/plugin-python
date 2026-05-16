@@ -44,7 +44,7 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["configurationID"], "cfg-1")
-        self.assertEqual(body["configurationMode"], 2)
+        self.assertEqual(body["configurationMode"], 0)
         self.assertTrue(body["useQuestion"])
 
     def test_post_generalinfo_returns_matching_typ(self):

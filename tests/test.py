@@ -38,7 +38,7 @@ class Checker(unittest.TestCase): # do not rename
         student_result = student_sum(*args)
         expected_result = correctImplementation(*args)
         self.assertEqual(student_result, expected_result)
-        
+
     def test_output(self):
         args = (3, 4)
         with RedirectedStdout() as student_out:
@@ -46,14 +46,32 @@ class Checker(unittest.TestCase): # do not rename
         with RedirectedStdout() as expected_out:
             correctImplementation(*args)
         self.assertEqual(str(student_out), str(expected_out))
-            
+
+def count_larger_mean(values: list[float]):
+    if not values:
+        return 0
+    mean = sum(values) / len(values)
+    count = 0
+    for v in values:
+        count += 1 if v > mean else 0
+    return count
+
+import unittest
+
+class Checker1(unittest.TestCase): # do not rename
+    def test_return(self): # test method names must start with 'test_'
+        self.assertEqual(count_larger_mean([]), 0)
+        self.assertEqual(count_larger_mean([0, 1]), 1)
+        self.assertEqual(count_larger_mean([0, 0, 1]), 1)
+        self.assertEqual(count_larger_mean([0, 2, 4]), 1)
+        self.assertEqual(count_larger_mean([0, 1, 1]), 2)
 
 def main():
     __magic_string__ = '__magic_string__'
     ret = {'count' : 0, 'errors': [], 'failures': []}
     try:
         unittestOutput = StringIO()
-        suite = unittest.TestLoader().loadTestsFromTestCase(Checker)
+        suite = unittest.TestLoader().loadTestsFromTestCase(Checker1)
         runner = unittest.TextTestRunner(verbosity=0, stream=unittestOutput)
         result = runner.run(suite)
         ret['count'] = result.testsRun

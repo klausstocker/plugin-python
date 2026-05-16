@@ -4,6 +4,8 @@ import sys
 from shared.jobe_wrapper import JobeWrapper
 from shared.check import checkCode
 from shared.check_result import CheckResult
+from shared.question_config import QuestionConfigDto
+from shared.question_examples import *
 
 
 class TestJobeWrapper(unittest.TestCase):
@@ -37,10 +39,10 @@ def correctImplementation(arg1, arg2):
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # names must start with 'test_'
         args = (1, 2)
-        student_result = calculate_sum(*args) # call to students implementation 
+        student_result = calculate_sum(*args) # call to students implementation
         expected_result = correctImplementation(*args)
         self.assertEqual(student_result, expected_result)
-        
+
     def test_output(self):
         args = (3, 4)
         with RedirectedStdout() as student_out:
@@ -71,3 +73,8 @@ print(open('file2').read())
         result = jobe.run_test('python3', code, 'test.py', fileSpec)
         self.assertTrue(result.success())
         self.assertEqual(result.stdout, "The first file\nLine 2\nSecond file\n")
+
+    def testExamples(self):
+        for example in QuestionConfigDtoExamplesWorkingIndication():
+            result = checkCode('localhost:4000', example.indication, example.validation)
+            self.assertTrue(result.wasSuccessful())

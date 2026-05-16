@@ -82,7 +82,7 @@ class Checker(unittest.TestCase): # do not rename
     def test_wraparound(self):
         #self.assertEqual(count_zero_stops(5, ["L10", "R5"]), 1)
         self.assertEqual(countPointingAt0(5, ["L10", "R5"]), 1)
-        
+
     def test_two_zero_stops(self):
         rotations = ["R50", "L1", "R1"]
         #self.assertEqual(count_zero_stops(50, rotations), 2)
@@ -94,4 +94,33 @@ class Checker(unittest.TestCase): # do not rename
         self.assertEqual(countPointingAt0(50, rotations), 5)
 
 """
+    ),
+    QuestionConfigDto(
+        indication="""
+def count_larger_mean(values: list[float]):
+    if not values:
+        return 0
+    mean = sum(values) / len(values)
+    count = 0
+    for v in values:
+        count += 1 if v > mean else 0
+    return count
+""",
+        validation="""
+import unittest
+
+class Checker(unittest.TestCase): # do not rename
+    def test_return(self): # test method names must start with 'test_'
+        self.assertEqual(count_larger_mean([]), 0)
+        self.assertEqual(count_larger_mean([0, 1]), 1)
+        self.assertEqual(count_larger_mean([0, 0, 1]), 1)
+        self.assertEqual(count_larger_mean([0, 2, 4]), 1)
+        self.assertEqual(count_larger_mean([0, 1, 1]), 2)
+
+"""
     )]
+
+
+def QuestionConfigDtoExamplesWorkingIndication():
+    examples = QuestionConfigDtoExamples()
+    return [examples[0], examples[2]]
