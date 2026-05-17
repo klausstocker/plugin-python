@@ -133,8 +133,7 @@ def minimalDistance(points: list[tuple[float,float]]):
     for p1 in points:
         for p2 in points:
             dist = math.sqrt((p2[0] - p1[1]) ** 2 + (p2[1] - p1[1]) ** 2)
-            if dist < min_dist:
-                min_dist = dist
+            min_dist = min(min_dist, dist)
     return min_dist
 
 """,
@@ -151,14 +150,13 @@ def correctImplementation(points: list[tuple[float,float]]):
     for p1 in points:
         for p2 in points:
             dist = math.sqrt((p2[0] - p1[1]) ** 2 + (p2[1] - p1[1]) ** 2)
-            if dist < min_dist:
-                min_dist = dist
+            min_dist = min(min_dist, dist)
     return min_dist
 
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # test method names must start with 'test_'
         points = []
-        for i in range(10):
+        for _ in range(10):
             points.append((random.random() * 10., random.random() * 10.))
         self.assertAlmostEqual(minimalDistance(points), correctImplementation(points))
 
