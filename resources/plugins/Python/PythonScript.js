@@ -36,11 +36,13 @@ function initPluginPython(dtoString, active) {
     const lintButtonId = `lintButton_${plugin.name}`;
 
     const answerField = $(plugin_inp)[0];
-    const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
+    const answerDto = parseAnswerDto(answerField ? answerField.value : "");
+    const initialMain = answerDto.answerText || dtoData.indication || "# Write your Python code here\n";
 
     drawLayout();
     ensureStyles();
     setupEditors(initialMain);
+    writeAnswerDto(initialMain);
     bindActions();
 
     function drawLayout() {
@@ -161,7 +163,7 @@ function initPluginPython(dtoString, active) {
 
         if (answerField) {
             editor.session.on("change", function () {
-                answerField.value = editor.getValue();
+                writeAnswerDto(editor.getValue());
             });
         }
 
@@ -174,9 +176,41 @@ function initPluginPython(dtoString, active) {
 
         const mainTextArea = mainEl.querySelector("textarea");
         if (answerField) {
-            mainTextArea.addEventListener("input", () => answerField.value = mainTextArea.value);
+            mainTextArea.addEventListener("input", () => writeAnswerDto(mainTextArea.value));
         }
         plugin.getMainCode = () => mainTextArea.value;
+    }
+
+
+    function parseAnswerDto(raw) {
+        const emptyDto = { answerText: "", ze: "", ergebnis: null };
+        if (!raw) return emptyDto;
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object") {
+                return {
+                    answerText: typeof parsed.answerText === "string" ? parsed.answerText : "",
+                    ze: typeof parsed.ze === "string" ? parsed.ze : "",
+                    ergebnis: parsed.ergebnis || null
+                };
+            }
+        } catch (e) {
+            // Backward compatibility: plain code string in answer field
+            return { answerText: String(raw), ze: "", ergebnis: null };
+        }
+
+        return emptyDto;
+    }
+
+    function writeAnswerDto(code) {
+        if (!answerField) return;
+        const packed = {
+            answerText: code || "",
+            ze: answerDto.ze || "",
+            ergebnis: answerDto.ergebnis || null
+        };
+        answerField.value = JSON.stringify(packed);
     }
 
     function bindActions() {
