@@ -398,14 +398,14 @@ class PluginGeneralInfo(BaseModel):
     wikiHelp: Optional[str] = "Plugins"
     helpUrl: Optional[str] = ""
     help: Optional[str] = ""
-    defaultPluginConfig: bool = True
+    defaultPluginConfig: bool = False
     math: bool = False
     pluginType: Optional[str] = "python.PluginPython"
     initPluginJS: Optional[str] = CONF_INIT_JS
     javaScript: bool = True
     javascriptLibraries: Optional[List[JavascriptLibrary]] = Field(default_factory=list)
     javascriptLibrariesLocal: Optional[List[JavascriptLibrary]] = Field(default_factory=list)
-    inputElement: Optional[str] = "TextField"
+    inputElement: Optional[str] = "JAVASCRIPT"
     cacheable: bool = True
     useVars: bool = True
     useCVars: bool = True
@@ -899,6 +899,13 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
+        correct_erg  = answerDto.ergebnis.string if (answerDto and answerDto.ergebnis) else ""
+        antwort = antwort.strip() if antwort else ""
+        correct_text = correct_text.strip() if correct_text else ""
+        correct_erg = correct_erg.strip() if correct_erg else ""
+
+        logger.info("Score: antwort=%s, correct=%s, erg=%s, toleranz=%s, answerDto=%s, grade=%s", antwort, correct_text, correct_erg, toleranz, answerDto, grade)
+
         # default result = wrong
         info = PluginScoreInfoDto(
             schuelerErgebnis=CalcErgebnisDto(string=antwort),
