@@ -899,6 +899,7 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
+        correct_text = answerDto.answerText if answerDto else ""
         correct_erg  = answerDto.ergebnis.string if (answerDto and answerDto.ergebnis) else ""
         antwort = antwort.strip() if antwort else ""
         correct_text = correct_text.strip() if correct_text else ""

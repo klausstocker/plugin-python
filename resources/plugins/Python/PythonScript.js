@@ -38,6 +38,8 @@ function initPluginPython(dtoString, active) {
     const answerField = $(plugin_inp)[0];
     const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
 
+    answerField.value = dtoData.indication;
+
     drawLayout();
     ensureStyles();
     setupEditors(initialMain);
