@@ -899,29 +899,22 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
-        correct_text = answerDto.answerText if answerDto else ""
-        correct_erg  = answerDto.ergebnis.string if (answerDto and answerDto.ergebnis) else ""
-        antwort = antwort.strip() if antwort else ""
-        correct_text = correct_text.strip() if correct_text else ""
-        correct_erg = correct_erg.strip() if correct_erg else ""
-
-        logger.info("Score: antwort=%s, correct=%s, erg=%s, toleranz=%s, answerDto=%s, grade=%s", antwort, correct_text, correct_erg, toleranz, answerDto, grade)
 
         # default result = wrong
         info = PluginScoreInfoDto(
-            schuelerErgebnis=CalcErgebnisDto(string=antwort),
+            schuelerErgebnis=CalcErgebnisDto(string=""),
             zielEinheit=ze,
             punkteIst=0.0,
             punkteSoll=float(grade),
             status="FALSCH",
-            htmlScoreInfo=f"Wert:{antwort}",
+            htmlScoreInfo="",
             feedback=""
         )
         try:
             result = checkCode('jobe:80', antwort or "", validation_code or "")
-            if result.wasSuccessful():
-                info.punkteIst  = float(grade)
-                info.status  = "OK"
+            info.punkteIst = float(grade * result.score())
+            info.status  = result.status()
+            info.schuelerErgebnis = calcErgebnisDto(string=result.__repr__(grade))
         except Exception:
             pass
         return info

@@ -105,8 +105,8 @@ async def check_code(request: Request):
     try:
         result = checkCode('jobe:80', code, testcode)
         return JSONResponse({'output': result.__repr__()})
-    except Exception:
-        return JSONResponse({'output': 'Error checking code'})
+    except Exception as e:
+        return JSONResponse({'output': f'Error checking code: {e}'})
 
 
 @router.post(f"{SERVICEPATH}/example")

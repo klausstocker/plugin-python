@@ -15,9 +15,22 @@ class CheckResult():
         return CheckResult(json.loads(resultJson), offset)
 
     def wasSuccessful(self):
-        return len(self.failures) == 0 and len(self.errors) == 0
+        return self.negCount() == 0
 
-    def __repr__(self):
+    def negCount(self):
+        return len(self.failures) + len(self.errors) + len(self.exceptions)
+
+    def status(self):
+        if self.negCount() == 0:
+            return "OK"
+        if self.negCount() < self.count:
+            return "TEILWEISE_OK"
+        return "FALSCH"
+
+    def score(self):
+        return max(0, self.count - self.negCount()) / self.count
+
+    def __repr__(self, grade = 1.):
         ret = ''
         for failure in self.failures:
             ret += f'{str(failure)}\n'
@@ -25,5 +38,6 @@ class CheckResult():
             ret += f'{str(error)}\n'
         for ex in self.exceptions:
             ret += f'{str(ex)}\n'
-        ret += f'line offset: {self._offset=}\n'
-        return ret + f'Ran {self.count} Test, {len(self.failures)} failures, {len(self.errors)} errors\n'
+        ret += f'Ran {self.count} Test, {len(self.failures)} failures, {len(self.errors)} errors, {len(self.exceptions)} exceptions\n'
+        ret += f'Score: {self.score() * grade}\n'
+        return ret
