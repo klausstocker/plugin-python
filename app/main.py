@@ -777,6 +777,7 @@ class PluginDemo:
         antwort = antwort.strip() if antwort else ""
         correct_text = correct_text.strip() if correct_text else ""
         correct_erg = correct_erg.strip() if correct_erg else ""
+
         logger.info("Score: antwort=%s, correct=%s, erg=%s, toleranz=%s, answerDto=%s, grade=%s", antwort, correct_text, correct_erg, toleranz, answerDto, grade)
 
         # default result = wrong
