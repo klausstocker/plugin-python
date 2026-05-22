@@ -108,8 +108,8 @@ LETTO_SETUP_USER = "user"
 LETTO_SETUP_PASSWORD = os.getenv("letto_user_user_password", os.getenv("LETTO_USER_USER_PASSWORD", ""))
 PLUGIN_ENDPOINT_NAME = os.getenv("PLUGIN_ENDPOINT_NAME", "pluginpython")
 PLUGIN_REGISTER_ON_READY = os.getenv("PLUGIN_REGISTER_ON_READY", "true").lower() == "true"
-PLUGIN_REGISTER_RETRIES = int(os.getenv("PLUGIN_REGISTER_RETRIES", "30"))
-PLUGIN_REGISTER_DELAY_SECONDS = float(os.getenv("PLUGIN_REGISTER_DELAY_SECONDS", "1.0"))
+PLUGIN_REGISTER_RETRIES = int(os.getenv("PLUGIN_REGISTER_RETRIES", "100"))
+PLUGIN_REGISTER_DELAY_SECONDS = float(os.getenv("PLUGIN_REGISTER_DELAY_SECONDS", "10.0"))
 NW_LETTO_ADDRESS = os.getenv("network_letto_address", os.getenv("NETWORK_LETTO_ADDRESS", "letto-pluginpython"))
 DOCKER_CONTAINER_NAME = os.getenv("docker_container_name", os.getenv("DOCKER_CONTAINER_NAME", "letto-pluginpython"))
 LETTO_PLUGIN_URI_INTERN = os.getenv("letto_plugin_uri_intern",
@@ -899,6 +899,11 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
+#        antwort = """
+#def calculate_sum(a, b):
+#    print('the sum is ' + str(a + b))
+#    return a + b
+#"""
         # default result = wrong
         info = PluginScoreInfoDto(
             schuelerErgebnis=CalcErgebnisDto(string=antwort),
@@ -1317,6 +1322,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginScoreInfoDto()
+        logger.debug(f"{req.antwort=}")
+        logger.debug(f"{req.answerDto=}")
         return pi.score(req.antwort or "", req.toleranz, req.answerDto, req.grade, req.config or "", req.pluginDto)
 
     @r.post("/getvars")

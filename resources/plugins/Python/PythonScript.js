@@ -19,12 +19,13 @@ function initPluginPython(dtoString, active) {
     } catch (e) {
         dtoData = {};
     }
-
     const plugin_div = "#" + dto.tagName + "_div";
     const plugin_inp = "." + dto.tagName + "_inp";
+    console.log("input: " + plugin_inp);
+    console.log("len: " + $(plugin_inp).length);
     const plugin = {
         name: dto.tagName,
-        active: !!active,
+        active: active,
         serviceBase: (dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
     const pluginToken = (dto.params && dto.params.pluginToken) || dto.pluginToken || "";
@@ -164,6 +165,7 @@ function initPluginPython(dtoString, active) {
         if (answerField) {
             editor.session.on("change", function () {
                 writeAnswerDto(editor.getValue());
+                console.log("sync to answerfield: " + answerField + "code:" + answerField.value);
             });
         }
 
