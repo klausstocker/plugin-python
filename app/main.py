@@ -290,7 +290,7 @@ class PluginGeneralInfo(BaseModel):
     wikiHelp: Optional[str] = "Plugins"
     helpUrl: Optional[str] = ""
     help: Optional[str] = ""
-    defaultPluginConfig: bool = True
+    defaultPluginConfig: bool = False
     math: bool = False
     pluginType: Optional[str] = "python.PluginDemo"
     initPluginJS: Optional[str] = CONF_INIT_JS
@@ -773,6 +773,12 @@ class PluginDemo:
               grade: float) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         correct_text = answerDto.answerText if answerDto else ""
+        correct_erg  = answerDto.ergebnis.string if (answerDto and answerDto.ergebnis) else ""
+        antwort = antwort.strip() if antwort else ""
+        correct_text = correct_text.strip() if correct_text else ""
+        correct_erg = correct_erg.strip() if correct_erg else ""
+        logger.info("Score: antwort=%s, correct=%s, erg=%s, toleranz=%s, answerDto=%s, grade=%s", antwort, correct_text, correct_erg, toleranz, answerDto, grade)
+
         # default result = wrong
         info = PluginScoreInfoDto(
             schuelerErgebnis=CalcErgebnisDto(string=antwort),
@@ -784,6 +790,9 @@ class PluginDemo:
             feedback=""
         )
         try:
+            if correct_erg == antwort :
+                info.punkteIst = float(grade)
+                info.status = "OK"
             richtig = parse_time_seconds(correct_text or "")
             eingabe = parse_time_seconds(antwort or "")
             if toleranz is not None:
