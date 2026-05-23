@@ -39,7 +39,8 @@ function configPluginPython(dtoString) {
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
-        optLintAtTestId: `optLintAtTest_${pluginTag}`
+        optLintAtTestId: `optLintAtTest_${pluginTag}`,
+        linterConfigId: `linterConfig_${pluginTag}`
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
@@ -66,7 +67,8 @@ function configPluginPython(dtoString) {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
                 unitTestAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.unitTestAtTest : false,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
-            }
+            },
+            linterConfig: (fallbackData && fallbackData.linterConfig) || ""
         };
 
         if (!configRawValue) return defaults;
@@ -81,14 +83,16 @@ function configPluginPython(dtoString) {
                     runAtTest: parsed.evalConfig && typeof parsed.evalConfig.runAtTest === "boolean" ? parsed.evalConfig.runAtTest : defaults.evalConfig.runAtTest,
                     unitTestAtTest: parsed.evalConfig && typeof parsed.evalConfig.unitTestAtTest === "boolean" ? parsed.evalConfig.unitTestAtTest : defaults.evalConfig.unitTestAtTest,
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
-                }
+                },
+                linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig
             };
         } catch (e) {
             return {
                 indication: configRawValue,
                 validation: defaults.validation,
                 files: defaults.files,
-                evalConfig: defaults.evalConfig
+                evalConfig: defaults.evalConfig,
+                linterConfig: defaults.linterConfig
             };
         }
     }
@@ -185,6 +189,8 @@ function configPluginPython(dtoString) {
                             <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> runAtTest</label>
                             <label class="checkbox-row"><input id="${ids.optUnitTestAtTestId}" type="checkbox" /> unitTestAtTest</label>
                             <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lintAtTest</label>
+                            <label for="${ids.linterConfigId}">Linter configuration</label>
+                            <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
                         </div>
                     </div>
 
@@ -507,16 +513,20 @@ function configPluginPython(dtoString) {
         const runAtTest = document.getElementById(ids.optRunAtTestId);
         const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
+        const linterConfig = document.getElementById(ids.linterConfigId);
 
-        runAtTest.checked = !!state.evalConfig.runAtTest;
-        unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
-        lintAtTest.checked = !!state.evalConfig.lintAtTest;
+        if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
+        if (unitTestAtTest) unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
+        if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
+        if (linterConfig) linterConfig.value = state.linterConfig || "";
 
-        [runAtTest, unitTestAtTest, lintAtTest].forEach((el) => {
+        [runAtTest, unitTestAtTest, lintAtTest, linterConfig].forEach((el) => {
+            if (!el) return;
             el.addEventListener("change", () => {
-                state.evalConfig.runAtTest = !!runAtTest.checked;
-                state.evalConfig.unitTestAtTest = !!unitTestAtTest.checked;
-                state.evalConfig.lintAtTest = !!lintAtTest.checked;
+                state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
+                state.evalConfig.unitTestAtTest = !!(unitTestAtTest && unitTestAtTest.checked);
+                state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
+                state.linterConfig = linterConfig ? linterConfig.value : "";
                 saveConfig();
             });
         });
@@ -526,7 +536,7 @@ function configPluginPython(dtoString) {
         const outputEl = document.getElementById(ids.outputId);
 
         bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
-        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
     }
 
@@ -623,6 +633,12 @@ function configPluginPython(dtoString) {
         });
     }
 
+    function buildQuestionConfigDtoPayload() {
+        return {
+            linterConfig: state.linterConfig || ""
+        };
+    }
+
     function saveConfig() {
         if (!configField) return;
 
@@ -630,11 +646,13 @@ function configPluginPython(dtoString) {
             indication: getPreviewCode(),
             validation: getUnitCode(),
             files: state.files || {},
-            evalConfig: state.evalConfig || {}
+            evalConfig: state.evalConfig || {},
+            linterConfig: state.linterConfig || ""
         };
 
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
+        questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.config = JSON.stringify(pluginConfig);
 
         configField.value = JSON.stringify(questionConfigDto);

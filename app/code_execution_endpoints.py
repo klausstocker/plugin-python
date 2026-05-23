@@ -87,7 +87,9 @@ async def lint_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
     code = body['code']
-    score, messages = lintCode(code)
+    question_config = body.get('questionConfigDto') or {}
+    linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
+    score, messages = lintCode(code, linter_config)
     messagesText = f'Your code has been rated: {score:.2f}/10.0'
     for m in messages:
         messagesText += f'\nline: {m.line}: {m.msg_id}: {m.msg}, {m.category}'
@@ -99,8 +101,6 @@ async def check_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
     code = body['code']
-    score, messages = lintCode(code)
-    messagesText = f'Your code has been rated: {score:.2f}/10.0'
     testcode = body['testcode']
     try:
         result = checkCode('jobe:80', code, testcode)

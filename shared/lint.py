@@ -1,5 +1,5 @@
 import os
-import json
+import shlex
 import tempfile
 import pylint.lint
 from pylint.reporters import CollectingReporter
@@ -22,7 +22,7 @@ class ScopedTemporaryFile():
         return self.tmp.name
 
 
-def lintCode(code :str):
+def lintCode(code: str, linter_config: str = ""):
     tmp = ScopedTemporaryFile()
     with open(tmp.name(), 'w') as f:
         f.write(code)
@@ -30,5 +30,8 @@ def lintCode(code :str):
         return (0.0, 'Error while linting')
 
     reporter = CollectingReporter()
-    results = pylint.lint.Run([tmp.name()], reporter=reporter, exit=False)
+    lint_args = [tmp.name()]
+    if linter_config:
+        lint_args = shlex.split(linter_config) + lint_args
+    results = pylint.lint.Run(lint_args, reporter=reporter, exit=False)
     return (results.linter.stats.global_note, reporter.messages)
