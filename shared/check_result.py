@@ -21,6 +21,8 @@ class CheckResult():
         return len(self.failures) + len(self.errors) + len(self.exceptions)
 
     def status(self):
+        if self.count == 0:
+            return "NotScored"
         if self.negCount() == 0:
             return "OK"
         if self.negCount() < self.count:
@@ -28,6 +30,8 @@ class CheckResult():
         return "FALSCH"
 
     def score(self):
+        if self.count == 0:
+            return 0.
         return max(0, self.count - self.negCount()) / self.count
 
     def __repr__(self, grade = 1.):
