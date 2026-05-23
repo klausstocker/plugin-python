@@ -40,7 +40,8 @@ function configPluginPython(dtoString) {
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
-        linterConfigId: `linterConfig_${pluginTag}`
+        linterConfigId: `linterConfig_${pluginTag}`,
+        linterWeightId: `linterWeight_${pluginTag}`
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
@@ -68,7 +69,8 @@ function configPluginPython(dtoString) {
                 unitTestAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.unitTestAtTest : false,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
             },
-            linterConfig: (fallbackData && fallbackData.linterConfig) || ""
+            linterConfig: (fallbackData && fallbackData.linterConfig) || "",
+            linterWeight: Number((fallbackData && fallbackData.linterWeight) || 0.0)
         };
 
         if (!configRawValue) return defaults;
@@ -84,7 +86,8 @@ function configPluginPython(dtoString) {
                     unitTestAtTest: parsed.evalConfig && typeof parsed.evalConfig.unitTestAtTest === "boolean" ? parsed.evalConfig.unitTestAtTest : defaults.evalConfig.unitTestAtTest,
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
                 },
-                linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig
+                linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
+                linterWeight: Number(parsed.linterWeight || defaults.linterWeight || 0.0)
             };
         } catch (e) {
             return {
@@ -92,7 +95,8 @@ function configPluginPython(dtoString) {
                 validation: defaults.validation,
                 files: defaults.files,
                 evalConfig: defaults.evalConfig,
-                linterConfig: defaults.linterConfig
+                linterConfig: defaults.linterConfig,
+                linterWeight: defaults.linterWeight
             };
         }
     }
@@ -191,6 +195,8 @@ function configPluginPython(dtoString) {
                             <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lintAtTest</label>
                             <label for="${ids.linterConfigId}">Linter configuration</label>
                             <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                            <label for="${ids.linterWeightId}">Linter weight</label>
+                            <input id="${ids.linterWeightId}" type="number" min="0" step="0.1" class="text-input" placeholder="0.0" />
                         </div>
                     </div>
 
@@ -514,19 +520,22 @@ function configPluginPython(dtoString) {
         const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
+        const linterWeight = document.getElementById(ids.linterWeightId);
 
         if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
         if (unitTestAtTest) unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
         if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
         if (linterConfig) linterConfig.value = state.linterConfig || "";
+        if (linterWeight) linterWeight.value = Number(state.linterWeight || 0.0);
 
-        [runAtTest, unitTestAtTest, lintAtTest, linterConfig].forEach((el) => {
+        [runAtTest, unitTestAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
             if (!el) return;
             el.addEventListener("change", () => {
                 state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
                 state.evalConfig.unitTestAtTest = !!(unitTestAtTest && unitTestAtTest.checked);
                 state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
                 state.linterConfig = linterConfig ? linterConfig.value : "";
+                state.linterWeight = linterWeight ? Number(linterWeight.value || 0.0) : 0.0;
                 saveConfig();
             });
         });
@@ -635,7 +644,8 @@ function configPluginPython(dtoString) {
 
     function buildQuestionConfigDtoPayload() {
         return {
-            linterConfig: state.linterConfig || ""
+            linterConfig: state.linterConfig || "",
+            linterWeight: Number(state.linterWeight || 0.0)
         };
     }
 
@@ -647,12 +657,14 @@ function configPluginPython(dtoString) {
             validation: getUnitCode(),
             files: state.files || {},
             evalConfig: state.evalConfig || {},
-            linterConfig: state.linterConfig || ""
+            linterConfig: state.linterConfig || "",
+            linterWeight: Number(state.linterWeight || 0.0)
         };
 
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
+        questionConfigDto.linterWeight = pluginConfig.linterWeight;
         questionConfigDto.config = JSON.stringify(pluginConfig);
 
         configField.value = JSON.stringify(questionConfigDto);

@@ -38,6 +38,7 @@ function initPluginPython(dtoString, active) {
     const answerField = $(plugin_inp)[0];
     const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
     const linterConfig = dtoData.linterConfig || "";
+    const linterWeight = Number(dtoData.linterWeight || 0.0);
 
     answerField.value = dtoData.indication;
 
@@ -186,7 +187,7 @@ function initPluginPython(dtoString, active) {
         const out = document.getElementById(outputId);
 
         bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "" }), out);
-        bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig } }), out);
+        bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight } }), out);
     }
 
     function bindRequest(buttonId, endpoint, bodyBuilder, targetEl) {
