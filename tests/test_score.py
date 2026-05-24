@@ -58,3 +58,60 @@ class TestScoreResult(unittest.TestCase):
         self.assertIn("Linter weight: 2.0000", text)
         self.assertIn("Linter score: 70.00 %", text)
         self.assertIn("Overall score: 63.33 %", text)
+
+
+class TestCheckResult(unittest.TestCase):
+    def test_score_uses_assert_count(self):
+        from shared.check_result import CheckResult
+        r = CheckResult({
+            'count': 2,
+            'assert_count': 5,
+            'failed_assert_count': 1,
+            'failures': ['f1'],
+            'errors': [],
+            'exceptions': []
+        })
+        self.assertAlmostEqual(r.score(), 0.8)
+
+    def test_repr_shows_test_and_assert_counts(self):
+        from shared.check_result import CheckResult
+        r = CheckResult({
+            'count': 3,
+            'assert_count': 7,
+            'failures': [],
+            'errors': [],
+            'exceptions': []
+        })
+        text = r.__repr__()
+        self.assertIn('Ran 3 tests, 7 asserts', text)
+
+
+    def test_neg_count_uses_failed_assert_count(self):
+        from shared.check_result import CheckResult
+        r = CheckResult({
+            'count': 2,
+            'assert_count': 5,
+            'failed_assert_count': 2,
+            'failures': ['f1'],
+            'errors': ['e1'],
+            'exceptions': ['x1']
+        })
+        self.assertEqual(r.negCount(), 2)
+        self.assertAlmostEqual(r.score(), 0.6)
+
+
+    def test_score_equally_weights_test_functions(self):
+        from shared.check_result import CheckResult
+        r = CheckResult({
+            'count': 2,
+            'assert_count': 3,
+            'failed_assert_count': 1,
+            'test_details': [
+                {'assert_count': 1, 'failed_assert_count': 0, 'had_error': True},
+                {'assert_count': 3, 'failed_assert_count': 1, 'had_error': False},
+            ],
+            'failures': ['f1'],
+            'errors': ['e1'],
+            'exceptions': []
+        })
+        self.assertAlmostEqual(r.score(), (0.0 + (2/3)) / 2)

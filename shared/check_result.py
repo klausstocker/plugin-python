@@ -6,6 +6,9 @@ class CheckResult():
         self._offset = offset
         self.count = resultDict['count'] if 'count' in resultDict else 0
         self.failures = resultDict['failures'] if 'failures' in resultDict else []
+        self.assert_count = resultDict['assert_count'] if 'assert_count' in resultDict else 0
+        self.failed_assert_count = resultDict['failed_assert_count'] if 'failed_assert_count' in resultDict else len(self.failures)
+        self.test_details = resultDict['test_details'] if 'test_details' in resultDict else []
         self.errors = resultDict['errors'] if 'errors' in resultDict else []
         self.exceptions = resultDict['exceptions'] if 'exceptions' in resultDict else []
 
@@ -18,7 +21,7 @@ class CheckResult():
         return self.negCount() == 0
 
     def negCount(self):
-        return len(self.failures) + len(self.errors) + len(self.exceptions)
+        return self.failed_assert_count
 
     def status(self):
         if self.count == 0:
@@ -30,9 +33,24 @@ class CheckResult():
         return "FALSCH"
 
     def score(self):
-        if self.count == 0:
+        if len(self.test_details) > 0:
+            test_scores = []
+            for test_detail in self.test_details:
+                if test_detail.get('had_error', False):
+                    test_scores.append(0.0)
+                    continue
+
+                assert_count = test_detail.get('assert_count', 0)
+                failed_assert_count = test_detail.get('failed_assert_count', 0)
+                if assert_count == 0:
+                    test_scores.append(1.0)
+                    continue
+                test_scores.append(max(0, assert_count - failed_assert_count) / assert_count)
+            return sum(test_scores) / len(test_scores)
+
+        if self.assert_count == 0:
             return 0.
-        return max(0, self.count - self.negCount()) / self.count
+        return max(0, self.assert_count - self.negCount()) / self.assert_count
 
     def __repr__(self):
         ret = ''
@@ -42,6 +60,6 @@ class CheckResult():
             ret += f'{str(error)}\n'
         for ex in self.exceptions:
             ret += f'{str(ex)}\n'
-        ret += f'Ran {self.count} tests, {len(self.failures)} failures, {len(self.errors)} errors, {len(self.exceptions)} exceptions.\n'
+        ret += f'Ran {self.count} tests, {self.assert_count} asserts, {len(self.failures)} failures, {len(self.errors)} errors, {len(self.exceptions)} exceptions.\n'
         ret += f'Unit test score: {(self.score() * 100.):.2f} %\n'
         return ret
