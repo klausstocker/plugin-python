@@ -194,7 +194,8 @@ function configPluginPython(dtoString) {
                             </div>
                             <div class="linter-head-row">
                                 <label for="${ids.linterConfigId}">Linter configuration</label>
-                                <input id="${ids.linterWeightId}" type="number" min="0" step="0.1" class="text-input linter-weight-input" placeholder="weight" />
+                                <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
                             </div>
                             <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
                         </div>
@@ -543,7 +544,7 @@ function configPluginPython(dtoString) {
         if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
         if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
         if (linterConfig) linterConfig.value = state.linterConfig || "";
-        if (linterWeight) linterWeight.value = Number(state.linterWeight || 0.0);
+        if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
 
         [runAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
             if (!el) return;
@@ -566,8 +567,24 @@ function configPluginPython(dtoString) {
         state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
         state.linterConfig = linterConfig ? linterConfig.value : "";
 
-        const parsedWeight = linterWeight ? Number(linterWeight.value) : 0.0;
+        const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
+
+        if (linterWeight) {
+            linterWeight.value = formatWeightValue(state.linterWeight);
+        }
+    }
+
+    function parseWeightValue(rawValue) {
+        const normalized = String(rawValue == null ? "" : rawValue).trim().replace(",", ".");
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0.0;
+    }
+
+    function formatWeightValue(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return "0.0";
+        return String(parsed);
     }
 
     function bindSharedButtons() {
