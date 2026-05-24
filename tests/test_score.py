@@ -17,8 +17,8 @@ class FakeCheckResult:
     def score(self):
         return self._value
 
-    def __repr__(self, grade=1.0):
-        return f"Score: {self._value * grade}\n"
+    def __repr__(self):
+        return f"Score: {self._value}\n"
 
 
 class TestScoreCode(unittest.TestCase):
@@ -41,7 +41,7 @@ class TestScoreCode(unittest.TestCase):
 
         score, _ = scoreCode('jobe:80', 'print(1)', 'tests', '--disable=C0114', 2.0)
 
-        expected = (0.4 + 2.0 * (8.0 / 10.0)) / (1.0 + 2.0)
+        expected = (0.4 + 2.0 * 0.8) / (1.0 + 2.0)
         self.assertAlmostEqual(score, expected)
         lint_mock.assert_called_once_with('print(1)', '--disable=C0114')
 
@@ -53,9 +53,8 @@ if __name__ == '__main__':
 class TestScoreResult(unittest.TestCase):
     def test_score_result_repr_with_lint_details(self):
         from shared.score_result import ScoreResult
-        r = ScoreResult(FakeCheckResult(0.5), 7.0, 2.0)
-        text = r.__repr__(1.0)
-        self.assertIn("Linter weight: 2.0", text)
-        self.assertIn("Linter score: 7.0/10.0", text)
-        self.assertIn("Overall score:", text)
-
+        r = ScoreResult(FakeCheckResult(0.5), 0.7, 2.0)
+        text = r.__repr__()
+        self.assertIn("Linter weight: 2.0000", text)
+        self.assertIn("Linter score: 70.00 %", text)
+        self.assertIn("Overall score: 63.33 %", text)

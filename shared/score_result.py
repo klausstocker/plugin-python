@@ -11,17 +11,15 @@ class ScoreResult:
         base_score = self.check_result.score()
         if self.linter_weight == 0.0:
             return base_score
-        return (base_score + self.linter_weight * (self.linter_score / 10.0)) / (1.0 + self.linter_weight)
+        return (base_score + self.linter_weight * self.linter_score) / (1.0 + self.linter_weight)
 
-    def __repr__(self, grade: float = 1.0):
+    def __repr__(self):
         if self.linter_weight == 0.0:
-            return self.check_result.__repr__(grade)
+            return self.check_result.__repr__()
 
-        base_score = self.check_result.score()
-        total_score = self.total_score()
-        ret = self.check_result.__repr__(grade)
-        ret += f'Check score: {base_score * grade}\n'
-        ret += f'Linter weight: {self.linter_weight}\n'
-        ret += f'Linter score: {self.linter_score}/10.0\n'
-        ret += f'Overall score: {total_score * grade}\n'
+        ret = self.check_result.__repr__()
+        ret += f'Check score: {(self.check_result.score() * 100.):.2f} %\n'
+        ret += f'Linter weight: {self.linter_weight:.4f}\n'
+        ret += f'Linter score: {(self.linter_score * 100.):.2f} %\n'
+        ret += f'Overall score: {(self.total_score() * 100.):.2f} %\n'
         return ret
