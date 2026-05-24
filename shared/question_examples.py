@@ -162,6 +162,53 @@ class Checker(unittest.TestCase): # do not rename
 
 """,
         linterConfig="--disable=C0114,C0115,C0116")
+    ,
+    QuestionConfigDto(
+        indication="""
+def rad2degree(angle_rad: float):
+    grad = 0
+    minuten = 0
+    sekunden = 0
+    quadrant = 1
+    return grad, minuten, sekunden, quadrant
+
+""",
+        validation="""
+import math
+import unittest
+
+def correct_implementation(rad: float):
+    grad_gesamt = math.degrees(rad)
+
+    while grad_gesamt < 0:
+        grad_gesamt += 360.
+
+    grad = int(grad_gesamt)
+    rest = abs(grad_gesamt - grad) * 60
+
+    minuten = int(rest)
+    sekunden = (rest - minuten) * 60
+
+    grad_norm = grad % 360
+    quadrant = 0
+    if 0 <= grad_norm < 90:
+        quadrant = 1
+    elif 90 <= grad_norm < 180:
+        quadrant = 2
+    elif 180 <= grad_norm < 270:
+        quadrant = 3
+    elif 270 <= grad_norm < 360:
+        quadrant = 4
+
+    return grad, minuten, sekunden, quadrant
+
+class Checker(unittest.TestCase): # do not rename
+    def test_zero(self): # test method names must start with 'test_'
+        for a in range(-365, 400, 45):
+            self.assertEqual(rad2degree(a), correct_implementation(a))
+
+""",
+        linterConfig="--disable=C0114,C0115,C0116")
     ]
 
 
