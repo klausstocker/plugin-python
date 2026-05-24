@@ -39,7 +39,6 @@ function configPluginPython(dtoString) {
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
-        optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`
@@ -67,7 +66,6 @@ function configPluginPython(dtoString) {
             files: (fallbackData && fallbackData.files) || {},
             evalConfig: {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
-                unitTestAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.unitTestAtTest : false,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
             },
             linterConfig: (fallbackData && fallbackData.linterConfig) || "",
@@ -84,7 +82,6 @@ function configPluginPython(dtoString) {
                 files: parsed.files || defaults.files,
                 evalConfig: {
                     runAtTest: parsed.evalConfig && typeof parsed.evalConfig.runAtTest === "boolean" ? parsed.evalConfig.runAtTest : defaults.evalConfig.runAtTest,
-                    unitTestAtTest: parsed.evalConfig && typeof parsed.evalConfig.unitTestAtTest === "boolean" ? parsed.evalConfig.unitTestAtTest : defaults.evalConfig.unitTestAtTest,
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
                 },
                 linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
@@ -191,13 +188,16 @@ function configPluginPython(dtoString) {
 
                         <div class="tab-panel" id="tab-options">
                             <h3>Configuration flags</h3>
-                            <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> runAtTest</label>
-                            <label class="checkbox-row"><input id="${ids.optUnitTestAtTestId}" type="checkbox" /> unitTestAtTest</label>
-                            <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lintAtTest</label>
-                            <label for="${ids.linterConfigId}">Linter configuration</label>
+                            <div class="flags-row">
+                                <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
+                                <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
+                            </div>
+                            <div class="linter-head-row">
+                                <label for="${ids.linterConfigId}">Linter configuration</label>
+                                <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                            </div>
                             <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
-                            <label for="${ids.linterWeightId}">Linter weight</label>
-                            <input id="${ids.linterWeightId}" type="number" min="0" step="0.1" class="text-input" placeholder="0.0" />
                         </div>
                     </div>
 
@@ -358,8 +358,26 @@ function configPluginPython(dtoString) {
                 background: #f5f5f5;
             }
             .pluginConfigForm .checkbox-row {
-                display: block;
-                margin: 8px 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                margin: 0;
+            }
+            .pluginConfigForm .flags-row {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                flex-wrap: wrap;
+            }
+            .pluginConfigForm .linter-head-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .pluginConfigForm .linter-weight-input {
+                width: 90px;
+                margin: 0;
             }
             .pluginConfigForm .small-gap {
                 gap: 6px;
@@ -519,18 +537,16 @@ function configPluginPython(dtoString) {
 
     function setupOptionsTab() {
         const runAtTest = document.getElementById(ids.optRunAtTestId);
-        const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
 
         if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
-        if (unitTestAtTest) unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
         if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
         if (linterConfig) linterConfig.value = state.linterConfig || "";
-        if (linterWeight) linterWeight.value = Number(state.linterWeight || 0.0);
+        if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
 
-        [runAtTest, unitTestAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
+        [runAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
             if (!el) return;
             const onOptionChanged = () => {
                 syncOptionsStateFromInputs();
@@ -543,18 +559,32 @@ function configPluginPython(dtoString) {
 
     function syncOptionsStateFromInputs() {
         const runAtTest = document.getElementById(ids.optRunAtTestId);
-        const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
 
         state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
-        state.evalConfig.unitTestAtTest = !!(unitTestAtTest && unitTestAtTest.checked);
         state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
         state.linterConfig = linterConfig ? linterConfig.value : "";
 
-        const parsedWeight = linterWeight ? Number(linterWeight.value) : 0.0;
+        const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
+
+        if (linterWeight) {
+            linterWeight.value = formatWeightValue(state.linterWeight);
+        }
+    }
+
+    function parseWeightValue(rawValue) {
+        const normalized = String(rawValue == null ? "" : rawValue).trim().replace(",", ".");
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0.0;
+    }
+
+    function formatWeightValue(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return "0.0";
+        return String(parsed);
     }
 
     function bindSharedButtons() {
@@ -613,7 +643,7 @@ function configPluginPython(dtoString) {
     function applyExample(example) {
         if (!example) return;
         state.files = example.files || {};
-        state.evalConfig = example.evalConfig || { runAtTest: true, unitTestAtTest: false, lintAtTest: true };
+        state.evalConfig = example.evalConfig || { runAtTest: true, lintAtTest: true };
 
         if (configPluginPython._setUnitCode) configPluginPython._setUnitCode(example.validation || "");
         if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
