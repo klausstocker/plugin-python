@@ -18,7 +18,6 @@ class ScoreResult:
             return self.check_result.__repr__()
 
         ret = self.check_result.__repr__()
-        ret += f'Check score: {(self.check_result.score() * 100.):.2f} %\n'
         ret += f'Linter weight: {self.linter_weight:.4f}\n'
         ret += f'Linter score: {(self.linter_score * 100.):.2f} %\n'
         ret += f'Overall score: {(self.total_score() * 100.):.2f} %\n'

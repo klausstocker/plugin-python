@@ -29,8 +29,8 @@ class Checker(unittest.TestCase): # do not rename
         with RedirectedStdout() as expected_out:
             correctImplementation(*args)
         self.assertEqual(str(student_out), str(expected_out))
-"""
-    ),
+""",
+        linterConfig="--disable=C0114,C0115,C0116"),
     QuestionConfigDto(
         indication="""
 def countPointingAt0(start: int, rotations: list[str]):
@@ -93,8 +93,8 @@ class Checker(unittest.TestCase): # do not rename
         #self.assertEqual(count_zero_stops(50, rotations), 5)
         self.assertEqual(countPointingAt0(50, rotations), 5)
 
-"""
-    ),
+""",
+        linterConfig="--disable=C0114,C0115,C0116"),
     QuestionConfigDto(
         indication="""
 def count_larger_mean(values: list[float]):
@@ -117,8 +117,8 @@ class Checker(unittest.TestCase): # do not rename
         self.assertEqual(count_larger_mean([0, 2, 4]), 1)
         self.assertEqual(count_larger_mean([0, 1, 1]), 2)
 
-"""
-    ),
+""",
+        linterConfig="--disable=C0114,C0115,C0116"),
     QuestionConfigDto(
         indication="""
 import sys
@@ -160,8 +160,9 @@ class Checker(unittest.TestCase): # do not rename
             points.append((random.random() * 10., random.random() * 10.))
         self.assertAlmostEqual(minimalDistance(points), correctImplementation(points))
 
-"""
-    )]
+""",
+        linterConfig="--disable=C0114,C0115,C0116")
+    ]
 
 
 def QuestionConfigDtoExamplesWorkingIndication():
