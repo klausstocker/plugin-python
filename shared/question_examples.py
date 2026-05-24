@@ -162,6 +162,56 @@ class Checker(unittest.TestCase): # do not rename
 
 """,
         linterConfig="--disable=C0114,C0115,C0116")
+    ,
+    QuestionConfigDto(
+        indication="""
+def rad2degree(angle_rad: float):
+    grad = 0
+    minuten = 0
+    sekunden = 0
+    quadrant = 1
+    return grad, minuten, sekunden, quadrant
+""",
+        validation="""
+import math
+import unittest
+
+def correct_implementation(rad: float):
+    grad_gesamt = math.degrees(rad)
+
+    grad = int(grad_gesamt)
+    rest = abs(grad_gesamt - grad) * 60
+
+    minuten = int(rest)
+    sekunden = (rest - minuten) * 60
+
+    grad_norm = grad % 360
+    quadrant = 0
+    if 0 <= grad_norm < 90:
+        quadrant = 1
+    elif 90 <= grad_norm < 180:
+        quadrant = 2
+    elif 180 <= grad_norm < 270:
+        quadrant = 3
+    elif 270 <= grad_norm < 360:
+        quadrant = 4
+
+    return grad, minuten, sekunden, quadrant
+
+class Checker(unittest.TestCase): # do not rename
+    def test_zero(self): # test method names must start with 'test_'
+        self.assertEqual(rad2degree(0.0), correct_implementation(0.0))
+
+    def test_pi_over_two(self):
+        self.assertEqual(rad2degree(math.pi / 2), correct_implementation(math.pi / 2))
+
+    def test_negative_angle(self):
+        self.assertEqual(rad2degree(-math.pi / 4), correct_implementation(-math.pi / 4))
+
+    def test_large_angle(self):
+        self.assertEqual(rad2degree(7 * math.pi), correct_implementation(7 * math.pi))
+""",
+        linterConfig="--disable=C0114,C0115,C0116")
     ]
 
 
