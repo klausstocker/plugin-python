@@ -12,4 +12,6 @@ class QuestionConfigDto(BaseModel):
     validation: str = ""
     files: dict[str, str] = {}
     evalConfig: EvalConfigDto = EvalConfigDto()
+    linterConfig: str = ""
+    linterWeight: float = 0.0
 

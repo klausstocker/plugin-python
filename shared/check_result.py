@@ -34,7 +34,7 @@ class CheckResult():
             return 0.
         return max(0, self.count - self.negCount()) / self.count
 
-    def __repr__(self, grade = 1.):
+    def __repr__(self):
         ret = ''
         for failure in self.failures:
             ret += f'{str(failure)}\n'
@@ -43,5 +43,5 @@ class CheckResult():
         for ex in self.exceptions:
             ret += f'{str(ex)}\n'
         ret += f'Ran {self.count} Test, {len(self.failures)} failures, {len(self.errors)} errors, {len(self.exceptions)} exceptions\n'
-        ret += f'Score: {self.score() * grade}\n'
+        ret += f'Score: {(self.score() * 100.):.2f} %\n'
         return ret

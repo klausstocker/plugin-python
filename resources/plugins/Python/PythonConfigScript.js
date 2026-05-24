@@ -32,6 +32,7 @@ function configPluginPython(dtoString) {
         btnRunId: `sharedRun_${pluginTag}`,
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
+        btnScoreId: `sharedScore_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
         fileNameId: `fileName_${pluginTag}`,
@@ -39,7 +40,9 @@ function configPluginPython(dtoString) {
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optUnitTestAtTestId: `optUnitTestAtTest_${pluginTag}`,
-        optLintAtTestId: `optLintAtTest_${pluginTag}`
+        optLintAtTestId: `optLintAtTest_${pluginTag}`,
+        linterConfigId: `linterConfig_${pluginTag}`,
+        linterWeightId: `linterWeight_${pluginTag}`
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
@@ -66,7 +69,9 @@ function configPluginPython(dtoString) {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
                 unitTestAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.unitTestAtTest : false,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
-            }
+            },
+            linterConfig: (fallbackData && fallbackData.linterConfig) || "",
+            linterWeight: Number((fallbackData && fallbackData.linterWeight) || 0.0)
         };
 
         if (!configRawValue) return defaults;
@@ -81,14 +86,18 @@ function configPluginPython(dtoString) {
                     runAtTest: parsed.evalConfig && typeof parsed.evalConfig.runAtTest === "boolean" ? parsed.evalConfig.runAtTest : defaults.evalConfig.runAtTest,
                     unitTestAtTest: parsed.evalConfig && typeof parsed.evalConfig.unitTestAtTest === "boolean" ? parsed.evalConfig.unitTestAtTest : defaults.evalConfig.unitTestAtTest,
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
-                }
+                },
+                linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
+                linterWeight: Number(parsed.linterWeight || defaults.linterWeight || 0.0)
             };
         } catch (e) {
             return {
                 indication: configRawValue,
                 validation: defaults.validation,
                 files: defaults.files,
-                evalConfig: defaults.evalConfig
+                evalConfig: defaults.evalConfig,
+                linterConfig: defaults.linterConfig,
+                linterWeight: defaults.linterWeight
             };
         }
     }
@@ -185,6 +194,10 @@ function configPluginPython(dtoString) {
                             <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> runAtTest</label>
                             <label class="checkbox-row"><input id="${ids.optUnitTestAtTestId}" type="checkbox" /> unitTestAtTest</label>
                             <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lintAtTest</label>
+                            <label for="${ids.linterConfigId}">Linter configuration</label>
+                            <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                            <label for="${ids.linterWeightId}">Linter weight</label>
+                            <input id="${ids.linterWeightId}" type="number" min="0" step="0.1" class="text-input" placeholder="0.0" />
                         </div>
                     </div>
 
@@ -193,6 +206,7 @@ function configPluginPython(dtoString) {
                             <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
                             <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
                             <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
+                            <button type="button" id="${ids.btnScoreId}" class="cfg-btn">score</button>
                         </div>
                         <pre id="${ids.outputId}" class="output-box"></pre>
                     </div>
@@ -507,27 +521,49 @@ function configPluginPython(dtoString) {
         const runAtTest = document.getElementById(ids.optRunAtTestId);
         const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
+        const linterConfig = document.getElementById(ids.linterConfigId);
+        const linterWeight = document.getElementById(ids.linterWeightId);
 
-        runAtTest.checked = !!state.evalConfig.runAtTest;
-        unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
-        lintAtTest.checked = !!state.evalConfig.lintAtTest;
+        if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
+        if (unitTestAtTest) unitTestAtTest.checked = !!state.evalConfig.unitTestAtTest;
+        if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
+        if (linterConfig) linterConfig.value = state.linterConfig || "";
+        if (linterWeight) linterWeight.value = Number(state.linterWeight || 0.0);
 
-        [runAtTest, unitTestAtTest, lintAtTest].forEach((el) => {
-            el.addEventListener("change", () => {
-                state.evalConfig.runAtTest = !!runAtTest.checked;
-                state.evalConfig.unitTestAtTest = !!unitTestAtTest.checked;
-                state.evalConfig.lintAtTest = !!lintAtTest.checked;
+        [runAtTest, unitTestAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
+            if (!el) return;
+            const onOptionChanged = () => {
+                syncOptionsStateFromInputs();
                 saveConfig();
-            });
+            };
+            el.addEventListener("change", onOptionChanged);
+            el.addEventListener("input", onOptionChanged);
         });
+    }
+
+    function syncOptionsStateFromInputs() {
+        const runAtTest = document.getElementById(ids.optRunAtTestId);
+        const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
+        const lintAtTest = document.getElementById(ids.optLintAtTestId);
+        const linterConfig = document.getElementById(ids.linterConfigId);
+        const linterWeight = document.getElementById(ids.linterWeightId);
+
+        state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
+        state.evalConfig.unitTestAtTest = !!(unitTestAtTest && unitTestAtTest.checked);
+        state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
+        state.linterConfig = linterConfig ? linterConfig.value : "";
+
+        const parsedWeight = linterWeight ? Number(linterWeight.value) : 0.0;
+        state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
     }
 
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
         bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
-        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
+        bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
     }
 
     async function setupExamples() {
@@ -623,18 +659,31 @@ function configPluginPython(dtoString) {
         });
     }
 
+    function buildQuestionConfigDtoPayload() {
+        syncOptionsStateFromInputs();
+        return {
+            linterConfig: state.linterConfig || "",
+            linterWeight: Number(state.linterWeight || 0.0)
+        };
+    }
+
     function saveConfig() {
         if (!configField) return;
+        syncOptionsStateFromInputs();
 
         const pluginConfig = {
             indication: getPreviewCode(),
             validation: getUnitCode(),
             files: state.files || {},
-            evalConfig: state.evalConfig || {}
+            evalConfig: state.evalConfig || {},
+            linterConfig: state.linterConfig || "",
+            linterWeight: Number(state.linterWeight || 0.0)
         };
 
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
+        questionConfigDto.linterConfig = pluginConfig.linterConfig;
+        questionConfigDto.linterWeight = pluginConfig.linterWeight;
         questionConfigDto.config = JSON.stringify(pluginConfig);
 
         configField.value = JSON.stringify(questionConfigDto);

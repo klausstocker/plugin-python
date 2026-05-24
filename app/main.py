@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from shared.question_config import QuestionConfigDto
 from shared.check import checkCode
+from shared.lint import lintCode
+from shared.score import scoreCode
 from pydantic import ValidationError
 
 # --------------------------
@@ -899,6 +901,7 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
+        linter_config, linter_weight = _extract_linter_settings(answerDto, config, pluginDto)
 
         # default result = wrong
         info = PluginScoreInfoDto(
@@ -911,9 +914,9 @@ class PluginPython:
             feedback=""
         )
         try:
-            result = checkCode('jobe:80', antwort or "", validation_code or "")
-            info.punkteIst = float(grade * result.score())
-            info.status  = result.status()
+            total_score, result = scoreCode('jobe:80', antwort or "", validation_code or "", linter_config, linter_weight)
+            info.punkteIst = float(grade * total_score)
+            info.status  = result.check_result.status()
             info.schuelerErgebnis = calcErgebnisDto(string=result.__repr__(grade))
         except Exception:
             pass
@@ -1567,6 +1570,57 @@ def extern_reload(req: LoadPluginRequestDto):
 
 app.include_router(extern_router)
 
+
+
+def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> tuple[str, float]:
+    """Extract linter config and linter weight from possible nested payload formats."""
+
+    def _parse_json_string(raw: str) -> Optional[dict]:
+        if not raw:
+            return None
+        try:
+            obj = json.loads(raw)
+            return obj if isinstance(obj, dict) else None
+        except Exception:
+            return None
+
+    def _to_float(value: Any) -> float:
+        try:
+            return float(value)
+        except Exception:
+            return 0.0
+
+    def _extract_from_dict(data: dict) -> tuple[str, float]:
+        linter_config = data.get("linterConfig")
+        linter_weight = _to_float(data.get("linterWeight", 0.0))
+        if isinstance(linter_config, str):
+            return linter_config, linter_weight
+
+        nested = data.get("config")
+        if isinstance(nested, str):
+            nested_data = _parse_json_string(nested)
+            if nested_data:
+                nested_linter_config = nested_data.get("linterConfig")
+                nested_linter_weight = _to_float(nested_data.get("linterWeight", 0.0))
+                if isinstance(nested_linter_config, str):
+                    return nested_linter_config, nested_linter_weight
+                return "", nested_linter_weight
+        return "", linter_weight
+
+    if plugin_dto and plugin_dto.jsonData:
+        try:
+            payload = base64.b64decode(plugin_dto.jsonData).decode("utf-8")
+            data = _parse_json_string(payload)
+            if data:
+                return _extract_from_dict(data)
+        except Exception:
+            pass
+
+    config_obj = _parse_json_string(plugin_config or "")
+    if config_obj:
+        return _extract_from_dict(config_obj)
+
+    return "", 0.0
 def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> str:
     """Extract validation unittest code from possible nested payload formats."""
 
