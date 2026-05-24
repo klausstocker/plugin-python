@@ -55,6 +55,24 @@ class Checker(unittest.TestCase): # do not rename
         self.assertEqual(result.count, 2)
         self.assertTrue(result.wasSuccessful())
 
+    def test_check_one_passing_one_failing(self):
+        code = """
+def always_true():
+    return True
+"""
+        testCode = """
+class Checker(unittest.TestCase): # do not rename
+    def test_true(self):
+        self.assertTrue(always_true())
+
+    def test_false(self):
+        self.assertFalse(always_true())
+"""
+        result = checkCode('localhost:4000', code, testCode)
+        self.assertEqual(result.count, 2)
+        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(result.score(), 0.5)
+
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
         fileId = 'B00WHrZtSjfile1gasdfaserscasdfaserasdfaserqwcasrweas'

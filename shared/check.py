@@ -37,11 +37,11 @@ def main():
         result = runner.run(suite)
         ret['count'] = result.testsRun
         for error in result.errors:
-            ret['errors'].append(error)
+            ret['errors'].append(error[1] if isinstance(error, tuple) else str(error))
         for failure in result.failures:
-            ret['failures'].append(failure)
+            ret['failures'].append(failure[1] if isinstance(failure, tuple) else str(failure))
     except Exception as e:
-        ret['exceptions'].append(e)
+        ret['exceptions'].append(str(e))
     return ret
 
 if __name__ == '__main__':
