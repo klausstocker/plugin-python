@@ -42,6 +42,6 @@ class CheckResult():
             ret += f'{str(error)}\n'
         for ex in self.exceptions:
             ret += f'{str(ex)}\n'
-        ret += f'Ran {self.count} Test, {len(self.failures)} failures, {len(self.errors)} errors, {len(self.exceptions)} exceptions\n'
-        ret += f'Score: {(self.score() * 100.):.2f} %\n'
+        ret += f'Ran {self.count} tests, {len(self.failures)} failures, {len(self.errors)} errors, {len(self.exceptions)} exceptions.\n'
+        ret += f'Unit test score: {(self.score() * 100.):.2f} %\n'
         return ret
