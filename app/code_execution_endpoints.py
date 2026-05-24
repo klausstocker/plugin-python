@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
+from shared.score import scoreCode
 from shared.question_config import QuestionConfigDto
 from shared.question_examples import QuestionConfigDtoExamples
 
@@ -108,6 +109,29 @@ async def check_code(request: Request):
     except Exception as e:
         return JSONResponse({'output': f'Error checking code: {e}'})
 
+
+
+
+@router.post(f"{SERVICEPATH}/scorePlugin")
+async def score_plugin(request: Request):
+    _ensure_authorized(request)
+    body = await request.json()
+    code = body['code']
+    testcode = body['testcode']
+
+    question_config = body.get('questionConfigDto') or {}
+    linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
+    linter_weight_raw = question_config.get('linterWeight', 0.0) if isinstance(question_config, dict) else 0.0
+    try:
+        linter_weight = float(linter_weight_raw)
+    except (TypeError, ValueError):
+        linter_weight = 0.0
+
+    try:
+        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight)
+        return JSONResponse({'output': result.__repr__(), 'score': score})
+    except Exception as e:
+        return JSONResponse({'output': f'Error scoring code: {e}', 'score': 0.0})
 
 @router.post(f"{SERVICEPATH}/example")
 async def get_example(request: Request):
