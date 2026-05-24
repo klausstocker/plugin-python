@@ -916,7 +916,7 @@ class PluginPython:
         try:
             total_score, result = scoreCode('jobe:80', antwort or "", validation_code or "", linter_config, linter_weight)
             info.punkteIst = float(grade * total_score)
-            info.status  = result.status()
+            info.status  = result.check_result.status()
             info.schuelerErgebnis = calcErgebnisDto(string=result.__repr__(grade))
         except Exception:
             pass

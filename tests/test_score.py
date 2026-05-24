@@ -17,6 +17,9 @@ class FakeCheckResult:
     def score(self):
         return self._value
 
+    def __repr__(self, grade=1.0):
+        return f"Score: {self._value * grade}\n"
+
 
 class TestScoreCode(unittest.TestCase):
     @patch('shared.score.checkCode')
@@ -27,7 +30,7 @@ class TestScoreCode(unittest.TestCase):
         score, result = scoreCode('jobe:80', 'print(1)', 'tests', '--disable=C0114', 0.0)
 
         self.assertEqual(score, 0.6)
-        self.assertIs(result, check_mock.return_value)
+        self.assertIs(result.check_result, check_mock.return_value)
         lint_mock.assert_not_called()
 
     @patch('shared.score.checkCode')
@@ -45,3 +48,14 @@ class TestScoreCode(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestScoreResult(unittest.TestCase):
+    def test_score_result_repr_with_lint_details(self):
+        from shared.score_result import ScoreResult
+        r = ScoreResult(FakeCheckResult(0.5), 7.0, 2.0)
+        text = r.__repr__(1.0)
+        self.assertIn("Linter weight: 2.0", text)
+        self.assertIn("Linter score: 7.0/10.0", text)
+        self.assertIn("Overall score:", text)
+
