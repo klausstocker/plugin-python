@@ -28,6 +28,7 @@ from enum import IntEnum
 from shared.question_config import QuestionConfigDto
 from shared.check import checkCode
 from shared.lint import lintCode
+from shared.score import scoreCode
 from pydantic import ValidationError
 
 # --------------------------
@@ -913,14 +914,7 @@ class PluginPython:
             feedback=""
         )
         try:
-            result = checkCode('jobe:80', antwort or "", validation_code or "")
-            base_score = result.score()
-            total_score = base_score
-
-            if linter_weight != 0.0:
-                linter_score, _ = lintCode(antwort or "", linter_config)
-                total_score = (base_score + linter_weight * (linter_score / 10.0)) / (1.0 + linter_weight)
-
+            total_score, result = scoreCode('jobe:80', antwort or "", validation_code or "", linter_config, linter_weight)
             info.punkteIst = float(grade * total_score)
             info.status  = result.status()
             info.schuelerErgebnis = calcErgebnisDto(string=result.__repr__(grade))
