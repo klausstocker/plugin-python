@@ -64,12 +64,12 @@ function initPluginPython(dtoString, active) {
 
         $(plugin_div).append(`
             <div class="${rootClass} code-runner-root" data-service-base="${plugin.serviceBase}">
-                <div class="header-row">
-                    <div class="file-info">main.py</div>
-                    <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
-                </div>
                 <div class="container horizontal" id="${containerId}">
                     <div class="panel panel-main" id="${mainPanelId}">
+                        <div class="file-info main-header">
+                            <span>main.py</span>
+                            <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
+                        </div>
                         <div id="${mainEditorId}" class="editor-box"></div>
                     </div>
                     <div class="splitter" id="${splitterId}" role="separator" aria-label="Resize panels"></div>
@@ -158,12 +158,19 @@ function initPluginPython(dtoString, active) {
             }
             .code-runner-root .panel-main {
                 display: flex;
+                flex-direction: column;
+                border: 1px solid #d0d0d0;
+            }
+            .code-runner-root .main-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
             }
             .code-runner-root .editor-box {
                 flex: 1;
                 font-size: 16px;
                 font-family: monospace;
-                border: 1px solid #d0d0d0;
+                border-top: none;
             }
             .code-runner-root .panel-output {
                 display: flex;
