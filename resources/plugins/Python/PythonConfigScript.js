@@ -532,15 +532,29 @@ function configPluginPython(dtoString) {
 
         [runAtTest, unitTestAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
             if (!el) return;
-            el.addEventListener("change", () => {
-                state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
-                state.evalConfig.unitTestAtTest = !!(unitTestAtTest && unitTestAtTest.checked);
-                state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
-                state.linterConfig = linterConfig ? linterConfig.value : "";
-                state.linterWeight = linterWeight ? Number(linterWeight.value || 0.0) : 0.0;
+            const onOptionChanged = () => {
+                syncOptionsStateFromInputs();
                 saveConfig();
-            });
+            };
+            el.addEventListener("change", onOptionChanged);
+            el.addEventListener("input", onOptionChanged);
         });
+    }
+
+    function syncOptionsStateFromInputs() {
+        const runAtTest = document.getElementById(ids.optRunAtTestId);
+        const unitTestAtTest = document.getElementById(ids.optUnitTestAtTestId);
+        const lintAtTest = document.getElementById(ids.optLintAtTestId);
+        const linterConfig = document.getElementById(ids.linterConfigId);
+        const linterWeight = document.getElementById(ids.linterWeightId);
+
+        state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
+        state.evalConfig.unitTestAtTest = !!(unitTestAtTest && unitTestAtTest.checked);
+        state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
+        state.linterConfig = linterConfig ? linterConfig.value : "";
+
+        const parsedWeight = linterWeight ? Number(linterWeight.value) : 0.0;
+        state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
     }
 
     function bindSharedButtons() {
@@ -646,6 +660,7 @@ function configPluginPython(dtoString) {
     }
 
     function buildQuestionConfigDtoPayload() {
+        syncOptionsStateFromInputs();
         return {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0)
@@ -654,6 +669,7 @@ function configPluginPython(dtoString) {
 
     function saveConfig() {
         if (!configField) return;
+        syncOptionsStateFromInputs();
 
         const pluginConfig = {
             indication: getPreviewCode(),
