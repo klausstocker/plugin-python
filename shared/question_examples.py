@@ -171,6 +171,7 @@ def rad2degree(angle_rad: float):
     sekunden = 0
     quadrant = 1
     return grad, minuten, sekunden, quadrant
+
 """,
         validation="""
 import math
@@ -178,6 +179,9 @@ import unittest
 
 def correct_implementation(rad: float):
     grad_gesamt = math.degrees(rad)
+
+    while grad_gesamt < 0:
+        grad_gesamt += 360.
 
     grad = int(grad_gesamt)
     rest = abs(grad_gesamt - grad) * 60
@@ -200,16 +204,9 @@ def correct_implementation(rad: float):
 
 class Checker(unittest.TestCase): # do not rename
     def test_zero(self): # test method names must start with 'test_'
-        self.assertEqual(rad2degree(0.0), correct_implementation(0.0))
+        for a in range(-365, 400, 45):
+            self.assertEqual(rad2degree(a), correct_implementation(a))
 
-    def test_pi_over_two(self):
-        self.assertEqual(rad2degree(math.pi / 2), correct_implementation(math.pi / 2))
-
-    def test_negative_angle(self):
-        self.assertEqual(rad2degree(-math.pi / 4), correct_implementation(-math.pi / 4))
-
-    def test_large_angle(self):
-        self.assertEqual(rad2degree(7 * math.pi), correct_implementation(7 * math.pi))
 """,
         linterConfig="--disable=C0114,C0115,C0116")
     ]
