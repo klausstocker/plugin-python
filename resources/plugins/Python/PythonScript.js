@@ -32,8 +32,17 @@ function initPluginPython(dtoString, active) {
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
     const outputId = `output_${plugin.name}`;
+    const containerId = `container_${plugin.name}`;
+    const splitterId = `splitter_${plugin.name}`;
+    const mainPanelId = `mainPanel_${plugin.name}`;
+    const outputPanelId = `outputPanel_${plugin.name}`;
+    const toggleLayoutButtonId = `toggleLayout_${plugin.name}`;
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
+    const defaultRatio = 2 / 3;
+    let orientation = "horizontal";
+    let splitRatio = defaultRatio;
+    let aceEditor = null;
 
     const answerField = $(plugin_inp)[0];
     const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
@@ -55,10 +64,19 @@ function initPluginPython(dtoString, active) {
 
         $(plugin_div).append(`
             <div class="${rootClass} code-runner-root" data-service-base="${plugin.serviceBase}">
-                <div class="file-info">main.py</div>
-                <div class="container">
-                    <div id="${mainEditorId}" class="editor-box"></div>
-                    <div id="${outputId}" class="output-box"></div>
+                <div class="header-row">
+                    <div class="file-info">main.py</div>
+                    <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
+                </div>
+                <div class="container horizontal" id="${containerId}">
+                    <div class="panel panel-main" id="${mainPanelId}">
+                        <div id="${mainEditorId}" class="editor-box"></div>
+                    </div>
+                    <div class="splitter" id="${splitterId}" role="separator" aria-label="Resize panels"></div>
+                    <div class="panel panel-output" id="${outputPanelId}">
+                        <div class="file-info output-header">output</div>
+                        <div id="${outputId}" class="output-box"></div>
+                    </div>
                 </div>
 
                 <div class="btn-container">
@@ -109,18 +127,58 @@ function initPluginPython(dtoString, active) {
                 border-bottom: 1px solid #ccc;
                 font-family: monospace;
             }
+            .code-runner-root .header-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .code-runner-root .layout-toggle-button {
+                margin: 0 8px;
+                min-width: 36px;
+                height: 32px;
+                border: 1px solid #b8b8b8;
+                border-radius: 4px;
+                background-color: #f0f0f0;
+                cursor: pointer;
+                font-size: 16px;
+                line-height: 1;
+            }
             .code-runner-root .container {
                 display: flex;
-                gap: 8px;
                 margin-bottom: 10px;
+                height: 340px;
             }
-            .code-runner-root .editor-box,
-            .code-runner-root .output-box {
-                height: 300px;
-                width: 100%;
+            .code-runner-root .container.vertical {
+                flex-direction: column;
+            }
+            .code-runner-root .panel {
+                min-width: 120px;
+                min-height: 80px;
+                overflow: hidden;
+            }
+            .code-runner-root .panel-main {
+                display: flex;
+            }
+            .code-runner-root .editor-box {
+                flex: 1;
                 font-size: 16px;
                 font-family: monospace;
                 border: 1px solid #d0d0d0;
+            }
+            .code-runner-root .panel-output {
+                display: flex;
+                flex-direction: column;
+                border: 1px solid #d0d0d0;
+            }
+            .code-runner-root .output-header {
+                border-bottom: 1px solid #ccc;
+            }
+            .code-runner-root .output-box {
+                height: 100%;
+                width: 100%;
+                flex: 1;
+                font-size: 16px;
+                font-family: monospace;
             }
             .code-runner-root .output-box {
                 background-color: black;
@@ -129,6 +187,16 @@ function initPluginPython(dtoString, active) {
                 padding: 8px;
                 white-space: pre-wrap;
                 box-sizing: border-box;
+            }
+            .code-runner-root .splitter {
+                background-color: #d0d0d0;
+                flex: 0 0 8px;
+            }
+            .code-runner-root .container.horizontal .splitter {
+                cursor: col-resize;
+            }
+            .code-runner-root .container.vertical .splitter {
+                cursor: row-resize;
             }
             .code-runner-root .btn-container {
                 margin-top: 8px;
@@ -159,6 +227,7 @@ function initPluginPython(dtoString, active) {
         }
 
         const editor = ace.edit(mainEditorId);
+        aceEditor = editor;
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
@@ -184,10 +253,67 @@ function initPluginPython(dtoString, active) {
     }
 
     function bindActions() {
+        setupLayoutControls();
         const out = document.getElementById(outputId);
 
         bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "" }), out);
         bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight } }), out);
+    }
+
+    function setupLayoutControls() {
+        const container = document.getElementById(containerId);
+        const mainPanel = document.getElementById(mainPanelId);
+        const outputPanel = document.getElementById(outputPanelId);
+        const splitter = document.getElementById(splitterId);
+        const toggleBtn = document.getElementById(toggleLayoutButtonId);
+        if (!container || !mainPanel || !outputPanel || !splitter || !toggleBtn) return;
+
+        applyLayout();
+
+        toggleBtn.addEventListener("click", () => {
+            orientation = orientation === "horizontal" ? "vertical" : "horizontal";
+            applyLayout();
+        });
+
+        splitter.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            const onMove = (moveEvent) => {
+                const rect = container.getBoundingClientRect();
+                if (orientation === "horizontal") {
+                    const raw = (moveEvent.clientX - rect.left) / rect.width;
+                    splitRatio = clampRatio(raw);
+                } else {
+                    const raw = (moveEvent.clientY - rect.top) / rect.height;
+                    splitRatio = clampRatio(raw);
+                }
+                applyLayout();
+            };
+            const onUp = () => {
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+            };
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
+        });
+
+        function applyLayout() {
+            const isHorizontal = orientation === "horizontal";
+            container.classList.toggle("horizontal", isHorizontal);
+            container.classList.toggle("vertical", !isHorizontal);
+            toggleBtn.textContent = isHorizontal ? "⇅" : "⇄";
+            toggleBtn.title = isHorizontal ? "Switch to vertical layout" : "Switch to horizontal layout";
+
+            mainPanel.style.flex = `${splitRatio} 1 0`;
+            outputPanel.style.flex = `${1 - splitRatio} 1 0`;
+
+            if (aceEditor && typeof aceEditor.resize === "function") {
+                aceEditor.resize();
+            }
+        }
+    }
+
+    function clampRatio(ratio) {
+        return Math.min(0.85, Math.max(0.15, ratio || defaultRatio));
     }
 
     function bindRequest(buttonId, endpoint, bodyBuilder, targetEl) {
