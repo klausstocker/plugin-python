@@ -32,6 +32,7 @@ function configPluginPython(dtoString) {
         btnRunId: `sharedRun_${pluginTag}`,
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
+        btnScoreId: `sharedScore_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
         fileNameId: `fileName_${pluginTag}`,
@@ -205,6 +206,7 @@ function configPluginPython(dtoString) {
                             <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
                             <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
                             <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
+                            <button type="button" id="${ids.btnScoreId}" class="cfg-btn">score</button>
                         </div>
                         <pre id="${ids.outputId}" class="output-box"></pre>
                     </div>
@@ -547,6 +549,7 @@ function configPluginPython(dtoString) {
         bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
+        bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
     }
 
     async function setupExamples() {
