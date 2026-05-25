@@ -41,7 +41,11 @@ function configPluginPython(dtoString) {
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
-        linterWeightId: `linterWeight_${pluginTag}`
+        linterWeightId: `linterWeight_${pluginTag}`,
+        helpToggleId: `helpToggle_${pluginTag}`,
+        outputToggleId: `outputToggle_${pluginTag}`,
+        mainSplitId: `mainSplit_${pluginTag}`,
+        splitHandleId: `splitHandle_${pluginTag}`
     };
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
@@ -50,6 +54,7 @@ function configPluginPython(dtoString) {
     drawForm();
     ensureStyles();
     setupTabs();
+    setupResizableSections();
     setupEditors(state.validation, state.indication);
     setupFileTab();
     setupOptionsTab();
@@ -139,81 +144,93 @@ function configPluginPython(dtoString) {
         $(config_form_div).append(`
             <div class="${ids.rootClass}">
                 <div class="config-main">
-                    <div class="tab-buttons">
-                        <button type="button" class="tab-btn active" data-tab="tab-unittest">UnitTest</button>
-                        <button type="button" class="tab-btn" data-tab="tab-preview">Preview</button>
-                        <button type="button" class="tab-btn" data-tab="tab-files">Files</button>
-                        <button type="button" class="tab-btn" data-tab="tab-options">Configuration</button>
-                    </div>
-
-                    <div id="${ids.tabsWrapId}" class="tab-panels">
-                        <div class="tab-panel active" id="tab-unittest">
-                            <div class="tab-title-row">
-                                <h3>Unit test</h3>
-                                <div class="unit-example-controls">
-                                    <label for="${ids.exampleSelectId}">Example:</label>
-                                    <select id="${ids.exampleSelectId}" class="text-input unit-example-select"></select>
-                                    <button type="button" id="${ids.exampleApplyId}" class="cfg-btn">Apply</button>
-                                </div>
-                            </div>
-                            <div id="${ids.unitEditorId}" class="editor-box"></div>
-                        </div>
-
-                        <div class="tab-panel" id="tab-preview">
-                            <h3>Preview editor</h3>
-                            <div id="${ids.previewEditorId}" class="editor-box"></div>
-                        </div>
-
-                        <div class="tab-panel" id="tab-files">
-                            <h3>File management</h3>
-                            <div class="files-grid">
-                                <div>
-                                    <label>File name</label>
-                                    <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                    <div class="btn-row small-gap">
-                                        <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                        <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                                    </div>
-                                    <div class="btn-row small-gap">
-                                        <input id="${ids.fileUploadId}" type="file" />
-                                        <button type="button" class="cfg-btn" data-file-action="upload">import</button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label>Stored files</label>
-                                    <div id="${ids.fileListId}" class="file-list"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-panel" id="tab-options">
-                            <h3>Configuration flags</h3>
-                            <div class="flags-row">
-                                <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
-                                <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
-                            </div>
-                            <div class="linter-head-row">
-                                <label for="${ids.linterConfigId}">Linter configuration</label>
-                                <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
-                                <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
-                            </div>
-                            <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                    <div class="tab-head-row">
+                        <div class="tab-buttons">
+                            <button type="button" class="tab-btn active" data-tab="tab-unittest">UnitTest</button>
+                            <button type="button" class="tab-btn" data-tab="tab-preview">Preview</button>
+                            <button type="button" class="tab-btn" data-tab="tab-files">Files</button>
+                            <button type="button" class="tab-btn" data-tab="tab-options">Configuration</button>
                         </div>
                     </div>
 
-                    <div class="shared-actions">
-                        <div class="btn-row">
-                            <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
-                            <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
-                            <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
-                            <button type="button" id="${ids.btnScoreId}" class="cfg-btn">score</button>
+                    <div id="${ids.mainSplitId}" class="main-split" data-output-hidden="false">
+                        <div id="${ids.tabsWrapId}" class="tab-panels">
+                            <div class="tab-panel active" id="tab-unittest">
+                                <div class="tab-title-row">
+                                    <h3>Unit test</h3>
+                                    <div class="unit-example-controls">
+                                        <label for="${ids.exampleSelectId}">Example:</label>
+                                        <select id="${ids.exampleSelectId}" class="text-input unit-example-select"></select>
+                                        <button type="button" id="${ids.exampleApplyId}" class="cfg-btn">Apply</button>
+                                    </div>
+                                </div>
+                                <div id="${ids.unitEditorId}" class="editor-box"></div>
+                            </div>
+
+                            <div class="tab-panel" id="tab-preview">
+                                <h3>Preview editor</h3>
+                                <div id="${ids.previewEditorId}" class="editor-box"></div>
+                            </div>
+
+                            <div class="tab-panel" id="tab-files">
+                                <h3>File management</h3>
+                                <div class="files-grid">
+                                    <div>
+                                        <label>File name</label>
+                                        <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
+                                        <div class="btn-row small-gap">
+                                            <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
+                                            <button type="button" class="cfg-btn" data-file-action="download">download</button>
+                                        </div>
+                                        <div class="btn-row small-gap">
+                                            <input id="${ids.fileUploadId}" type="file" />
+                                            <button type="button" class="cfg-btn" data-file-action="upload">import</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label>Stored files</label>
+                                        <div id="${ids.fileListId}" class="file-list"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-panel" id="tab-options">
+                                <h3>Configuration flags</h3>
+                                <div class="flags-row">
+                                    <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
+                                    <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
+                                </div>
+                                <div class="linter-head-row">
+                                    <label for="${ids.linterConfigId}">Linter configuration</label>
+                                    <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                    <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                                </div>
+                                <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                            </div>
                         </div>
-                        <pre id="${ids.outputId}" class="output-box"></pre>
+
+                        <div id="${ids.splitHandleId}" class="split-handle" title="Drag to resize editor/output sections"></div>
+
+                        <div class="shared-actions">
+                            <div class="shared-head-row">
+                                <div class="btn-row">
+                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
+                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
+                                    <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
+                                    <button type="button" id="${ids.btnScoreId}" class="cfg-btn">score</button>
+                                </div>
+                                <button type="button" id="${ids.outputToggleId}" class="icon-btn" title="Hide output">▾</button>
+                            </div>
+                            <pre id="${ids.outputId}" class="output-box"></pre>
+                        </div>
                     </div>
                 </div>
 
                 <div class="config-help">
-                    <h3>Help</h3>
+                    <div class="help-head-row">
+                        <h3>Help</h3>
+                        <button type="button" id="${ids.helpToggleId}" class="icon-btn" title="Hide help">◂</button>
+                    </div>
                     <a href="https://doc.letto.at/wiki/Plugins" target="_blank">Wiki-Plugins</a>
                     <div id="configPluginHelp"></div>
                     <div id="configPluginWiki"></div>
@@ -234,26 +251,37 @@ function configPluginPython(dtoString) {
                 width: 100%;
                 height: 75vh;
                 box-sizing: border-box;
-                gap: 10px;
+                gap: 8px;
             }
             .pluginConfigForm .config-main {
                 flex: 2;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
                 min-width: 0;
             }
             .pluginConfigForm .config-help {
                 flex: 1;
                 border: 1px solid #ccc;
-                padding: 10px;
+                padding: 8px;
                 overflow: auto;
                 min-width: 0;
             }
             .pluginConfigForm .tab-buttons {
                 display: flex;
-                gap: 6px;
+                gap: 8px;
                 flex-wrap: wrap;
+            }
+            .pluginConfigForm .tab-head-row,
+            .pluginConfigForm .shared-head-row,
+            .pluginConfigForm .help-head-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .pluginConfigForm .help-head-row h3 {
+                margin: 0;
             }
             .pluginConfigForm .tab-btn,
             .pluginConfigForm .cfg-btn {
@@ -266,11 +294,30 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .tab-btn.active {
                 background: #dce9ff;
             }
-            .pluginConfigForm .tab-panels {
+            .pluginConfigForm .main-split {
                 flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .pluginConfigForm .tab-panels {
                 min-height: 0;
                 border: 1px solid #ccc;
                 padding: 8px;
+            }
+            .pluginConfigForm .main-split[data-output-hidden="false"] .tab-panels {
+                flex: 0 0 65%;
+            }
+            .pluginConfigForm .main-split[data-output-hidden="false"] .shared-actions {
+                flex: 1 1 auto;
+            }
+            .pluginConfigForm .main-split[data-output-hidden="true"] .split-handle,
+            .pluginConfigForm .main-split[data-output-hidden="true"] .shared-actions {
+                display: none;
+            }
+            .pluginConfigForm .main-split[data-output-hidden="true"] .tab-panels {
+                flex: 1 1 auto;
             }
             .pluginConfigForm .tab-panel {
                 display: none;
@@ -295,7 +342,7 @@ function configPluginPython(dtoString) {
                 margin-left: auto;
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 8px;
             }
             .pluginConfigForm .unit-example-select {
                 width: auto;
@@ -306,6 +353,25 @@ function configPluginPython(dtoString) {
                 flex: 1;
                 min-height: 0;
                 border: 1px solid #d0d0d0;
+            }
+            .pluginConfigForm .split-handle {
+                height: 8px;
+                border: 1px solid #ccc;
+                background: #f3f3f3;
+                cursor: row-resize;
+                border-radius: 4px;
+            }
+            .pluginConfigForm .icon-btn {
+                border: 1px solid #b8b8b8;
+                background: #fafafa;
+                width: 24px;
+                height: 24px;
+                line-height: 20px;
+                text-align: center;
+                border-radius: 4px;
+                cursor: pointer;
+                padding: 0;
+                font-size: 14px;
             }
             .pluginConfigForm .shared-actions {
                 border: 1px solid #ccc;
@@ -331,7 +397,7 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .files-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 10px;
+                gap: 8px;
                 min-height: 0;
                 height: 100%;
             }
@@ -366,7 +432,7 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .flags-row {
                 display: flex;
                 align-items: center;
-                gap: 16px;
+                gap: 8px;
                 flex-wrap: wrap;
             }
             .pluginConfigForm .linter-head-row {
@@ -380,7 +446,7 @@ function configPluginPython(dtoString) {
                 margin: 0;
             }
             .pluginConfigForm .small-gap {
-                gap: 6px;
+                gap: 8px;
             }
             .pluginConfigForm iframe {
                 width: 100%;
@@ -389,6 +455,61 @@ function configPluginPython(dtoString) {
             }
         `;
         document.head.appendChild(style);
+    }
+
+    function setupResizableSections() {
+        const root = document.querySelector("." + ids.rootClass);
+        if (!root) return;
+
+        const helpCol = root.querySelector(".config-help");
+        const helpToggle = document.getElementById(ids.helpToggleId);
+        const mainSplit = document.getElementById(ids.mainSplitId);
+        const splitHandle = document.getElementById(ids.splitHandleId);
+        const tabsWrap = document.getElementById(ids.tabsWrapId);
+        const outputToggle = document.getElementById(ids.outputToggleId);
+
+        if (helpToggle && helpCol) {
+            helpToggle.addEventListener("click", () => {
+                const hidden = helpCol.style.display === "none";
+                helpCol.style.display = hidden ? "" : "none";
+                helpToggle.textContent = hidden ? "◂" : "▸";
+                helpToggle.title = hidden ? "Hide help" : "Show help";
+            });
+        }
+
+        if (outputToggle && mainSplit) {
+            outputToggle.addEventListener("click", () => {
+                const hidden = mainSplit.getAttribute("data-output-hidden") === "true";
+                mainSplit.setAttribute("data-output-hidden", hidden ? "false" : "true");
+                outputToggle.textContent = hidden ? "▾" : "▸";
+                outputToggle.title = hidden ? "Hide output" : "Show output";
+            });
+        }
+
+        if (splitHandle && mainSplit && tabsWrap) {
+            splitHandle.addEventListener("mousedown", (event) => {
+                event.preventDefault();
+                const rect = mainSplit.getBoundingClientRect();
+                const splitHeight = splitHandle.offsetHeight + 8;
+                const minTop = 140;
+                const minBottom = 80;
+
+                function onMove(moveEvent) {
+                    const pos = moveEvent.clientY - rect.top;
+                    const maxTop = rect.height - minBottom - splitHeight;
+                    const nextTop = Math.max(minTop, Math.min(maxTop, pos));
+                    tabsWrap.style.flex = `0 0 ${nextTop}px`;
+                }
+
+                function onUp() {
+                    document.removeEventListener("mousemove", onMove);
+                    document.removeEventListener("mouseup", onUp);
+                }
+
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+            });
+        }
     }
 
     function setupTabs() {
