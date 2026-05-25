@@ -312,12 +312,18 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .main-split[data-output-hidden="false"] .shared-actions {
                 flex: 1 1 auto;
             }
-            .pluginConfigForm .main-split[data-output-hidden="true"] .split-handle,
-            .pluginConfigForm .main-split[data-output-hidden="true"] .shared-actions {
+            .pluginConfigForm .main-split[data-output-hidden="true"] .split-handle {
                 display: none;
             }
             .pluginConfigForm .main-split[data-output-hidden="true"] .tab-panels {
                 flex: 1 1 auto;
+            }
+            .pluginConfigForm .main-split[data-output-hidden="true"] .shared-actions {
+                flex: 0 0 auto;
+                min-height: auto;
+            }
+            .pluginConfigForm .main-split[data-output-hidden="true"] .output-box {
+                display: none;
             }
             .pluginConfigForm .tab-panel {
                 display: none;
