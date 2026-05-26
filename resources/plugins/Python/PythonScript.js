@@ -49,7 +49,9 @@ function initPluginPython(dtoString, active) {
     const linterConfig = dtoData.linterConfig || "";
     const linterWeight = Number(dtoData.linterWeight || 0.0);
 
-    answerField.value = dtoData.indication;
+    if (answerField) {
+        answerField.value = initialMain;
+    }
 
     drawLayout();
     ensureStyles();
