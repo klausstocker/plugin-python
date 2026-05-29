@@ -37,7 +37,6 @@ function configPluginPython(dtoString) {
         btnScoreId: `sharedScore_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
-        fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
@@ -179,16 +178,16 @@ function configPluginPython(dtoString) {
                                 <h3>File management</h3>
                                 <div class="files-grid">
                                     <div>
-                                        <label>File name</label>
-                                        <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                        <div class="btn-row small-gap">
-                                            <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                            <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                                        </div>
+                                        <label>Upload file</label>
                                         <div class="btn-row small-gap">
                                             <input id="${ids.fileUploadId}" type="file" />
                                             <button type="button" class="cfg-btn" data-file-action="upload">import</button>
                                         </div>
+                                        <div class="btn-row small-gap">
+                                            <button type="button" class="cfg-btn" data-file-action="download">download selected</button>
+                                            <button type="button" class="cfg-btn" data-file-action="delete">delete selected</button>
+                                        </div>
+                                        <p class="file-help">Select a stored file to download or delete it.</p>
                                     </div>
                                     <div>
                                         <label>Stored files</label>
@@ -440,6 +439,15 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .file-item:hover {
                 background: #f5f5f5;
             }
+            .pluginConfigForm .file-item.selected {
+                background: #e8f1ff;
+                outline: 1px solid #7aa7e9;
+            }
+            .pluginConfigForm .file-help {
+                margin: 8px 0 0;
+                color: #666;
+                font-size: 12px;
+            }
             .pluginConfigForm .checkbox-row {
                 display: inline-flex;
                 align-items: center;
@@ -625,9 +633,9 @@ function configPluginPython(dtoString) {
     }
 
     function setupFileTab() {
-        const fileNameInput = document.getElementById(ids.fileNameId);
         const fileList = document.getElementById(ids.fileListId);
         const fileUpload = document.getElementById(ids.fileUploadId);
+        let selectedFileName = "";
 
         function getFileInfo(name) {
             const value = state.files && state.files[name];
@@ -653,30 +661,26 @@ function configPluginPython(dtoString) {
             return candidate;
         }
 
-        if (fileUpload) {
-            fileUpload.addEventListener("change", () => {
-                const file = fileUpload.files && fileUpload.files[0];
-                if (file) {
-                    fileNameInput.value = createUniqueDisplayName(file.name);
-                }
-            });
-        }
-
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
             if (!names.length) {
+                selectedFileName = "";
                 fileList.innerHTML = "<em>No files stored.</em>";
                 return;
+            }
+            if (selectedFileName && !state.files[selectedFileName]) {
+                selectedFileName = "";
             }
             fileList.innerHTML = names.map((name) => {
                 const info = getFileInfo(name);
                 const details = info.size != null ? ` <span class="file-size">(${escapeHtml(formatBytes(info.size))})</span>` : "";
-                return `<div class="file-item" data-file="${escapeHtmlAttr(name)}"><span>${escapeHtml(name)}</span>${details}</div>`;
+                const selectedClass = name === selectedFileName ? " selected" : "";
+                return `<div class="file-item${selectedClass}" data-file="${escapeHtmlAttr(name)}"><span>${escapeHtml(name)}</span>${details}</div>`;
             }).join("");
             fileList.querySelectorAll(".file-item").forEach((row) => {
                 row.addEventListener("click", () => {
-                    const name = row.getAttribute("data-file");
-                    fileNameInput.value = name;
+                    selectedFileName = row.getAttribute("data-file") || "";
+                    renderFileList();
                 });
             });
         }
@@ -684,7 +688,7 @@ function configPluginPython(dtoString) {
         document.querySelectorAll("[data-file-action]").forEach((btn) => {
             btn.addEventListener("click", async () => {
                 const action = btn.getAttribute("data-file-action");
-                const name = (fileNameInput.value || "").trim();
+                const name = selectedFileName;
 
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
@@ -693,6 +697,7 @@ function configPluginPython(dtoString) {
                         await requestFileDelete(info.storedName);
                     }
                     delete state.files[name];
+                    selectedFileName = "";
                     renderFileList();
                     saveConfig();
                     return;
@@ -720,10 +725,10 @@ function configPluginPython(dtoString) {
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const displayName = createUniqueDisplayName(name || file.name);
+                    const displayName = createUniqueDisplayName(file.name);
                     const uploaded = await requestFileUpload(file, displayName);
                     state.files[displayName] = { ...uploaded, displayName: displayName };
-                    fileNameInput.value = "";
+                    selectedFileName = displayName;
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
