@@ -48,6 +48,7 @@ function initPluginPython(dtoString, active) {
     const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
     const linterConfig = dtoData.linterConfig || "";
     const linterWeight = Number(dtoData.linterWeight || 0.0);
+    const files = dtoData.files || {};
 
     if (answerField) {
         answerField.value = initialMain;
@@ -265,8 +266,8 @@ function initPluginPython(dtoString, active) {
         setupLayoutControls();
         const out = document.getElementById(outputId);
 
-        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "" }), out);
-        bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight } }), out);
+        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files } }), out);
+        bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files } }), out);
     }
 
     function setupLayoutControls() {

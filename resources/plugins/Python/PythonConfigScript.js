@@ -425,6 +425,13 @@ function configPluginPython(dtoString) {
                 padding: 4px;
                 cursor: pointer;
                 border-bottom: 1px solid #eee;
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .pluginConfigForm .file-size {
+                color: #666;
+                font-size: 12px;
             }
             .pluginConfigForm .file-item:hover {
                 background: #f5f5f5;
@@ -607,13 +614,24 @@ function configPluginPython(dtoString) {
         const fileList = document.getElementById(ids.fileListId);
         const fileUpload = document.getElementById(ids.fileUploadId);
 
+        function getFileInfo(name) {
+            const value = state.files && state.files[name];
+            if (value && typeof value === "object") return value;
+            if (typeof value === "string") return { content: value, size: value.length };
+            return {};
+        }
+
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
             if (!names.length) {
                 fileList.innerHTML = "<em>No files stored.</em>";
                 return;
             }
-            fileList.innerHTML = names.map((name) => `<div class="file-item" data-file="${escapeHtmlAttr(name)}">${escapeHtml(name)}</div>`).join("");
+            fileList.innerHTML = names.map((name) => {
+                const info = getFileInfo(name);
+                const details = info.size != null ? ` <span class="file-size">(${escapeHtml(formatBytes(info.size))})</span>` : "";
+                return `<div class="file-item" data-file="${escapeHtmlAttr(name)}"><span>${escapeHtml(name)}</span>${details}</div>`;
+            }).join("");
             fileList.querySelectorAll(".file-item").forEach((row) => {
                 row.addEventListener("click", () => {
                     const name = row.getAttribute("data-file");
@@ -629,6 +647,10 @@ function configPluginPython(dtoString) {
 
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
+                    const info = getFileInfo(name);
+                    if (info.storedName) {
+                        await requestFileDelete(info.storedName);
+                    }
                     delete state.files[name];
                     renderFileList();
                     saveConfig();
@@ -637,21 +659,30 @@ function configPluginPython(dtoString) {
 
                 if (action === "download") {
                     if (!name || state.files[name] == null) return;
-                    const blob = new Blob([state.files[name]], { type: "text/plain" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = name;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
+                    const info = getFileInfo(name);
+                    if (info.storedName) {
+                        const a = document.createElement("a");
+                        a.href = `${serviceBase}/files/download/${encodeURIComponent(info.storedName)}?name=${encodeURIComponent(name)}${pluginToken ? `&token=${encodeURIComponent(pluginToken)}` : ""}`;
+                        a.download = name;
+                        a.click();
+                    } else {
+                        const blob = new Blob([info.content || ""], { type: "text/plain" });
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = name;
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    }
                     return;
                 }
 
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    state.files[file.name] = text;
-                    fileNameInput.value = file.name;
+                    const displayName = name || file.name;
+                    const uploaded = await requestFileUpload(file, displayName);
+                    state.files[uploaded.displayName] = uploaded;
+                    fileNameInput.value = uploaded.displayName;
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
@@ -660,6 +691,36 @@ function configPluginPython(dtoString) {
         });
 
         renderFileList();
+    }
+
+    async function requestFileUpload(file, displayName) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("name", displayName || file.name || "uploaded-file");
+        const response = await fetch(serviceBase + "/files/upload", {
+            method: "POST",
+            headers: buildAuthHeaders(),
+            body: formData
+        });
+        if (!response.ok) throw new Error("File upload failed");
+        return await response.json();
+    }
+
+    async function requestFileDelete(storedName) {
+        const response = await fetch(serviceBase + "/files/delete", {
+            method: "POST",
+            headers: buildHeaders(),
+            body: JSON.stringify({ storedName: storedName })
+        });
+        if (!response.ok) throw new Error("File delete failed");
+        return await response.json();
+    }
+
+    function formatBytes(value) {
+        const bytes = Number(value || 0);
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
     }
 
     function setupOptionsTab() {
@@ -820,7 +881,8 @@ function configPluginPython(dtoString) {
         syncOptionsStateFromInputs();
         return {
             linterConfig: state.linterConfig || "",
-            linterWeight: Number(state.linterWeight || 0.0)
+            linterWeight: Number(state.linterWeight || 0.0),
+            files: state.files || {}
         };
     }
 
@@ -839,6 +901,8 @@ function configPluginPython(dtoString) {
 
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
+        questionConfigDto.files = pluginConfig.files;
+        questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
         questionConfigDto.config = JSON.stringify(pluginConfig);
@@ -873,11 +937,15 @@ function configPluginPython(dtoString) {
             .replace(/>/g, "&gt;");
     }
 
-    function buildHeaders() {
-        const headers = { "Content-Type": "application/json" };
+    function buildAuthHeaders() {
+        const headers = {};
         if (pluginToken) {
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
+    }
+
+    function buildHeaders() {
+        return { "Content-Type": "application/json", ...buildAuthHeaders() };
     }
 }
