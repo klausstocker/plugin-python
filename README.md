@@ -48,10 +48,10 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
 - Der Konfigurationsdialog zeigt `Plugin build: <hash>` im Tab `Configuration` an.
 - Der Wert steht als String direkt in `resources/plugins/Python/PythonConfigScript.js` (`PYTHON_CONFIG_SCRIPT_COMMIT_HASH`) und wird nicht vom Python-Backend in die JavaScript-Parameter injiziert.
 - Automatische Aktualisierung:
-  1. `build.bat` ermittelt vor `docker build` automatisch `git rev-parse --short=12 HEAD`.
-  2. Der Wert wird als Docker-Build-Argument `PLUGIN_BUILD_HASH` übergeben.
+  1. `build.bat` ermittelt vor `docker build` automatisch `git rev-parse --verify --short=12 HEAD` und unterdrückt Git-Fehler wie `fatal: Needed a single revision`.
+  2. Falls kein Git-Hash verfügbar ist, verwendet `build.bat` `revision.txt` und danach `unknown`; der Wert wird als Docker-Build-Argument `PLUGIN_BUILD_HASH` übergeben.
   3. Das Dockerfile ersetzt beim Image-Build den String in der kopierten `PythonConfigScript.js`, sodass die ausgelieferte JavaScript-Datei den Build-Commit direkt enthält.
-- Für CI/CD sollte entsprechend `docker build --build-arg PLUGIN_BUILD_HASH=$(git rev-parse --short=12 HEAD) ...` verwendet werden.
+- Für CI/CD sollte entsprechend `docker build --build-arg PLUGIN_BUILD_HASH=$(git rev-parse --verify --short=12 HEAD 2>/dev/null || cat revision.txt 2>/dev/null || echo unknown) ...` verwendet werden.
 
 ## Absicherung der Code-Execution-Endpunkte
 - Betroffene Endpunkte: `POST /pluginpython/run`, `POST /pluginpython/lint`, `POST /pluginpython/check`, `POST /pluginpython/example`.
