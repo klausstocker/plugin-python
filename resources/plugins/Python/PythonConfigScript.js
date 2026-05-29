@@ -22,6 +22,7 @@ function configPluginPython(dtoString) {
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
     const pluginToken = (dto.params && dto.params.pluginToken) || "";
+    const scriptBuildHash = (dto.params && (dto.params.buildHash || dto.params.commitHash)) || "unknown";
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -42,6 +43,7 @@ function configPluginPython(dtoString) {
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
+        buildInfoId: `buildInfo_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
         outputToggleId: `outputToggle_${pluginTag}`,
         mainSplitId: `mainSplit_${pluginTag}`,
@@ -196,6 +198,7 @@ function configPluginPython(dtoString) {
 
                             <div class="tab-panel" id="tab-options">
                                 <h3>Configuration flags</h3>
+                                <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">Plugin build: ${escapeHtml(scriptBuildHash)}</div>
                                 <div class="flags-row">
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
@@ -447,6 +450,17 @@ function configPluginPython(dtoString) {
                 align-items: center;
                 gap: 8px;
                 flex-wrap: wrap;
+            }
+            .pluginConfigForm .build-info {
+                display: inline-block;
+                margin: 0 0 8px;
+                padding: 4px 6px;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                background: #f7f7f7;
+                color: #444;
+                font-family: monospace;
+                font-size: 12px;
             }
             .pluginConfigForm .linter-head-row {
                 display: flex;

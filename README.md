@@ -43,6 +43,17 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
 - `POST /pluginpython/api/open/generalinfo`
 - `POST /pluginpython/api/open/reloadplugindto`
 
+
+## Build-/Commit-Anzeige im Konfigurationsdialog
+- Der Konfigurationsdialog zeigt `Plugin build: <hash>` im Tab `Configuration` an.
+- Der Wert kommt aus `params.buildHash`, das vom Backend in die Plugin-Daten geschrieben wird.
+- Automatische Aktualisierung:
+  1. `build.bat` ermittelt vor `docker build` automatisch `git rev-parse --short=12 HEAD`.
+  2. Der Wert wird als Docker-Build-Argument `PLUGIN_BUILD_HASH` übergeben.
+  3. Das Dockerfile übernimmt ihn als Image-Label `org.opencontainers.image.revision` und als Environment-Variable `PLUGIN_BUILD_HASH`.
+  4. Zur Laufzeit verwendet das Backend `PLUGIN_BUILD_HASH`; in lokalen Entwicklerversionen fällt es auf `git rev-parse --short=12 HEAD` und danach auf `revision.txt` zurück.
+- Für CI/CD sollte entsprechend `docker build --build-arg PLUGIN_BUILD_HASH=$(git rev-parse --short=12 HEAD) ...` verwendet werden.
+
 ## Absicherung der Code-Execution-Endpunkte
 - Betroffene Endpunkte: `POST /pluginpython/run`, `POST /pluginpython/lint`, `POST /pluginpython/check`, `POST /pluginpython/example`.
 - Optional aktivierbar über Umgebungsvariablen:

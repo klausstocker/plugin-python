@@ -50,6 +50,17 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(body["configurationMode"], 0)
         self.assertTrue(body["useQuestion"])
 
+    def test_post_loadplugindto_includes_build_hash_param(self):
+        response = self.client.post(
+            f"{BASE_PATH}/open/loadplugindto",
+            json={"typ": "Python", "name": "PluginVomTester", "config": "", "nr": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        params = response.json()["params"]
+        self.assertIn("buildHash", params)
+        self.assertTrue(params["buildHash"])
+
     def test_file_manager_upload_download_delete_uses_persistent_storage(self):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
         samples = [
