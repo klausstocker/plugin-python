@@ -6,3 +6,10 @@
 /tmp/
 /out/
 /target/
+
+# .NET / C# build outputs
+[Bb]in/
+[Oo]bj/
+*.user
+*.rsuser
+.vs/
