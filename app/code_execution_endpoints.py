@@ -93,6 +93,19 @@ def _file_specs_from_config(files_config: Any) -> dict[str, bytes]:
     return file_data
 
 
+def _file_specs_from_body(body: dict) -> dict[str, bytes]:
+    file_data = {}
+    question_config = body.get('questionConfigDto') or {}
+    if isinstance(question_config, dict):
+        file_data.update(_file_specs_from_config(question_config.get('files') or {}))
+    file_data.update(_file_specs_from_config(body.get('files') or {}))
+    return file_data
+
+
+def _jobe_files_from_body(body: dict):
+    return JobeWrapper.createFiles(_file_specs_from_body(body))
+
+
 @router.post(f"{SERVICEPATH}/files/upload")
 async def upload_file(request: Request, file: UploadFile = File(...), name: str = Form("")):
     _ensure_authorized(request)
@@ -143,13 +156,7 @@ async def run_code(request: Request):
     body = await request.json()
     code = body['code']
     try:
-        file_data = {}
-        question_config = body.get('questionConfigDto') or {}
-        if isinstance(question_config, dict):
-            file_data.update(_file_specs_from_config(question_config.get('files') or {}))
-        file_data.update(_file_specs_from_config(body.get('files') or {}))
-
-        files = JobeWrapper.createFiles(file_data)
+        files = _jobe_files_from_body(body)
         jobe = JobeWrapper('jobe:80')
         result = jobe.run_test('python3', code, 'test.py', files)
         return JSONResponse({'output': result.__repr__()})
@@ -178,7 +185,7 @@ async def check_code(request: Request):
     code = body['code']
     testcode = body['testcode']
     try:
-        result = checkCode('jobe:80', code, testcode)
+        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body))
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         return JSONResponse({'output': f'Error checking code: {e}'})
@@ -200,7 +207,7 @@ async def score_plugin(request: Request):
         linter_weight = 0.0
 
     try:
-        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight)
+        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body))
         return JSONResponse({'output': result.__repr__(), 'score': score})
     except Exception as e:
         return JSONResponse({'output': f'Error scoring code: {e}', 'score': 0.0})

@@ -19,7 +19,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
-from app.code_execution_endpoints import get_exec_token, router as code_execution_router
+from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from PIL import Image, ImageDraw
@@ -29,6 +29,7 @@ from shared.question_config import QuestionConfigDto
 from shared.check import checkCode
 from shared.lint import lintCode
 from shared.score import scoreCode
+from shared.jobe_wrapper import JobeWrapper
 from pydantic import ValidationError
 
 # --------------------------
@@ -916,7 +917,8 @@ class PluginPython:
             feedback=""
         )
         try:
-            total_score, result = scoreCode('jobe:80', antwort or "", validation_code or "", linter_config, linter_weight)
+            file_specs = JobeWrapper.createFiles(_extract_file_specs_from_config(config, pluginDto))
+            total_score, result = scoreCode('jobe:80', antwort or "", validation_code or "", linter_config, linter_weight, files=file_specs)
             info.punkteIst = float(grade * total_score)
             info.status  = result.check_result.status()
             info.schuelerErgebnis = CalcErgebnisDto(string=result.__repr__())
@@ -1573,6 +1575,46 @@ def extern_reload(req: LoadPluginRequestDto):
 app.include_router(extern_router)
 
 
+
+
+def _extract_file_specs_from_config(plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> dict[str, bytes]:
+    """Extract configured files and prepare them for Jobe under their display names."""
+
+    def _parse_json_string(raw: str) -> Optional[dict]:
+        if not raw:
+            return None
+        try:
+            obj = json.loads(raw)
+            return obj if isinstance(obj, dict) else None
+        except Exception:
+            return None
+
+    def _extract_from_dict(data: dict) -> dict[str, bytes]:
+        file_data = {}
+        file_data.update(_file_specs_from_config(data.get("files") or {}))
+        nested = data.get("config")
+        if isinstance(nested, str):
+            nested_data = _parse_json_string(nested)
+            if nested_data:
+                file_data.update(_file_specs_from_config(nested_data.get("files") or {}))
+        return file_data
+
+    if plugin_dto and plugin_dto.jsonData:
+        try:
+            payload = base64.b64decode(plugin_dto.jsonData).decode("utf-8")
+            data = _parse_json_string(payload)
+            if data:
+                file_data = _extract_from_dict(data)
+                if file_data:
+                    return file_data
+        except Exception:
+            pass
+
+    config_obj = _parse_json_string(plugin_config or "")
+    if config_obj:
+        return _extract_from_dict(config_obj)
+
+    return {}
 
 def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> tuple[str, float]:
     """Extract linter config and linter weight from possible nested payload formats."""

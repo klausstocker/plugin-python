@@ -1,5 +1,6 @@
 import unittest
 import sys
+from unittest.mock import patch
 
 from shared.jobe_wrapper import JobeWrapper
 from shared.check import checkCode
@@ -72,6 +73,26 @@ class Checker(unittest.TestCase): # do not rename
         self.assertEqual(result.count, 2)
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(result.score(), 0.5)
+
+
+    def test_check_uploads_files_to_jobe(self):
+        files = [("stored-id", "input.txt", b"content")]
+
+        class FakeRunResult:
+            stdout = '__magic_string__{"count":1,"errors":[],"failures":[],"exceptions":[]}'
+
+            def success(self):
+                return True
+
+        with patch("shared.check.JobeWrapper") as wrapper_cls:
+            wrapper = wrapper_cls.return_value
+            wrapper.run_test.return_value = FakeRunResult()
+
+            result = checkCode("jobe:80", "print(open('input.txt').read())\n", "", files=files)
+
+            wrapper.run_test.assert_called_once()
+            self.assertIs(wrapper.run_test.call_args.args[3], files)
+            self.assertTrue(result.wasSuccessful())
 
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')

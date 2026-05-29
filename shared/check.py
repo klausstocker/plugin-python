@@ -10,7 +10,7 @@ from io import StringIO
 import json
 """
 
-def checkCode(server, code, testCode):
+def checkCode(server, code, testCode, files=None):
     code2run = code + __imports__ + testCode + """
 class RedirectedStdout:
     def __init__(self):
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     print(f'{__magic_string__}{json.dumps(ret, separators=(',', ':'))}')
 """
     jobe = JobeWrapper(server)
-    result = jobe.run_test('python3', code2run, 'test.py')
+    result = jobe.run_test('python3', code2run, 'test.py', files or [])
     if not result.success():
         return CheckResult({'count': 0, 'errors': ['error running code']})
     return CheckResult.from_str(result.stdout, (code + __imports__).count('\n'))
