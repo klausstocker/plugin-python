@@ -636,6 +636,32 @@ function configPluginPython(dtoString) {
             return {};
         }
 
+        function createUniqueDisplayName(preferredName) {
+            const cleanName = (preferredName || "uploaded-file").trim() || "uploaded-file";
+            if (!state.files || state.files[cleanName] == null) return cleanName;
+
+            const dotIndex = cleanName.lastIndexOf(".");
+            const hasExtension = dotIndex > 0;
+            const base = hasExtension ? cleanName.substring(0, dotIndex) : cleanName;
+            const extension = hasExtension ? cleanName.substring(dotIndex) : "";
+            let counter = 2;
+            let candidate = `${base}-${counter}${extension}`;
+            while (state.files[candidate] != null) {
+                counter += 1;
+                candidate = `${base}-${counter}${extension}`;
+            }
+            return candidate;
+        }
+
+        if (fileUpload) {
+            fileUpload.addEventListener("change", () => {
+                const file = fileUpload.files && fileUpload.files[0];
+                if (file) {
+                    fileNameInput.value = createUniqueDisplayName(file.name);
+                }
+            });
+        }
+
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
             if (!names.length) {
@@ -694,10 +720,10 @@ function configPluginPython(dtoString) {
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const displayName = name || file.name;
+                    const displayName = createUniqueDisplayName(name || file.name);
                     const uploaded = await requestFileUpload(file, displayName);
-                    state.files[uploaded.displayName] = uploaded;
-                    fileNameInput.value = uploaded.displayName;
+                    state.files[displayName] = { ...uploaded, displayName: displayName };
+                    fileNameInput.value = "";
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
