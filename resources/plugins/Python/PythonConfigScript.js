@@ -2,6 +2,8 @@ try {
     $ = jQuery;
 } catch (e) {}
 
+const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = "c70dad38cc61";
+
 function configPluginPython(dtoString) {
     // -------------------------- Verbindungskonstante zu LeTTo ---------------------------------------
     // Div Element welches im Konfigurations-Formular liegt - MUSS für LETTO SO HEISSEN!!
@@ -22,7 +24,6 @@ function configPluginPython(dtoString) {
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
     const pluginToken = (dto.params && dto.params.pluginToken) || "";
-    const scriptBuildHash = (dto.params && (dto.params.buildHash || dto.params.commitHash)) || "unknown";
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -198,7 +199,7 @@ function configPluginPython(dtoString) {
 
                             <div class="tab-panel" id="tab-options">
                                 <h3>Configuration flags</h3>
-                                <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">Plugin build: ${escapeHtml(scriptBuildHash)}</div>
+                                <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">Plugin build: ${escapeHtml(PYTHON_CONFIG_SCRIPT_COMMIT_HASH)}</div>
                                 <div class="flags-row">
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>

@@ -8,8 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     SERVICEPATH=/pluginpython \
-    RESOURCE_DIR=/app/resources \
-    PLUGIN_BUILD_HASH=${PLUGIN_BUILD_HASH}
+    RESOURCE_DIR=/app/resources
 
 WORKDIR /app
 
@@ -26,6 +25,7 @@ COPY app ./app
 COPY shared ./shared
 # resources folder exists, but JS libs can be copied in later (see README)
 COPY resources       ./resources
+RUN python -c "from pathlib import Path; import re; h='${PLUGIN_BUILD_HASH}'; p=Path('resources/plugins/Python/PythonConfigScript.js'); s=p.read_text(); p.write_text(re.sub(r'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"[^\"]*\";', 'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"' + h + '\";', s))"
 COPY scripts/*.sh    /scripts/
 COPY revision.txt revision.txt
 COPY README.md .

@@ -11,13 +11,11 @@ import shutil
 import httpx
 import platform
 import socket
-import subprocess
 import time
 from logging.handlers import RotatingFileHandler
 from logging import Logger
 from contextlib import asynccontextmanager
 from datetime import datetime
-from pathlib import Path
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
@@ -221,48 +219,6 @@ def encode_question_config_base64(config_raw: Optional[str]) -> str:
 
 log_external_uri_configuration()
 
-
-def get_build_hash() -> str:
-    """Return the source revision shown in the JavaScript configuration dialog."""
-    for env_name in ("PLUGIN_BUILD_HASH", "GIT_COMMIT", "SOURCE_COMMIT"):
-        value = os.getenv(env_name, "").strip()
-        if value:
-            return value
-
-    repo_root = os.getenv("PLUGIN_REPO_ROOT", os.getcwd())
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short=12", "HEAD"],
-            cwd=repo_root,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
-        value = result.stdout.strip()
-        if value:
-            return value
-    except (OSError, subprocess.SubprocessError):
-        pass
-
-    try:
-        revision = Path("revision.txt").read_text(encoding="utf-8").strip()
-        if revision:
-            return revision
-    except OSError:
-        pass
-
-    return "unknown"
-
-
-def build_plugin_params(extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    params = {
-        "pluginToken": get_exec_token(),
-        "buildHash": get_build_hash(),
-    }
-    if extra:
-        params.update(extra)
-    return params
 
 
 _registration_task = None
@@ -1246,7 +1202,8 @@ def create_or_update_configuration_state(
     if state.pluginConfigDto.params is None:
         state.pluginConfigDto.params = {}
 
-    state.pluginConfigDto.params.update(build_plugin_params({"config": state.config}))
+    state.pluginConfigDto.params["config"] = state.config
+    state.pluginConfigDto.params["pluginToken"] = get_exec_token()
 
     if state.pluginPython is not None:
         state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
@@ -1396,7 +1353,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params=build_plugin_params(),
+            params={"pluginToken": get_exec_token()},
             jsonData=encode_question_config_base64(req.config)
         )
 
@@ -1526,7 +1483,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params=build_plugin_params({"config": effective_config}),
+            params={"config": effective_config, "pluginToken": get_exec_token()},
             jsonData=encode_question_config_base64(effective_config),
         )
 
@@ -1609,7 +1566,7 @@ def extern_reload(req: LoadPluginRequestDto):
         imageUrl="",
         width=CONF_width,
         height=CONF_height,
-        params=build_plugin_params(),
+        params={"pluginToken": get_exec_token()},
     )
 
 
