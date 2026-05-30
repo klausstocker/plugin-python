@@ -13,12 +13,7 @@ function configPluginPython(dtoString) {
     // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
-    let jsonData = {};
-    try {
-        jsonData = dto.jsonData ? JSON.parse(dto.jsonData) : {};
-    } catch (e) {
-        jsonData = {};
-    }
+    const jsonData = parseDtoJsonData(dto);
 
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
@@ -65,12 +60,57 @@ function configPluginPython(dtoString) {
     renderHelp();
     saveConfig();
 
+
+    function parseDtoJsonData(sourceDto) {
+        if (!sourceDto || !sourceDto.jsonData) return {};
+        try {
+            try {
+                return JSON.parse(atob(sourceDto.jsonData));
+            } catch (decodeError) {
+                return JSON.parse(sourceDto.jsonData);
+            }
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function parseJsonObject(rawValue) {
+        if (!rawValue || typeof rawValue !== "string") return null;
+        try {
+            const parsed = JSON.parse(rawValue);
+            return parsed && typeof parsed === "object" ? parsed : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function extractFilesFromConfigValue(rawValue) {
+        const parsed = parseJsonObject(rawValue);
+        if (!parsed) return {};
+        if (parsed.files && typeof parsed.files === "object") return parsed.files;
+        if (typeof parsed.config === "string") {
+            const nested = parseJsonObject(parsed.config);
+            if (nested && nested.files && typeof nested.files === "object") return nested.files;
+        }
+        return {};
+    }
+
+    function currentStoredFiles() {
+        if (state.files && Object.keys(state.files).length) return state.files;
+        const savedFiles = configField ? extractFilesFromConfigValue(configField.value) : {};
+        if (Object.keys(savedFiles).length) {
+            state.files = savedFiles;
+            return state.files;
+        }
+        return state.files || {};
+    }
+
     function parseConfig(rawValue, fallbackData) {
         const configRawValue = extractRawConfig(rawValue);
         const defaults = {
             indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
             validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
-            files: (fallbackData && fallbackData.files) || {},
+            files: (fallbackData && fallbackData.files) || extractFilesFromConfigValue(rawValue) || {},
             evalConfig: {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
@@ -927,7 +967,7 @@ function configPluginPython(dtoString) {
         return {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
-            files: state.files || {}
+            files: currentStoredFiles()
         };
     }
 
@@ -938,7 +978,7 @@ function configPluginPython(dtoString) {
         const pluginConfig = {
             indication: getPreviewCode(),
             validation: getUnitCode(),
-            files: state.files || {},
+            files: currentStoredFiles(),
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0)
@@ -947,6 +987,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.files = pluginConfig.files;
+        console.debug("[pluginpython config] hidden input files", Object.keys(questionConfigDto.files || {}));
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
