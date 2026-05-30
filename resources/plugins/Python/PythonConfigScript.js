@@ -749,7 +749,7 @@ function configPluginPython(dtoString) {
                     if (!file) return;
                     const uploaded = await requestFileUpload(file);
                     const displayName = createUniqueDisplayName(uploaded.displayName || file.name);
-                    state.files[displayName] = { ...uploaded, displayName: displayName };
+                    state.files[displayName] = { storedName: uploaded.storedName, size: uploaded.size };
                     selectedFileName = displayName;
                     fileUpload.value = "";
                     renderFileList();
@@ -969,7 +969,6 @@ function configPluginPython(dtoString) {
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.files = pluginConfig.files;
-        console.debug("[pluginpython config] hidden input files", Object.keys(questionConfigDto.files || {}));
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;

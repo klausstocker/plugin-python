@@ -92,6 +92,7 @@ class TestEndpoints(unittest.TestCase):
                     body = response.json()
                     self.assertEqual(body["displayName"], sample["source_name"])
                     self.assertEqual(body["size"], len(sample["content"]))
+                    self.assertNotIn("contentType", body)
                     self.assertIn("storedName", body)
 
                     stored_path = storage_root / body["storedName"]

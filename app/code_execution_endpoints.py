@@ -109,23 +109,17 @@ def _debug_file_config_entries(source: str, files_config: Any) -> None:
         else:
             stored_name = "<unsupported>"
             size = "<unknown>"
-        entries.append(f"displayName={display_name!r}, storedName={stored_name!r}, size={size}")
+        entries.append(f"filename={display_name!r}, storedName={stored_name!r}, size={size}")
 
     print(f"[pluginpython files] {source}: gathered {len(entries)} file(s): {entries}", flush=True)
 
 
 def _file_specs_from_body(body: dict) -> dict[str, bytes]:
-    file_data = {}
     question_config = body.get('questionConfigDto') or {}
     question_files = question_config.get('files') if isinstance(question_config, dict) else None
-    body_files = body.get('files') or {}
 
     _debug_file_config_entries('questionConfigDto.files', question_files)
-    if isinstance(question_config, dict):
-        file_data.update(_file_specs_from_config(question_files or {}))
-
-    _debug_file_config_entries('body.files', body_files)
-    file_data.update(_file_specs_from_config(body_files))
+    file_data = _file_specs_from_config(question_files or {}) if isinstance(question_config, dict) else {}
 
     gathered = [f"filename={name!r}, size={len(content)}" for name, content in file_data.items()]
     print(f"[pluginpython files] _file_specs_from_body final filenames: {gathered}", flush=True)
@@ -138,29 +132,25 @@ def _jobe_files_from_body(body: dict):
 
 def _debug_run_file_metadata(body: dict) -> None:
     question_config = body.get('questionConfigDto') or {}
-    sources = []
-    if isinstance(question_config, dict):
-        sources.append(('questionConfigDto.files', question_config.get('files') or {}))
-    sources.append(('body.files', body.get('files') or {}))
+    files_config = question_config.get('files') if isinstance(question_config, dict) else None
+    if not isinstance(files_config, dict):
+        return
 
-    for source, files_config in sources:
-        if not isinstance(files_config, dict):
-            continue
-        for display_name, file_info in files_config.items():
-            if isinstance(file_info, dict):
-                stored_name = file_info.get("storedName") or file_info.get("stored_name") or "<inline>"
-                size = file_info.get("size")
-            elif isinstance(file_info, str):
-                stored_name = "<inline>"
-                size = len(file_info.encode("utf-8"))
-            else:
-                stored_name = "<unsupported>"
-                size = "<unknown>"
-            print(
-                f"[pluginpython /run] {source}: filename={display_name!r}, "
-                f"storedName={stored_name!r}, size={size}",
-                flush=True,
-            )
+    for display_name, file_info in files_config.items():
+        if isinstance(file_info, dict):
+            stored_name = file_info.get("storedName") or file_info.get("stored_name") or "<inline>"
+            size = file_info.get("size")
+        elif isinstance(file_info, str):
+            stored_name = "<inline>"
+            size = len(file_info.encode("utf-8"))
+        else:
+            stored_name = "<unsupported>"
+            size = "<unknown>"
+        print(
+            f"[pluginpython /run] questionConfigDto.files: filename={display_name!r}, "
+            f"storedName={stored_name!r}, size={size}",
+            flush=True,
+        )
 
 
 @router.post(f"{SERVICEPATH}/files/upload")
@@ -180,7 +170,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         "displayName": display_name,
         "storedName": stored_name,
         "size": len(content),
-        "contentType": file.content_type or "application/octet-stream",
     })
 
 
