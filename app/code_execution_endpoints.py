@@ -27,6 +27,26 @@ def get_exec_token() -> str:
     return EXEC_TOKEN
 
 
+def get_commit_hash() -> str:
+    build_hash = os.getenv("PLUGIN_BUILD_HASH", "").strip()
+    if build_hash:
+        return build_hash
+
+    revision_files = (
+        Path("revision.txt"),
+        Path(__file__).resolve().parents[1] / "revision.txt",
+    )
+    for revision_file in revision_files:
+        try:
+            revision = revision_file.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if revision:
+            return revision
+
+    return "unknown"
+
+
 def _extract_exec_token(request: Request) -> str:
     auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
@@ -151,6 +171,12 @@ def _debug_run_file_metadata(body: dict) -> None:
             f"storedName={stored_name!r}, size={size}",
             flush=True,
         )
+
+
+@router.get(f"{SERVICEPATH}/buildhash")
+async def get_buildhash(request: Request):
+    _ensure_authorized(request)
+    return JSONResponse({"commitHash": get_commit_hash()})
 
 
 @router.post(f"{SERVICEPATH}/files/upload")

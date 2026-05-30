@@ -55,6 +55,7 @@ function configPluginPython(dtoString) {
     setupEditors(state.validation, state.indication);
     setupFileTab();
     setupOptionsTab();
+    setupBuildInfo();
     bindSharedButtons();
     setupExamples();
     renderHelp();
@@ -220,7 +221,11 @@ function configPluginPython(dtoString) {
 
                             <div class="tab-panel" id="tab-options">
                                 <h3>Configuration flags</h3>
-                                <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">Plugin build: ${escapeHtml(PYTHON_CONFIG_SCRIPT_COMMIT_HASH)}</div>
+                                <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">
+                                    <span>Script build: <span data-build-role="script">${escapeHtml(PYTHON_CONFIG_SCRIPT_COMMIT_HASH)}</span></span>
+                                    <span class="build-separator"> | </span>
+                                    <span>Server build: <span data-build-role="server">loading...</span></span>
+                                </div>
                                 <div class="flags-row">
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
@@ -492,6 +497,14 @@ function configPluginPython(dtoString) {
                 color: #444;
                 font-family: monospace;
                 font-size: 12px;
+            }
+            .pluginConfigForm .build-info.build-mismatch {
+                border-color: #d00;
+                background: #fff0f0;
+            }
+            .pluginConfigForm .build-info .build-mismatch-text {
+                color: #d00;
+                font-weight: 700;
             }
             .pluginConfigForm .linter-head-row {
                 display: flex;
@@ -788,6 +801,38 @@ function configPluginPython(dtoString) {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+    }
+
+    async function setupBuildInfo() {
+        const buildInfo = document.getElementById(ids.buildInfoId);
+        if (!buildInfo) return;
+
+        const scriptHash = PYTHON_CONFIG_SCRIPT_COMMIT_HASH || "unknown";
+        const scriptElement = buildInfo.querySelector('[data-build-role="script"]');
+        const serverElement = buildInfo.querySelector('[data-build-role="server"]');
+        if (scriptElement) scriptElement.textContent = scriptHash;
+
+        try {
+            const response = await fetch(serviceBase + "/buildhash", {
+                method: "GET",
+                headers: buildAuthHeaders()
+            });
+            if (!response.ok) throw new Error("Build hash request failed");
+
+            const body = await response.json();
+            const serverHash = body && body.commitHash ? String(body.commitHash) : "unknown";
+            if (serverElement) serverElement.textContent = serverHash;
+
+            const mismatch = serverHash !== scriptHash;
+            buildInfo.classList.toggle("build-mismatch", mismatch);
+            if (scriptElement) scriptElement.classList.toggle("build-mismatch-text", mismatch);
+            if (serverElement) serverElement.classList.toggle("build-mismatch-text", mismatch);
+        } catch (e) {
+            if (serverElement) serverElement.textContent = "unavailable";
+            buildInfo.classList.add("build-mismatch");
+            if (scriptElement) scriptElement.classList.add("build-mismatch-text");
+            if (serverElement) serverElement.classList.add("build-mismatch-text");
+        }
     }
 
     function setupOptionsTab() {

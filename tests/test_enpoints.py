@@ -50,6 +50,21 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(body["configurationMode"], 0)
         self.assertTrue(body["useQuestion"])
 
+    def test_get_buildhash_returns_commit_hash(self):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        original_env = os.environ.get("PLUGIN_BUILD_HASH")
+        os.environ["PLUGIN_BUILD_HASH"] = "test-build-hash"
+        try:
+            response = self.client.get(f"{BASE_PATH}/buildhash", headers=headers)
+        finally:
+            if original_env is None:
+                os.environ.pop("PLUGIN_BUILD_HASH", None)
+            else:
+                os.environ["PLUGIN_BUILD_HASH"] = original_env
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"commitHash": "test-build-hash"})
+
     def test_file_manager_upload_download_delete_uses_persistent_storage(self):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
         samples = [

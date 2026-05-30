@@ -8,7 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     SERVICEPATH=/pluginpython \
-    RESOURCE_DIR=/app/resources
+    RESOURCE_DIR=/app/resources \
+    PLUGIN_BUILD_HASH=${PLUGIN_BUILD_HASH}
 
 WORKDIR /app
 

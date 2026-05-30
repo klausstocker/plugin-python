@@ -45,8 +45,8 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
 
 
 ## Build-/Commit-Anzeige im Konfigurationsdialog
-- Der Konfigurationsdialog zeigt `Plugin build: <hash>` im Tab `Configuration` an.
-- Der Wert steht als String direkt in `resources/plugins/Python/PythonConfigScript.js` (`PYTHON_CONFIG_SCRIPT_COMMIT_HASH`) und wird nicht vom Python-Backend in die JavaScript-Parameter injiziert.
+- Der Konfigurationsdialog zeigt den direkt im JavaScript eingebetteten Build-Hash und den vom Backend-Endpunkt `GET /pluginpython/buildhash` gemeldeten Hash im Tab `Configuration` an. Wenn beide Werte abweichen, werden beide rot markiert.
+- Der JavaScript-Wert steht als String direkt in `resources/plugins/Python/PythonConfigScript.js` (`PYTHON_CONFIG_SCRIPT_COMMIT_HASH`) und wird nicht vom Python-Backend in die JavaScript-Parameter injiziert; der Backend-Endpunkt liest denselben Build-Wert aus `PLUGIN_BUILD_HASH` bzw. `revision.txt`.
 - Automatische Aktualisierung:
   1. `build.bat` läuft relativ zu seinem eigenen Verzeichnis (`%~dp0`) und fragt Git nur ab, wenn dort `.git` existiert. Dadurch wird `fatal: Needed a single revision` vermieden, wenn das Skript außerhalb eines Git-Checkouts liegt.
   2. Wenn Git verfügbar ist, verwendet `build.bat` `git -C "%~dp0." log -1 --format=%h`; andernfalls nutzt es `revision.txt` und danach `unknown`. Der Wert wird als Docker-Build-Argument `PLUGIN_BUILD_HASH` übergeben.
