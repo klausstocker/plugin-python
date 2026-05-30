@@ -28,23 +28,7 @@ def get_exec_token() -> str:
 
 
 def get_commit_hash() -> str:
-    build_hash = os.getenv("PLUGIN_BUILD_HASH", "").strip()
-    if build_hash:
-        return build_hash
-
-    revision_files = (
-        Path("revision.txt"),
-        Path(__file__).resolve().parents[1] / "revision.txt",
-    )
-    for revision_file in revision_files:
-        try:
-            revision = revision_file.read_text(encoding="utf-8").strip()
-        except OSError:
-            continue
-        if revision:
-            return revision
-
-    return "unknown"
+    return os.getenv("PLUGIN_BUILD_HASH", "").strip() or "unknown"
 
 
 def _extract_exec_token(request: Request) -> str:

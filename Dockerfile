@@ -28,7 +28,6 @@ COPY shared ./shared
 COPY resources       ./resources
 RUN python -c "from pathlib import Path; import re; h='${PLUGIN_BUILD_HASH}'; p=Path('resources/plugins/Python/PythonConfigScript.js'); s=p.read_text(); p.write_text(re.sub(r'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"[^\"]*\";', 'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"' + h + '\";', s))"
 COPY scripts/*.sh    /scripts/
-COPY revision.txt revision.txt
 COPY README.md .
 RUN dos2unix /scripts/*.sh
 RUN chmod 755 /scripts/*.sh
