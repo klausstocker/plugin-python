@@ -2,6 +2,8 @@ try {
     $ = jQuery;
 } catch (e) {}
 
+const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = "c70dad38cc61";
+
 function configPluginPython(dtoString) {
     // -------------------------- Verbindungskonstante zu LeTTo ---------------------------------------
     // Div Element welches im Konfigurations-Formular liegt - MUSS für LETTO SO HEISSEN!!
@@ -11,12 +13,7 @@ function configPluginPython(dtoString) {
     // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
-    let jsonData = {};
-    try {
-        jsonData = dto.jsonData ? JSON.parse(dto.jsonData) : {};
-    } catch (e) {
-        jsonData = {};
-    }
+    const jsonData = parseDtoJsonData(dto);
 
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
@@ -35,13 +32,13 @@ function configPluginPython(dtoString) {
         btnScoreId: `sharedScore_${pluginTag}`,
         exampleSelectId: `exampleSelect_${pluginTag}`,
         exampleApplyId: `exampleApply_${pluginTag}`,
-        fileNameId: `fileName_${pluginTag}`,
         fileListId: `fileList_${pluginTag}`,
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
+        buildInfoId: `buildInfo_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
         outputToggleId: `outputToggle_${pluginTag}`,
         mainSplitId: `mainSplit_${pluginTag}`,
@@ -58,17 +55,58 @@ function configPluginPython(dtoString) {
     setupEditors(state.validation, state.indication);
     setupFileTab();
     setupOptionsTab();
+    setupBuildInfo();
     bindSharedButtons();
     setupExamples();
     renderHelp();
     saveConfig();
 
+
+    function parseDtoJsonData(sourceDto) {
+        if (!sourceDto || !sourceDto.jsonData) return {};
+        try {
+            try {
+                return JSON.parse(atob(sourceDto.jsonData));
+            } catch (decodeError) {
+                return JSON.parse(sourceDto.jsonData);
+            }
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function parseJsonObject(rawValue) {
+        if (!rawValue || typeof rawValue !== "string") return null;
+        try {
+            const parsed = JSON.parse(rawValue);
+            return parsed && typeof parsed === "object" ? parsed : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function extractFilesFromConfigValue(rawValue) {
+        const parsed = parseJsonObject(rawValue);
+        if (!parsed) return {};
+        if (parsed.files && typeof parsed.files === "object") return parsed.files;
+        return {};
+    }
+
+    function currentStoredFiles() {
+        if (state.files && Object.keys(state.files).length) return state.files;
+        const savedFiles = configField ? extractFilesFromConfigValue(configField.value) : {};
+        if (Object.keys(savedFiles).length) {
+            state.files = savedFiles;
+            return state.files;
+        }
+        return state.files || {};
+    }
+
     function parseConfig(rawValue, fallbackData) {
-        const configRawValue = extractRawConfig(rawValue);
         const defaults = {
             indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
             validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
-            files: (fallbackData && fallbackData.files) || {},
+            files: (fallbackData && fallbackData.files) || extractFilesFromConfigValue(rawValue) || {},
             evalConfig: {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
@@ -77,10 +115,10 @@ function configPluginPython(dtoString) {
             linterWeight: Number((fallbackData && fallbackData.linterWeight) || 0.0)
         };
 
-        if (!configRawValue) return defaults;
+        if (!rawValue) return defaults;
 
         try {
-            const parsed = JSON.parse(configRawValue);
+            const parsed = JSON.parse(rawValue);
             return {
                 indication: parsed.indication || defaults.indication,
                 validation: parsed.validation || defaults.validation,
@@ -94,7 +132,7 @@ function configPluginPython(dtoString) {
             };
         } catch (e) {
             return {
-                indication: configRawValue,
+                indication: rawValue,
                 validation: defaults.validation,
                 files: defaults.files,
                 evalConfig: defaults.evalConfig,
@@ -114,25 +152,12 @@ function configPluginPython(dtoString) {
 
         try {
             const parsed = JSON.parse(rawValue);
-            if (parsed && typeof parsed === "object" && Object.prototype.hasOwnProperty.call(parsed, "config")) {
+            if (parsed && typeof parsed === "object") {
                 return { ...fallback, ...parsed };
             }
         } catch (e) {}
 
         return fallback;
-    }
-
-    function extractRawConfig(rawValue) {
-        if (!rawValue) return "";
-
-        try {
-            const parsed = JSON.parse(rawValue);
-            if (parsed && typeof parsed === "object" && typeof parsed.config === "string") {
-                return parsed.config;
-            }
-        } catch (e) {}
-
-        return rawValue;
     }
 
     function drawForm() {
@@ -176,16 +201,16 @@ function configPluginPython(dtoString) {
                                 <h3>File management</h3>
                                 <div class="files-grid">
                                     <div>
-                                        <label>File name</label>
-                                        <input id="${ids.fileNameId}" type="text" class="text-input" placeholder="example.py" />
-                                        <div class="btn-row small-gap">
-                                            <button type="button" class="cfg-btn" data-file-action="delete">delete</button>
-                                            <button type="button" class="cfg-btn" data-file-action="download">download</button>
-                                        </div>
+                                        <label>Upload file</label>
                                         <div class="btn-row small-gap">
                                             <input id="${ids.fileUploadId}" type="file" />
                                             <button type="button" class="cfg-btn" data-file-action="upload">import</button>
                                         </div>
+                                        <div class="btn-row small-gap">
+                                            <button type="button" class="cfg-btn" data-file-action="download">download selected</button>
+                                            <button type="button" class="cfg-btn" data-file-action="delete">delete selected</button>
+                                        </div>
+                                        <p class="file-help">Select a stored file to download or delete it.</p>
                                     </div>
                                     <div>
                                         <label>Stored files</label>
@@ -196,6 +221,11 @@ function configPluginPython(dtoString) {
 
                             <div class="tab-panel" id="tab-options">
                                 <h3>Configuration flags</h3>
+                                <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">
+                                    <span>Script build: <span data-build-role="script">${escapeHtml(PYTHON_CONFIG_SCRIPT_COMMIT_HASH)}</span></span>
+                                    <span class="build-separator"> | </span>
+                                    <span>Server build: <span data-build-role="server">loading...</span></span>
+                                </div>
                                 <div class="flags-row">
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
@@ -425,9 +455,25 @@ function configPluginPython(dtoString) {
                 padding: 4px;
                 cursor: pointer;
                 border-bottom: 1px solid #eee;
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .pluginConfigForm .file-size {
+                color: #666;
+                font-size: 12px;
             }
             .pluginConfigForm .file-item:hover {
                 background: #f5f5f5;
+            }
+            .pluginConfigForm .file-item.selected {
+                background: #e8f1ff;
+                outline: 1px solid #7aa7e9;
+            }
+            .pluginConfigForm .file-help {
+                margin: 8px 0 0;
+                color: #666;
+                font-size: 12px;
             }
             .pluginConfigForm .checkbox-row {
                 display: inline-flex;
@@ -440,6 +486,25 @@ function configPluginPython(dtoString) {
                 align-items: center;
                 gap: 8px;
                 flex-wrap: wrap;
+            }
+            .pluginConfigForm .build-info {
+                display: inline-block;
+                margin: 0 0 8px;
+                padding: 4px 6px;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                background: #f7f7f7;
+                color: #444;
+                font-family: monospace;
+                font-size: 12px;
+            }
+            .pluginConfigForm .build-info.build-mismatch {
+                border-color: #d00;
+                background: #fff0f0;
+            }
+            .pluginConfigForm .build-info .build-mismatch-text {
+                color: #d00;
+                font-weight: 700;
             }
             .pluginConfigForm .linter-head-row {
                 display: flex;
@@ -603,21 +668,54 @@ function configPluginPython(dtoString) {
     }
 
     function setupFileTab() {
-        const fileNameInput = document.getElementById(ids.fileNameId);
         const fileList = document.getElementById(ids.fileListId);
         const fileUpload = document.getElementById(ids.fileUploadId);
+        let selectedFileName = "";
+
+        function getFileInfo(name) {
+            const value = state.files && state.files[name];
+            if (value && typeof value === "object") return value;
+            if (typeof value === "string") return { content: value, size: value.length };
+            return {};
+        }
+
+        function createUniqueDisplayName(preferredName) {
+            const cleanName = (preferredName || "uploaded-file").trim() || "uploaded-file";
+            if (!state.files || state.files[cleanName] == null) return cleanName;
+
+            const dotIndex = cleanName.lastIndexOf(".");
+            const hasExtension = dotIndex > 0;
+            const base = hasExtension ? cleanName.substring(0, dotIndex) : cleanName;
+            const extension = hasExtension ? cleanName.substring(dotIndex) : "";
+            let counter = 2;
+            let candidate = `${base}-${counter}${extension}`;
+            while (state.files[candidate] != null) {
+                counter += 1;
+                candidate = `${base}-${counter}${extension}`;
+            }
+            return candidate;
+        }
 
         function renderFileList() {
             const names = Object.keys(state.files || {}).sort();
             if (!names.length) {
+                selectedFileName = "";
                 fileList.innerHTML = "<em>No files stored.</em>";
                 return;
             }
-            fileList.innerHTML = names.map((name) => `<div class="file-item" data-file="${escapeHtmlAttr(name)}">${escapeHtml(name)}</div>`).join("");
+            if (selectedFileName && !state.files[selectedFileName]) {
+                selectedFileName = "";
+            }
+            fileList.innerHTML = names.map((name) => {
+                const info = getFileInfo(name);
+                const details = info.size != null ? ` <span class="file-size">(${escapeHtml(formatBytes(info.size))})</span>` : "";
+                const selectedClass = name === selectedFileName ? " selected" : "";
+                return `<div class="file-item${selectedClass}" data-file="${escapeHtmlAttr(name)}"><span>${escapeHtml(name)}</span>${details}</div>`;
+            }).join("");
             fileList.querySelectorAll(".file-item").forEach((row) => {
                 row.addEventListener("click", () => {
-                    const name = row.getAttribute("data-file");
-                    fileNameInput.value = name;
+                    selectedFileName = row.getAttribute("data-file") || "";
+                    renderFileList();
                 });
             });
         }
@@ -625,11 +723,16 @@ function configPluginPython(dtoString) {
         document.querySelectorAll("[data-file-action]").forEach((btn) => {
             btn.addEventListener("click", async () => {
                 const action = btn.getAttribute("data-file-action");
-                const name = (fileNameInput.value || "").trim();
+                const name = selectedFileName;
 
                 if (action === "delete") {
                     if (!name || !state.files[name]) return;
+                    const info = getFileInfo(name);
+                    if (info.storedName) {
+                        await requestFileDelete(info.storedName);
+                    }
                     delete state.files[name];
+                    selectedFileName = "";
                     renderFileList();
                     saveConfig();
                     return;
@@ -637,21 +740,30 @@ function configPluginPython(dtoString) {
 
                 if (action === "download") {
                     if (!name || state.files[name] == null) return;
-                    const blob = new Blob([state.files[name]], { type: "text/plain" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = name;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
+                    const info = getFileInfo(name);
+                    if (info.storedName) {
+                        const a = document.createElement("a");
+                        a.href = `${serviceBase}/files/download/${encodeURIComponent(info.storedName)}?name=${encodeURIComponent(name)}${pluginToken ? `&token=${encodeURIComponent(pluginToken)}` : ""}`;
+                        a.download = name;
+                        a.click();
+                    } else {
+                        const blob = new Blob([info.content || ""], { type: "text/plain" });
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = name;
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    }
                     return;
                 }
 
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    state.files[file.name] = text;
-                    fileNameInput.value = file.name;
+                    const uploaded = await requestFileUpload(file);
+                    const displayName = createUniqueDisplayName(uploaded.displayName || file.name);
+                    state.files[displayName] = { storedName: uploaded.storedName, size: uploaded.size };
+                    selectedFileName = displayName;
                     fileUpload.value = "";
                     renderFileList();
                     saveConfig();
@@ -660,6 +772,67 @@ function configPluginPython(dtoString) {
         });
 
         renderFileList();
+    }
+
+    async function requestFileUpload(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await fetch(serviceBase + "/files/upload", {
+            method: "POST",
+            headers: buildAuthHeaders(),
+            body: formData
+        });
+        if (!response.ok) throw new Error("File upload failed");
+        return await response.json();
+    }
+
+    async function requestFileDelete(storedName) {
+        const response = await fetch(serviceBase + "/files/delete", {
+            method: "POST",
+            headers: buildHeaders(),
+            body: JSON.stringify({ storedName: storedName })
+        });
+        if (!response.ok) throw new Error("File delete failed");
+        return await response.json();
+    }
+
+    function formatBytes(value) {
+        const bytes = Number(value || 0);
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+    }
+
+    async function setupBuildInfo() {
+        const buildInfo = document.getElementById(ids.buildInfoId);
+        if (!buildInfo) return;
+
+        const scriptHash = PYTHON_CONFIG_SCRIPT_COMMIT_HASH || "unknown";
+        const scriptElement = buildInfo.querySelector('[data-build-role="script"]');
+        const serverElement = buildInfo.querySelector('[data-build-role="server"]');
+        if (scriptElement) scriptElement.textContent = scriptHash;
+
+        try {
+            const response = await fetch(serviceBase + "/buildhash", {
+                method: "GET",
+                headers: buildAuthHeaders()
+            });
+            if (!response.ok) throw new Error("Build hash request failed");
+
+            const body = await response.json();
+            const serverHash = body && body.commitHash ? String(body.commitHash) : "unknown";
+            if (serverElement) serverElement.textContent = serverHash;
+
+            const mismatch = serverHash !== scriptHash;
+            buildInfo.classList.toggle("build-mismatch", mismatch);
+            if (scriptElement) scriptElement.classList.toggle("build-mismatch-text", mismatch);
+            if (serverElement) serverElement.classList.toggle("build-mismatch-text", mismatch);
+        } catch (e) {
+            if (serverElement) serverElement.textContent = "unavailable";
+            buildInfo.classList.add("build-mismatch");
+            if (scriptElement) scriptElement.classList.add("build-mismatch-text");
+            if (serverElement) serverElement.classList.add("build-mismatch-text");
+        }
     }
 
     function setupOptionsTab() {
@@ -717,9 +890,9 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode() }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
-        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode() }), outputEl);
+        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
     }
 
@@ -820,7 +993,8 @@ function configPluginPython(dtoString) {
         syncOptionsStateFromInputs();
         return {
             linterConfig: state.linterConfig || "",
-            linterWeight: Number(state.linterWeight || 0.0)
+            linterWeight: Number(state.linterWeight || 0.0),
+            files: currentStoredFiles()
         };
     }
 
@@ -831,7 +1005,7 @@ function configPluginPython(dtoString) {
         const pluginConfig = {
             indication: getPreviewCode(),
             validation: getUnitCode(),
-            files: state.files || {},
+            files: currentStoredFiles(),
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0)
@@ -839,9 +1013,10 @@ function configPluginPython(dtoString) {
 
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
+        questionConfigDto.files = pluginConfig.files;
+        questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
-        questionConfigDto.config = JSON.stringify(pluginConfig);
 
         configField.value = JSON.stringify(questionConfigDto);
     }
@@ -873,11 +1048,15 @@ function configPluginPython(dtoString) {
             .replace(/>/g, "&gt;");
     }
 
-    function buildHeaders() {
-        const headers = { "Content-Type": "application/json" };
+    function buildAuthHeaders() {
+        const headers = {};
         if (pluginToken) {
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
+    }
+
+    function buildHeaders() {
+        return { "Content-Type": "application/json", ...buildAuthHeaders() };
     }
 }

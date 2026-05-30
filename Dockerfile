@@ -1,12 +1,15 @@
 FROM python:3.12-slim
+ARG PLUGIN_BUILD_HASH=unknown
 LABEL maintainer="Klaus Stocker"
 LABEL description="Plugin-Python"
+LABEL org.opencontainers.image.revision="${PLUGIN_BUILD_HASH}"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     SERVICEPATH=/pluginpython \
-    RESOURCE_DIR=/app/resources
+    RESOURCE_DIR=/app/resources \
+    PLUGIN_BUILD_HASH=${PLUGIN_BUILD_HASH}
 
 WORKDIR /app
 
@@ -23,8 +26,8 @@ COPY app ./app
 COPY shared ./shared
 # resources folder exists, but JS libs can be copied in later (see README)
 COPY resources       ./resources
+RUN python -c "from pathlib import Path; import re; h='${PLUGIN_BUILD_HASH}'; p=Path('resources/plugins/Python/PythonConfigScript.js'); s=p.read_text(); p.write_text(re.sub(r'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"[^\"]*\";', 'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"' + h + '\";', s))"
 COPY scripts/*.sh    /scripts/
-COPY revision.txt revision.txt
 COPY README.md .
 RUN dos2unix /scripts/*.sh
 RUN chmod 755 /scripts/*.sh

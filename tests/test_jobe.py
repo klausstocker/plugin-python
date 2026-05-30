@@ -1,5 +1,6 @@
 import unittest
 import sys
+from unittest.mock import patch
 
 from shared.jobe_wrapper import JobeWrapper
 from shared.check import checkCode
@@ -73,11 +74,43 @@ class Checker(unittest.TestCase): # do not rename
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(result.score(), 0.5)
 
+
+    def test_check_uploads_files_to_jobe(self):
+        files = [("stored-id", "input.txt", b"content")]
+
+        class FakeRunResult:
+            stdout = '__magic_string__{"count":1,"errors":[],"failures":[],"exceptions":[]}'
+
+            def success(self):
+                return True
+
+        with patch("shared.check.JobeWrapper") as wrapper_cls:
+            wrapper = wrapper_cls.return_value
+            wrapper.run_test.return_value = FakeRunResult()
+
+            result = checkCode("jobe:80", "print(open('input.txt').read())\n", "", files=files)
+
+            wrapper.run_test.assert_called_once()
+            self.assertIs(wrapper.run_test.call_args.args[3], files)
+            self.assertTrue(result.wasSuccessful())
+
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
         fileId = 'B00WHrZtSjfile1gasdfaserscasdfaserasdfaserqwcasrweas'
         self.assertIsNone(jobe.put_file(fileId, ('inhalt').encode()))
         self.assertTrue(jobe.check_file(fileId))
+
+
+    def test_create_files_uses_opaque_jobe_ids_and_preserves_names(self):
+        files = {"test.json": b"{}", "data.txt": b"hello"}
+
+        file_specs = JobeWrapper.createFiles(files)
+
+        self.assertEqual([spec[1] for spec in file_specs], ["test.json", "data.txt"])
+        self.assertEqual([spec[2] for spec in file_specs], [b"{}", b"hello"])
+        for file_id, original_name, _content in file_specs:
+            self.assertNotIn(original_name, file_id)
+            self.assertRegex(file_id, r"^[0-9a-f]+$")
 
     def testWithFiles(self):
         files = {'file1': ('The first file\nLine 2').encode(),

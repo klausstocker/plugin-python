@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class EvalConfigDto(BaseModel):
@@ -9,7 +11,7 @@ class EvalConfigDto(BaseModel):
 class QuestionConfigDto(BaseModel):
     indication: str = ""
     validation: str = ""
-    files: dict[str, str] = {}
-    evalConfig: EvalConfigDto = EvalConfigDto()
+    files: dict[str, Any] = Field(default_factory=dict)
+    evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterConfig: str = ""
     linterWeight: float = 0.0
