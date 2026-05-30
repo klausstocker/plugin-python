@@ -1590,14 +1590,7 @@ def _extract_file_specs_from_config(plugin_config: str = "", plugin_dto: Optiona
             return None
 
     def _extract_from_dict(data: dict) -> dict[str, bytes]:
-        file_data = {}
-        file_data.update(_file_specs_from_config(data.get("files") or {}))
-        nested = data.get("config")
-        if isinstance(nested, str):
-            nested_data = _parse_json_string(nested)
-            if nested_data:
-                file_data.update(_file_specs_from_config(nested_data.get("files") or {}))
-        return file_data
+        return _file_specs_from_config(data.get("files") or {})
 
     if plugin_dto and plugin_dto.jsonData:
         try:
@@ -1617,7 +1610,7 @@ def _extract_file_specs_from_config(plugin_config: str = "", plugin_dto: Optiona
     return {}
 
 def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> tuple[str, float]:
-    """Extract linter config and linter weight from possible nested payload formats."""
+    """Extract linter config and linter weight from the flat question config payload."""
 
     def _parse_json_string(raw: str) -> Optional[dict]:
         if not raw:
@@ -1637,19 +1630,7 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
     def _extract_from_dict(data: dict) -> tuple[str, float]:
         linter_config = data.get("linterConfig")
         linter_weight = _to_float(data.get("linterWeight", 0.0))
-        if isinstance(linter_config, str):
-            return linter_config, linter_weight
-
-        nested = data.get("config")
-        if isinstance(nested, str):
-            nested_data = _parse_json_string(nested)
-            if nested_data:
-                nested_linter_config = nested_data.get("linterConfig")
-                nested_linter_weight = _to_float(nested_data.get("linterWeight", 0.0))
-                if isinstance(nested_linter_config, str):
-                    return nested_linter_config, nested_linter_weight
-                return "", nested_linter_weight
-        return "", linter_weight
+        return linter_config if isinstance(linter_config, str) else "", linter_weight
 
     if plugin_dto and plugin_dto.jsonData:
         try:
@@ -1666,7 +1647,7 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
 
     return "", 0.0
 def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> str:
-    """Extract validation unittest code from possible nested payload formats."""
+    """Extract validation unittest code from the flat question config payload."""
 
     def _parse_json_string(raw: str) -> Optional[dict]:
         if not raw:
@@ -1679,16 +1660,7 @@ def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_confi
 
     def _extract_from_dict(data: dict) -> str:
         validation = data.get("validation")
-        if isinstance(validation, str) and validation.strip():
-            return validation
-        nested = data.get("config")
-        if isinstance(nested, str):
-            nested_data = _parse_json_string(nested)
-            if nested_data:
-                validation2 = nested_data.get("validation")
-                if isinstance(validation2, str) and validation2.strip():
-                    return validation2
-        return ""
+        return validation if isinstance(validation, str) and validation.strip() else ""
 
     if plugin_dto and plugin_dto.jsonData:
         try:

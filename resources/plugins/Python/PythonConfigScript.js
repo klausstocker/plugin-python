@@ -88,10 +88,6 @@ function configPluginPython(dtoString) {
         const parsed = parseJsonObject(rawValue);
         if (!parsed) return {};
         if (parsed.files && typeof parsed.files === "object") return parsed.files;
-        if (typeof parsed.config === "string") {
-            const nested = parseJsonObject(parsed.config);
-            if (nested && nested.files && typeof nested.files === "object") return nested.files;
-        }
         return {};
     }
 
@@ -106,7 +102,6 @@ function configPluginPython(dtoString) {
     }
 
     function parseConfig(rawValue, fallbackData) {
-        const configRawValue = extractRawConfig(rawValue);
         const defaults = {
             indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
             validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
@@ -119,10 +114,10 @@ function configPluginPython(dtoString) {
             linterWeight: Number((fallbackData && fallbackData.linterWeight) || 0.0)
         };
 
-        if (!configRawValue) return defaults;
+        if (!rawValue) return defaults;
 
         try {
-            const parsed = JSON.parse(configRawValue);
+            const parsed = JSON.parse(rawValue);
             return {
                 indication: parsed.indication || defaults.indication,
                 validation: parsed.validation || defaults.validation,
@@ -136,7 +131,7 @@ function configPluginPython(dtoString) {
             };
         } catch (e) {
             return {
-                indication: configRawValue,
+                indication: rawValue,
                 validation: defaults.validation,
                 files: defaults.files,
                 evalConfig: defaults.evalConfig,
@@ -157,26 +152,11 @@ function configPluginPython(dtoString) {
         try {
             const parsed = JSON.parse(rawValue);
             if (parsed && typeof parsed === "object") {
-                const cleaned = { ...fallback, ...parsed };
-                delete cleaned.config;
-                return cleaned;
+                return { ...fallback, ...parsed };
             }
         } catch (e) {}
 
         return fallback;
-    }
-
-    function extractRawConfig(rawValue) {
-        if (!rawValue) return "";
-
-        try {
-            const parsed = JSON.parse(rawValue);
-            if (parsed && typeof parsed === "object" && typeof parsed.config === "string") {
-                return parsed.config;
-            }
-        } catch (e) {}
-
-        return rawValue;
     }
 
     function drawForm() {
@@ -993,7 +973,6 @@ function configPluginPython(dtoString) {
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
-        delete questionConfigDto.config;
 
         configField.value = JSON.stringify(questionConfigDto);
     }
