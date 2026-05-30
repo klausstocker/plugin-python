@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -145,6 +146,29 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["typ"], "PIG")
+
+    @patch("app.code_execution_endpoints.scoreCode")
+    def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        score_mock.return_value = (0.75, "score result")
+
+        response = self.client.post(
+            f"{BASE_PATH}/scorePlugin",
+            headers=headers,
+            json={
+                "code": "print(1)",
+                "testcode": "",
+                "questionConfigDto": {
+                    "linterConfig": "--disable=C0114",
+                    "linterWeight": "1,5",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["score"], 0.75)
+        score_mock.assert_called_once()
+        self.assertEqual(score_mock.call_args.args[4], 1.5)
 
 
 if __name__ == "__main__":

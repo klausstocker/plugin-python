@@ -1622,6 +1622,8 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
             return None
 
     def _to_float(value: Any) -> float:
+        if isinstance(value, str):
+            value = value.strip().replace(",", ".")
         try:
             return float(value)
         except Exception:

@@ -112,7 +112,7 @@ function configPluginPython(dtoString) {
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
             },
             linterConfig: (fallbackData && fallbackData.linterConfig) || "",
-            linterWeight: Number((fallbackData && fallbackData.linterWeight) || 0.0)
+            linterWeight: parseWeightValue(fallbackData && fallbackData.linterWeight)
         };
 
         if (!rawValue) return defaults;
@@ -128,7 +128,7 @@ function configPluginPython(dtoString) {
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
                 },
                 linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
-                linterWeight: Number(parsed.linterWeight || defaults.linterWeight || 0.0)
+                linterWeight: parseWeightValue(parsed.linterWeight != null ? parsed.linterWeight : defaults.linterWeight)
             };
         } catch (e) {
             return {
@@ -848,9 +848,12 @@ function configPluginPython(dtoString) {
 
         [runAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
             if (!el) return;
-            const onOptionChanged = () => {
+            const onOptionChanged = (event) => {
                 syncOptionsStateFromInputs();
                 saveConfig();
+                if (el === linterWeight && event && event.type === "change") {
+                    linterWeight.value = formatWeightValue(state.linterWeight);
+                }
             };
             el.addEventListener("change", onOptionChanged);
             el.addEventListener("input", onOptionChanged);
@@ -869,14 +872,11 @@ function configPluginPython(dtoString) {
 
         const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
-
-        if (linterWeight) {
-            linterWeight.value = formatWeightValue(state.linterWeight);
-        }
     }
 
     function parseWeightValue(rawValue) {
         const normalized = String(rawValue == null ? "" : rawValue).trim().replace(",", ".");
+        if (normalized === "" || normalized === "." || normalized === "-" || normalized === "+") return 0.0;
         const parsed = Number(normalized);
         return Number.isFinite(parsed) ? parsed : 0.0;
     }
