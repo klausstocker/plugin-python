@@ -156,8 +156,10 @@ function configPluginPython(dtoString) {
 
         try {
             const parsed = JSON.parse(rawValue);
-            if (parsed && typeof parsed === "object" && Object.prototype.hasOwnProperty.call(parsed, "config")) {
-                return { ...fallback, ...parsed };
+            if (parsed && typeof parsed === "object") {
+                const cleaned = { ...fallback, ...parsed };
+                delete cleaned.config;
+                return cleaned;
             }
         } catch (e) {}
 
@@ -991,7 +993,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
-        questionConfigDto.config = JSON.stringify(pluginConfig);
+        delete questionConfigDto.config;
 
         configField.value = JSON.stringify(questionConfigDto);
     }
