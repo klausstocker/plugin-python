@@ -100,6 +100,18 @@ class Checker(unittest.TestCase): # do not rename
         self.assertIsNone(jobe.put_file(fileId, ('inhalt').encode()))
         self.assertTrue(jobe.check_file(fileId))
 
+
+    def test_create_files_uses_opaque_jobe_ids_and_preserves_names(self):
+        files = {"test.json": b"{}", "data.txt": b"hello"}
+
+        file_specs = JobeWrapper.createFiles(files)
+
+        self.assertEqual([spec[1] for spec in file_specs], ["test.json", "data.txt"])
+        self.assertEqual([spec[2] for spec in file_specs], [b"{}", b"hello"])
+        for file_id, original_name, _content in file_specs:
+            self.assertNotIn(original_name, file_id)
+            self.assertRegex(file_id, r"^[0-9a-f]+$")
+
     def testWithFiles(self):
         files = {'file1': ('The first file\nLine 2').encode(),
                  'file2': ('Second file').encode()}

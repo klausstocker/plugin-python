@@ -76,10 +76,17 @@ class JobeWrapper():
 
     @staticmethod
     def createFiles(files: dict):
+        """Create Jobe file specs while preserving the in-sandbox filename.
+
+        Jobe receives files as (opaque_file_id, sandbox_filename, bytes).  The
+        file id is used only for the REST upload endpoint and should not contain
+        the user filename.  The second tuple element is the original/display name
+        that Jobe exposes to the Python code.
+        """
         commonId = uuid.uuid4().hex
         filesWithId = []
-        for name, content in files.items():
-            fileId = f'{commonId[:10]}{name}'
+        for index, (name, content) in enumerate(files.items()):
+            fileId = f'{commonId}{index:04x}'
             filesWithId.append((fileId, name, content))
         return filesWithId
 
