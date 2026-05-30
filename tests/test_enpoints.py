@@ -54,13 +54,13 @@ class TestEndpoints(unittest.TestCase):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
         samples = [
             {
-                "display_name": "notes.txt",
+                "display_name": "original-notes.txt",
                 "source_name": "original-notes.txt",
                 "content": b"Hello from a small text file.\nSecond line.\n",
                 "content_type": "text/plain",
             },
             {
-                "display_name": "data.bin",
+                "display_name": "original-data.bin",
                 "source_name": "original-data.bin",
                 "content": bytes([0, 1, 2, 3, 250, 251, 252, 253, 254, 255]),
                 "content_type": "application/octet-stream",
@@ -78,7 +78,7 @@ class TestEndpoints(unittest.TestCase):
                     response = self.client.post(
                         f"{BASE_PATH}/files/upload",
                         headers=headers,
-                        data={"name": sample["display_name"]},
+                        data={"name": "ignored-display-name.txt"},
                         files={
                             "file": (
                                 sample["source_name"],
@@ -90,7 +90,8 @@ class TestEndpoints(unittest.TestCase):
 
                     self.assertEqual(response.status_code, 200)
                     body = response.json()
-                    self.assertEqual(body["displayName"], sample["display_name"])
+                    self.assertEqual(body["displayName"], sample["source_name"])
+                    self.assertEqual(body["originalName"], sample["source_name"])
                     self.assertEqual(body["size"], len(sample["content"]))
                     self.assertIn("storedName", body)
 

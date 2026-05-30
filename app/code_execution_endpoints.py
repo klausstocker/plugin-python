@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
 
 from shared.check import checkCode
@@ -107,10 +107,10 @@ def _jobe_files_from_body(body: dict):
 
 
 @router.post(f"{SERVICEPATH}/files/upload")
-async def upload_file(request: Request, file: UploadFile = File(...), name: str = Form("")):
+async def upload_file(request: Request, file: UploadFile = File(...)):
     _ensure_authorized(request)
     FILE_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
-    display_name = _safe_display_name(name or file.filename or "uploaded-file")
+    display_name = _safe_display_name(file.filename or "uploaded-file")
     extension = Path(display_name).suffix
     safe_suffix = re.sub(r"[^A-Za-z0-9._-]+", "_", display_name)[:80]
     stored_name = f"{uuid.uuid4().hex}_{safe_suffix or 'file'}"

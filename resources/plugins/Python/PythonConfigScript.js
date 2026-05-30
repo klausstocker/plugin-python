@@ -725,8 +725,8 @@ function configPluginPython(dtoString) {
                 if (action === "upload") {
                     const file = fileUpload.files && fileUpload.files[0];
                     if (!file) return;
-                    const displayName = createUniqueDisplayName(file.name);
-                    const uploaded = await requestFileUpload(file, displayName);
+                    const uploaded = await requestFileUpload(file);
+                    const displayName = createUniqueDisplayName(uploaded.displayName || file.name);
                     state.files[displayName] = { ...uploaded, displayName: displayName };
                     selectedFileName = displayName;
                     fileUpload.value = "";
@@ -739,10 +739,9 @@ function configPluginPython(dtoString) {
         renderFileList();
     }
 
-    async function requestFileUpload(file, displayName) {
+    async function requestFileUpload(file) {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("name", displayName || file.name || "uploaded-file");
         const response = await fetch(serviceBase + "/files/upload", {
             method: "POST",
             headers: buildAuthHeaders(),
