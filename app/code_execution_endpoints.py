@@ -53,6 +53,15 @@ def _ensure_authorized(request: Request) -> None:
         )
 
 
+def _to_float(value: Any) -> float:
+    if isinstance(value, str):
+        value = value.strip().replace(",", ".")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _safe_display_name(value: str) -> str:
     name = Path((value or "").strip()).name
     name = re.sub(r"[\\/]+", "_", name)
@@ -263,10 +272,7 @@ async def score_plugin(request: Request):
     question_config = body.get('questionConfigDto') or {}
     linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
     linter_weight_raw = question_config.get('linterWeight', 0.0) if isinstance(question_config, dict) else 0.0
-    try:
-        linter_weight = float(linter_weight_raw)
-    except (TypeError, ValueError):
-        linter_weight = 0.0
+    linter_weight = _to_float(linter_weight_raw)
 
     try:
         score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body))
