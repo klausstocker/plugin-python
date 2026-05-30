@@ -91,7 +91,6 @@ class TestEndpoints(unittest.TestCase):
                     self.assertEqual(response.status_code, 200)
                     body = response.json()
                     self.assertEqual(body["displayName"], sample["source_name"])
-                    self.assertEqual(body["originalName"], sample["source_name"])
                     self.assertEqual(body["size"], len(sample["content"]))
                     self.assertIn("storedName", body)
 

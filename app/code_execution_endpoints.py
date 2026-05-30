@@ -124,7 +124,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         "storedName": stored_name,
         "size": len(content),
         "contentType": file.content_type or "application/octet-stream",
-        "originalName": file.filename or display_name,
     })
 
 
