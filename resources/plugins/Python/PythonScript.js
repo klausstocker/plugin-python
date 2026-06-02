@@ -50,9 +50,8 @@ function initPluginPython(dtoString, active) {
     const linterWeight = Number(dtoData.linterWeight || 0.0);
     const files = dtoData.files || {};
 
-    if (answerField) {
-        answerField.value = initialMain;
-    }
+    // Do not write fallback/indication text into the persisted answer field on render.
+    // The hidden answer field is updated only after the student edits the editor below.
 
     drawLayout();
     ensureStyles();
@@ -244,6 +243,7 @@ function initPluginPython(dtoString, active) {
 
         if (answerField) {
             editor.session.on("change", function () {
+                // Persist only after an editor change, not while rendering fallback/indication text.
                 answerField.value = editor.getValue();
             });
         }
@@ -257,7 +257,10 @@ function initPluginPython(dtoString, active) {
 
         const mainTextArea = mainEl.querySelector("textarea");
         if (answerField) {
-            mainTextArea.addEventListener("input", () => answerField.value = mainTextArea.value);
+            mainTextArea.addEventListener("input", () => {
+                // Persist only after student input in the fallback textarea.
+                answerField.value = mainTextArea.value;
+            });
         }
         plugin.getMainCode = () => mainTextArea.value;
     }
