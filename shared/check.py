@@ -1,17 +1,25 @@
 from shared.jobe_wrapper import JobeWrapper
 from shared.check_result import CheckResult
-import unittest
-import json
+import uuid
 
-__imports__ = """
-import unittest
+ANSWER_FILENAME = "answer.py"
+
+def _student_answer_file(code: str):
+    return [(uuid.uuid4().hex, ANSWER_FILENAME, code.encode("utf-8"))]
+
+
+def _with_student_answer_file(code: str, files=None):
+    auxiliary_files = list(files or [])
+    auxiliary_files = [file_spec for file_spec in auxiliary_files if file_spec[1] != ANSWER_FILENAME]
+    return _student_answer_file(code) + auxiliary_files
+
+
+def checkCode(server, code, testCode, files=None):
+    code2run = testCode + """
 import sys
 from io import StringIO
 import json
-"""
 
-def checkCode(server, code, testCode, files=None):
-    code2run = code + __imports__ + testCode + """
 class RedirectedStdout:
     def __init__(self):
         self._stdout = None
@@ -50,7 +58,7 @@ if __name__ == '__main__':
     print(f'{__magic_string__}{json.dumps(ret, separators=(',', ':'))}')
 """
     jobe = JobeWrapper(server)
-    result = jobe.run_test('python3', code2run, 'test.py', files or [])
+    result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files))
     if not result.success():
         return CheckResult({'count': 0, 'errors': ['error running code']})
-    return CheckResult.from_str(result.stdout, (code + __imports__).count('\n'))
+    return CheckResult.from_str(result.stdout)

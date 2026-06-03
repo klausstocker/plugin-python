@@ -2,17 +2,16 @@ import json
 
 class CheckResult():
     __magic_string__ = '__magic_string__'
-    def __init__(self, resultDict: dict, offset=0):
-        self._offset = offset
+    def __init__(self, resultDict: dict):
         self.count = resultDict['count'] if 'count' in resultDict else 0
         self.failures = resultDict['failures'] if 'failures' in resultDict else []
         self.errors = resultDict['errors'] if 'errors' in resultDict else []
         self.exceptions = resultDict['exceptions'] if 'exceptions' in resultDict else []
 
     @classmethod
-    def from_str(res, text, offset=0):
-        resultJson = text[text.find(CheckResult.__magic_string__)+len(CheckResult.__magic_string__):]
-        return CheckResult(json.loads(resultJson), offset)
+    def from_str(cls, text):
+        resultJson = text[text.find(CheckResult.__magic_string__)+len(cls.__magic_string__):]
+        return cls(json.loads(resultJson))
 
     def wasSuccessful(self):
         return self.negCount() == 0
