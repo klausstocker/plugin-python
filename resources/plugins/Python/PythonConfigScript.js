@@ -47,6 +47,7 @@ function configPluginPython(dtoString) {
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
+    const dataset = extractDataset(dto);
 
     drawForm();
     ensureStyles();
@@ -142,6 +143,20 @@ function configPluginPython(dtoString) {
         }
     }
 
+
+    function extractDataset(sourceDto) {
+        if (!sourceDto || !sourceDto.params || !sourceDto.params.dataset) return {};
+        if (typeof sourceDto.params.dataset === "object") return sourceDto.params.dataset;
+        if (typeof sourceDto.params.dataset === "string") {
+            try {
+                const parsed = JSON.parse(sourceDto.params.dataset);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+        return {};
+    }
 
     function parseQuestionConfigDto(rawValue, sourceDto) {
         const fallback = sourceDto && sourceDto.questionConfigDto && typeof sourceDto.questionConfigDto === "object"
@@ -994,7 +1009,8 @@ function configPluginPython(dtoString) {
         return {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
-            files: currentStoredFiles()
+            files: currentStoredFiles(),
+            dataset: dataset || {}
         };
     }
 

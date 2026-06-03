@@ -31,3 +31,9 @@
 ## 6) Reverse proxy path
 - Nginx forwards `/pluginpython/*` to the plugin container, so browser calls to `/pluginpython/run` and `/pluginpython/lint` hit this service.
 
+
+## 7) Dataset variables in config unit tests
+- LeTTo sends the active question dataset in `questionDto` during `/open/setconfigurationdata`; the plugin stores it in the configuration state.
+- The backend exposes a JSON-safe copy of `questionDto.vars`, `questionDto.cvars`, `questionDto.varsMaxima`, and `questionDto.mvars` as `dto.params.dataset` on the config DTO and refreshed plugin DTO.
+- `PythonConfigScript.js` forwards that dataset in `questionConfigDto.dataset` when Run/Check/Score requests are sent from the configuration dialog.
+- The execution backend converts `questionConfigDto.dataset` into a generated Jobe-side `dataset.py` module. Unit tests can use `from dataset import VARS, CVARS, MVARS, DATASET` or import individual plain `vars` names directly, for example `from dataset import answer`.

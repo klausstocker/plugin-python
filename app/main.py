@@ -538,6 +538,29 @@ class PluginQuestionDto(BaseModel):
     mvars: Optional[VarHashDto] = None
 
 
+
+def _serialize_var_dto(var_dto: Optional[VarDto]) -> Dict[str, Any]:
+    if var_dto is None:
+        return {}
+    return var_dto.model_dump(by_alias=True, exclude_none=True)
+
+
+def serialize_question_dataset(question_dto: Optional[PluginQuestionDto]) -> Dict[str, Any]:
+    """Return LeTTo dataset variables as a JSON-safe object for config JS."""
+    if question_dto is None:
+        return {}
+
+    dataset: Dict[str, Any] = {}
+    for field_name in ("vars", "cvars", "varsMaxima", "mvars"):
+        var_hash = getattr(question_dto, field_name, None)
+        if var_hash is None or not var_hash.vars:
+            continue
+        dataset[field_name] = {
+            name: _serialize_var_dto(var_dto)
+            for name, var_dto in var_hash.vars.items()
+        }
+    return dataset
+
 class PluginMaximaCalcModeDto(BaseModel):
     model_config = ConfigDict(extra="ignore")
     maxima: bool = False
@@ -595,7 +618,7 @@ class PluginDto(BaseModel):
     tagName: Optional[str] = "plugintag"       # Eindeutiger Bezeichner des PluginTags
     width: int = CONF_width           # Breite des Plugin-Bereiches in Pixel
     height: int = CONF_height          # Höhe des Plugin-Bereiches in Pixel
-    params: Optional[Dict[str, str]] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
+    params: Optional[Dict[str, Any]] = Field(default_factory=dict)   # Parameter welche vom Plugin an Javascript weitergegeben werden sollen, wird von LeTTo nicht verwendet
     jsonData: Optional[str] = None    # JSON-String welcher vom Plugin an Javascript weitergegeben werden soll, wird von LeTTo nicht verwendet
 
 class LoadPluginRequestDto(BaseModel):
@@ -1231,6 +1254,9 @@ def create_or_update_configuration_state(
             if state.questionDto.vars is not None
             else "null"
         )
+        state.pluginConfigDto.params["dataset"] = serialize_question_dataset(state.questionDto)
+    else:
+        state.pluginConfigDto.params.pop("dataset", None)
 
     state.touch()
     return state
@@ -1355,7 +1381,10 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"pluginToken": get_exec_token()},
+            params={
+                "pluginToken": get_exec_token(),
+                "dataset": serialize_question_dataset(req.q),
+            },
             jsonData=encode_question_config_base64(req.config)
         )
 
@@ -1485,7 +1514,11 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"config": effective_config, "pluginToken": get_exec_token()},
+            params={
+                "config": effective_config,
+                "pluginToken": get_exec_token(),
+                "dataset": serialize_question_dataset(effective_question),
+            },
             jsonData=encode_question_config_base64(effective_config),
         )
 
@@ -1568,7 +1601,10 @@ def extern_reload(req: LoadPluginRequestDto):
         imageUrl="",
         width=CONF_width,
         height=CONF_height,
-        params={"pluginToken": get_exec_token()},
+        params={
+            "pluginToken": get_exec_token(),
+            "dataset": serialize_question_dataset(req.q),
+        },
     )
 
 

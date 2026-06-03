@@ -147,6 +147,76 @@ class TestEndpoints(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["typ"], "PIG")
 
+    def test_set_configuration_data_exposes_dataset_to_config_js(self):
+        config_id = "cfg-dataset"
+        self.client.post(
+            f"{BASE_PATH}/open/configurationinfo",
+            json={
+                "typ": "PIG",
+                "name": "DatasetPlugin",
+                "config": "",
+                "configurationID": config_id,
+                "timeout": 300,
+            },
+        )
+
+        response = self.client.post(
+            f"{BASE_PATH}/open/setconfigurationdata",
+            json={
+                "typ": "PIG",
+                "configurationID": config_id,
+                "configuration": "",
+                "questionDto": {
+                    "id": 7,
+                    "vars": {
+                        "vars": {
+                            "answer": {
+                                "calcErgebnisDto": {"string": "42", "type": "NUMBER"},
+                                "ze": "",
+                            }
+                        }
+                    },
+                    "cvars": {
+                        "vars": {
+                            "label": {
+                                "calcErgebnisDto": {"string": "hello", "type": "STRING"}
+                            }
+                        }
+                    },
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["params"]["dataset"]["vars"]["answer"]["calcErgebnisDto"]["string"], "42")
+        self.assertEqual(body["params"]["dataset"]["cvars"]["label"]["calcErgebnisDto"]["string"], "hello")
+        self.assertEqual(body["pluginDto"]["params"]["dataset"]["vars"]["answer"]["calcErgebnisDto"]["string"], "42")
+
+    def test_dataset_payload_is_added_as_jobe_dataset_module(self):
+        body = {
+            "questionConfigDto": {
+                "dataset": {
+                    "vars": {
+                        "answer": {"calcErgebnisDto": {"string": "42", "type": "NUMBER"}},
+                        "items": {"calcErgebnisDto": {"json": "[1, 2, 3]", "type": "JSON"}},
+                    },
+                    "mvars": {
+                        "computed": {"calcErgebnisDto": {"string": "true", "type": "BOOLEAN"}}
+                    },
+                }
+            }
+        }
+
+        files = code_execution_endpoints._file_specs_from_body(body)
+
+        self.assertIn("dataset.py", files)
+        dataset_source = files["dataset.py"].decode("utf-8")
+        self.assertIn("'answer': 42", dataset_source)
+        self.assertIn("'items': [1, 2, 3]", dataset_source)
+        self.assertIn("'computed': True", dataset_source)
+        self.assertIn("globals().update(VARS)", dataset_source)
+
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
