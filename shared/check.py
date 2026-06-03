@@ -61,4 +61,4 @@ if __name__ == '__main__':
     result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files))
     if not result.success():
         return CheckResult({'count': 0, 'errors': ['error running code']})
-    return CheckResult.from_str(result.stdout, 0)
+    return CheckResult.from_str(result.stdout)
