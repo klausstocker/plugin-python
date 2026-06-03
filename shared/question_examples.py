@@ -14,18 +14,19 @@ def correctImplementation(arg1, arg2):
     return sum
 
 import unittest
+import answer
 
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # test method names must start with 'test_'
         args = (1, 2)
-        student_result = calculate_sum(*args) # call to students implementation
+        student_result = answer.calculate_sum(*args) # call to students implementation
         expected_result = correctImplementation(*args)
         self.assertEqual(student_result, expected_result)
 
     def test_output(self):
         args = (3, 4)
         with RedirectedStdout() as student_out:
-            calculate_sum(*args)
+            answer.calculate_sum(*args)
         with RedirectedStdout() as expected_out:
             correctImplementation(*args)
         self.assertEqual(str(student_out), str(expected_out))
@@ -72,26 +73,27 @@ def count_zero_stops(start: int, rotations: Iterable[str]) -> int:
     return zero_stops
 
 import unittest
+import answer
 
 class Checker(unittest.TestCase): # do not rename
     def test_example(self): # test method names must start with test_
         rotations = ["L68", "L30", "R48", "L5", "R60", "L55", "L1", "L99", "R14", "L82"]
         #self.assertEqual(count_zero_stops(50, rotations), 3)
-        self.assertEqual(countPointingAt0(50, rotations), 3)
+        self.assertEqual(answer.countPointingAt0(50, rotations), 3)
 
     def test_wraparound(self):
         #self.assertEqual(count_zero_stops(5, ["L10", "R5"]), 1)
-        self.assertEqual(countPointingAt0(5, ["L10", "R5"]), 1)
+        self.assertEqual(answer.countPointingAt0(5, ["L10", "R5"]), 1)
 
     def test_two_zero_stops(self):
         rotations = ["R50", "L1", "R1"]
         #self.assertEqual(count_zero_stops(50, rotations), 2)
-        self.assertEqual(countPointingAt0(50, rotations), 2)
+        self.assertEqual(answer.countPointingAt0(50, rotations), 2)
 
     def test_five_zero_stops(self):
         rotations = ["R50", "R100", "L100", "R200", "L300"]
         #self.assertEqual(count_zero_stops(50, rotations), 5)
-        self.assertEqual(countPointingAt0(50, rotations), 5)
+        self.assertEqual(answer.countPointingAt0(50, rotations), 5)
 
 """,
         linterConfig="--disable=C0114,C0115,C0116"),
@@ -108,14 +110,15 @@ def count_larger_mean(values: list[float]):
 """,
         validation="""
 import unittest
+import answer
 
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # test method names must start with 'test_'
-        self.assertEqual(count_larger_mean([]), 0)
-        self.assertEqual(count_larger_mean([0, 1]), 1)
-        self.assertEqual(count_larger_mean([0, 0, 1]), 1)
-        self.assertEqual(count_larger_mean([0, 2, 4]), 1)
-        self.assertEqual(count_larger_mean([0, 1, 1]), 2)
+        self.assertEqual(answer.count_larger_mean([]), 0)
+        self.assertEqual(answer.count_larger_mean([0, 1]), 1)
+        self.assertEqual(answer.count_larger_mean([0, 0, 1]), 1)
+        self.assertEqual(answer.count_larger_mean([0, 2, 4]), 1)
+        self.assertEqual(answer.count_larger_mean([0, 1, 1]), 2)
 
 """,
         linterConfig="--disable=C0114,C0115,C0116"),
@@ -139,7 +142,10 @@ def minimalDistance(points: list[tuple[float,float]]):
 """,
         validation="""
 import unittest
+import answer
 import random
+import sys
+import math
 
 def correctImplementation(points: list[tuple[float,float]]):
     if not points:
@@ -158,7 +164,7 @@ class Checker(unittest.TestCase): # do not rename
         points = []
         for _ in range(10):
             points.append((random.random() * 10., random.random() * 10.))
-        self.assertAlmostEqual(minimalDistance(points), correctImplementation(points))
+        self.assertAlmostEqual(answer.minimalDistance(points), correctImplementation(points))
 
 """,
         linterConfig="--disable=C0114,C0115,C0116")
@@ -176,6 +182,7 @@ def rad2degree(angle_rad: float):
         validation="""
 import math
 import unittest
+import answer
 
 def correct_implementation(rad: float):
     grad_gesamt = math.degrees(rad)
@@ -205,7 +212,7 @@ def correct_implementation(rad: float):
 class Checker(unittest.TestCase): # do not rename
     def test_zero(self): # test method names must start with 'test_'
         for a in range(-365, 400, 45):
-            self.assertEqual(rad2degree(a), correct_implementation(a))
+            self.assertEqual(answer.rad2degree(a), correct_implementation(a))
 
 """,
         linterConfig="--disable=C0114,C0115,C0116")

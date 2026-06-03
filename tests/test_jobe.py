@@ -32,6 +32,9 @@ def calculate_sum(a, b):
     return a + b
 """
         testCode = """
+import unittest
+import answer
+
 def correctImplementation(arg1, arg2):
     sum = arg1 + arg2
     print(f'the sum is {sum}')
@@ -40,14 +43,14 @@ def correctImplementation(arg1, arg2):
 class Checker(unittest.TestCase): # do not rename
     def test_return(self): # names must start with 'test_'
         args = (1, 2)
-        student_result = calculate_sum(*args) # call to students implementation
+        student_result = answer.calculate_sum(*args) # call to students implementation
         expected_result = correctImplementation(*args)
         self.assertEqual(student_result, expected_result)
 
     def test_output(self):
         args = (3, 4)
         with RedirectedStdout() as student_out:
-            calculate_sum(*args)
+            answer.calculate_sum(*args)
         with RedirectedStdout() as expected_out:
             correctImplementation(*args)
         self.assertEqual(str(student_out), str(expected_out))
@@ -62,12 +65,15 @@ def always_true():
     return True
 """
         testCode = """
+import unittest
+import answer
+
 class Checker(unittest.TestCase): # do not rename
     def test_true(self):
-        self.assertTrue(always_true())
+        self.assertTrue(answer.always_true())
 
     def test_false(self):
-        self.assertFalse(always_true())
+        self.assertFalse(answer.always_true())
 """
         result = checkCode('localhost:4000', code, testCode)
         self.assertEqual(result.count, 2)
@@ -88,10 +94,24 @@ class Checker(unittest.TestCase): # do not rename
             wrapper = wrapper_cls.return_value
             wrapper.run_test.return_value = FakeRunResult()
 
-            result = checkCode("jobe:80", "print(open('input.txt').read())\n", "", files=files)
+            testCode = """
+import unittest
+import answer
+
+class Checker(unittest.TestCase):
+    def test_has_answer_module(self):
+        self.assertTrue(hasattr(answer, "__file__"))
+"""
+            result = checkCode("jobe:80", "print(open('input.txt').read())\n", testCode, files=files)
 
             wrapper.run_test.assert_called_once()
-            self.assertIs(wrapper.run_test.call_args.args[3], files)
+            submitted_code = wrapper.run_test.call_args.args[1]
+            submitted_files = wrapper.run_test.call_args.args[3]
+            self.assertIn("import answer", submitted_code)
+            self.assertNotIn("print(open('input.txt').read())", submitted_code)
+            self.assertEqual(submitted_files[0][1], "answer.py")
+            self.assertEqual(submitted_files[0][2], b"print(open('input.txt').read())\n")
+            self.assertEqual(submitted_files[1:], files)
             self.assertTrue(result.wasSuccessful())
 
     def testUpload(self):
