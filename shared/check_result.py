@@ -10,7 +10,7 @@ class CheckResult():
 
     @classmethod
     def from_str(cls, text):
-        resultJson = text[text.find(CheckResult.__magic_string__)+len(CheckResult.__magic_string__):]
+        resultJson = text[text.find(CheckResult.__magic_string__)+len(cls.__magic_string__):]
         return cls(json.loads(resultJson))
 
     def wasSuccessful(self):
