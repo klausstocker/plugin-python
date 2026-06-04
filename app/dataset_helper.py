@@ -1,6 +1,7 @@
 import json
+import math
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Optional
 
 
@@ -31,6 +32,36 @@ def extract_dataset_variables(var_hash: Any) -> list[DatasetVariable]:
 def extract_question_dataset_variables(question: Any) -> list[DatasetVariable]:
     """Extract variables from the primary dataset-variable field of a question."""
     return extract_dataset_variables(_read_field(question, "vars"))
+
+
+def dataset_variables_to_python_source(variables: list[DatasetVariable]) -> str:
+    """Render dataset variables as a Python module for upload to Jobe."""
+    variable_dicts = [asdict(variable) for variable in variables]
+    lines = [
+        '"""Generated dataset variables for the Python plugin."""',
+        "",
+        f"DATASET_VARIABLES = {_python_literal(variable_dicts)}",
+        "DATASET_UNITS = "
+        f"{_python_literal({variable.name: variable.unit for variable in variables})}",
+        "",
+        "for _dataset_variable in DATASET_VARIABLES:",
+        "    globals()[_dataset_variable['name']] = _dataset_variable['value']",
+        "    if _dataset_variable['unit'] is not None:",
+        (
+            "        globals()["
+            "f\"{_dataset_variable['name']}_unit\"] = "
+            "_dataset_variable['unit']"
+        ),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def dataset_file_from_variables(variables: list[DatasetVariable]) -> dict[str, bytes]:
+    """Return a Jobe file map containing dataset.py when variables are present."""
+    if not variables:
+        return {}
+    return {"dataset.py": dataset_variables_to_python_source(variables).encode("utf-8")}
 
 
 def _vars_mapping(var_hash: Any) -> dict[str, Any]:
@@ -132,3 +163,25 @@ def _read_field(value: Any, name: str) -> Any:
     if isinstance(value, dict):
         return value.get(name)
     return getattr(value, name, None)
+
+
+def _python_literal(value: Any) -> str:
+    if isinstance(value, float):
+        if math.isnan(value):
+            return "float('nan')"
+        if math.isinf(value):
+            return "float('inf')" if value > 0 else "float('-inf')"
+        return repr(value)
+    if isinstance(value, dict):
+        items = ", ".join(
+            f"{_python_literal(key)}: {_python_literal(item_value)}"
+            for key, item_value in value.items()
+        )
+        return "{" + items + "}"
+    if isinstance(value, list):
+        return "[" + ", ".join(_python_literal(item) for item in value) + "]"
+    if isinstance(value, tuple):
+        items = ", ".join(_python_literal(item) for item in value)
+        suffix = "," if len(value) == 1 else ""
+        return "(" + items + suffix + ")"
+    return repr(value)

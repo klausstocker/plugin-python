@@ -20,7 +20,11 @@ from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
-from app.dataset_helper import extract_question_dataset_variables
+from app.dataset_helper import (
+    dataset_file_from_variables,
+    extract_dataset_variables,
+    extract_question_dataset_variables,
+)
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from PIL import Image, ImageDraw
@@ -983,7 +987,8 @@ class PluginPython:
         return "Here part or the whole 'Angabe' will be dsiplayed"
 
     def score(self, antwort: str, toleranz: Optional[ToleranzDto], answerDto: Optional[PluginAnswerDto],
-              grade: float, config: str = "", pluginDto: Optional[PluginDto] = None) -> PluginScoreInfoDto:
+              grade: float, config: str = "", pluginDto: Optional[PluginDto] = None,
+              varsQuestion: Optional[VarHashDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
         linter_config, linter_weight = _extract_linter_settings(answerDto, config, pluginDto)
@@ -999,8 +1004,19 @@ class PluginPython:
             feedback=""
         )
         try:
-            file_specs = JobeWrapper.createFiles(_extract_file_specs_from_config(config, pluginDto))
-            total_score, result = scoreCode('jobe:80', antwort or "", validation_code or "", linter_config, linter_weight, files=file_specs)
+            files_for_jobe = _extract_file_specs_from_config(config, pluginDto)
+            files_for_jobe.update(
+                dataset_file_from_variables(extract_dataset_variables(varsQuestion))
+            )
+            file_specs = JobeWrapper.createFiles(files_for_jobe)
+            total_score, result = scoreCode(
+                'jobe:80',
+                antwort or "",
+                validation_code or "",
+                linter_config,
+                linter_weight,
+                files=file_specs,
+            )
             info.punkteIst = float(grade * total_score)
             info.status  = result.check_result.status()
             info.schuelerErgebnis = CalcErgebnisDto(string=result.__repr__())
@@ -1414,7 +1430,15 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginScoreInfoDto()
-        return pi.score(req.antwort or "", req.toleranz, req.answerDto, req.grade, req.config or "", req.pluginDto)
+        return pi.score(
+            req.antwort or "",
+            req.toleranz,
+            req.answerDto,
+            req.grade,
+            req.config or "",
+            req.pluginDto,
+            req.varsQuestion,
+        )
 
     @r.post("/getvars")
     def get_vars(req: PluginRequestDto):

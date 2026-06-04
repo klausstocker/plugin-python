@@ -2,6 +2,8 @@ import unittest
 
 from app.dataset_helper import (
     DatasetVariable,
+    dataset_file_from_variables,
+    dataset_variables_to_python_source,
     extract_dataset_variables,
     extract_question_dataset_variables,
 )
@@ -64,6 +66,30 @@ class TestDatasetVariableExtraction(unittest.TestCase):
             extract_question_dataset_variables(question),
             [DatasetVariable(name="myVar", value=42.0, unit="m1s-1")],
         )
+
+    def test_renders_dataset_variables_as_importable_python_module(self):
+        source = dataset_variables_to_python_source([
+            DatasetVariable(name="myVar", value=42.0, unit="m1s-1")
+        ])
+        namespace = {}
+
+        exec(source, namespace)
+
+        self.assertEqual(namespace["myVar"], 42.0)
+        self.assertEqual(namespace["myVar_unit"], "m1s-1")
+        self.assertEqual(namespace["DATASET_UNITS"], {"myVar": "m1s-1"})
+        self.assertEqual(
+            namespace["DATASET_VARIABLES"],
+            [{"name": "myVar", "value": 42.0, "unit": "m1s-1"}],
+        )
+
+    def test_dataset_file_from_variables_builds_jobe_upload_file(self):
+        files = dataset_file_from_variables([
+            DatasetVariable(name="myVar", value=42.0, unit="m1s-1")
+        ])
+
+        self.assertEqual(list(files.keys()), ["dataset.py"])
+        self.assertIn(b"myVar", files["dataset.py"])
 
 
 if __name__ == "__main__":
