@@ -1,4 +1,5 @@
 import hmac
+import logging
 import os
 import re
 import secrets
@@ -9,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.dataset_helper import dataset_file_from_payload
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
@@ -20,8 +22,95 @@ FILE_STORAGE_ROOT = Path(os.getenv("PLUGIN_FILE_STORAGE_DIR", "/opt/letto/images
 REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "true").lower() == "true"
 EXEC_TOKEN = secrets.token_urlsafe(32)
 
-router = APIRouter()
+TRACE_LOG_LEVEL = 5
+logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
+router = APIRouter()
+logger = logging.getLogger("plugin-python.dataset")
+
+
+
+def _dataset_variable_summary(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {"present": False}
+    if isinstance(value, dict):
+        calc_result = value.get("calcErgebnisDto")
+        if isinstance(calc_result, dict):
+            return {
+                "present": True,
+                "calcErgebnisDto": {
+                    "type": calc_result.get("type"),
+                    "string": calc_result.get("string"),
+                    "json": calc_result.get("json"),
+                },
+                "ze": value.get("ze"),
+                "hasCalcParams": value.get("cp") is not None,
+            }
+        return {"present": True, "type": "dict", "keys": list(value.keys()), "repr": repr(value)[:200]}
+    return {"present": True, "type": type(value).__name__, "repr": repr(value)[:200]}
+
+
+def _dataset_field_summary(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {"present": False}
+    if isinstance(value, str):
+        return {"present": True, "type": "str", "length": len(value), "preview": value[:200]}
+    if isinstance(value, list):
+        return {
+            "present": True,
+            "type": "list",
+            "count": len(value),
+            "variables": value,
+        }
+    if isinstance(value, dict):
+        vars_map = value.get("vars") if isinstance(value.get("vars"), dict) else value
+        return {
+            "present": True,
+            "type": "dict",
+            "keys": list(value.keys()),
+            "variableNames": list(vars_map.keys()) if isinstance(vars_map, dict) else [],
+            "variables": {
+                name: _dataset_variable_summary(var_value)
+                for name, var_value in vars_map.items()
+            } if isinstance(vars_map, dict) else {},
+        }
+    return {"present": True, "type": type(value).__name__, "repr": repr(value)[:200]}
+
+
+def _dataset_transfer_summary(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"type": type(value).__name__, "present": value is not None}
+
+    summary: dict[str, Any] = {
+        "topLevelKeys": list(value.keys()),
+        "datasetFields": {},
+    }
+    for field in (
+        "vars",
+        "cvars",
+        "varsMaxima",
+        "mvars",
+        "varsQuestion",
+        "datasetVariables",
+    ):
+        if field in value:
+            summary["datasetFields"][field] = _dataset_field_summary(value.get(field))
+
+    for nested in ("q", "params", "pluginDto", "questionConfigDto"):
+        nested_value = value.get(nested)
+        if isinstance(nested_value, dict):
+            summary[nested] = _dataset_transfer_summary(nested_value)
+
+    return summary
+
+
+def _debug_dataset_transfer(label: str, value: Any) -> None:
+    logger.log(
+        TRACE_LOG_LEVEL,
+        "[pluginpython dataset] %s: %s",
+        label,
+        _dataset_transfer_summary(value),
+    )
 
 def get_exec_token() -> str:
     return EXEC_TOKEN
@@ -127,20 +216,31 @@ def _debug_file_config_entries(source: str, files_config: Any) -> None:
     print(f"[pluginpython files] {source}: gathered {len(entries)} file(s): {entries}", flush=True)
 
 
-def _file_specs_from_body(body: dict) -> dict[str, bytes]:
+def _file_specs_from_body(body: dict, include_dataset: bool = True) -> dict[str, bytes]:
     question_config = body.get('questionConfigDto') or {}
     question_files = question_config.get('files') if isinstance(question_config, dict) else None
 
     _debug_file_config_entries('questionConfigDto.files', question_files)
-    file_data = _file_specs_from_config(question_files or {}) if isinstance(question_config, dict) else {}
+    file_data = (
+        _file_specs_from_config(question_files or {})
+        if isinstance(question_config, dict)
+        else {}
+    )
+    if include_dataset and isinstance(question_config, dict):
+        file_data.update(dataset_file_from_payload(question_config))
 
-    gathered = [f"filename={name!r}, size={len(content)}" for name, content in file_data.items()]
+    gathered = [
+        f"filename={name!r}, size={len(content)}"
+        for name, content in file_data.items()
+    ]
     print(f"[pluginpython files] _file_specs_from_body final filenames: {gathered}", flush=True)
     return file_data
 
 
-def _jobe_files_from_body(body: dict):
-    return JobeWrapper.createFiles(_file_specs_from_body(body))
+def _jobe_files_from_body(body: dict, include_dataset: bool = True):
+    return JobeWrapper.createFiles(
+        _file_specs_from_body(body, include_dataset=include_dataset)
+    )
 
 
 def _debug_run_file_metadata(body: dict) -> None:
@@ -218,10 +318,11 @@ async def download_file(request: Request, stored_name: str, name: str = ""):
 async def run_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
+    _debug_dataset_transfer("/run request body", body)
     code = body['code']
     try:
         _debug_run_file_metadata(body)
-        files = _jobe_files_from_body(body)
+        files = _jobe_files_from_body(body, include_dataset=False)
         for file_id, filename, content in files:
             print(
                 f"[pluginpython /run] uploading to Jobe: filename={filename!r}, "
@@ -239,6 +340,7 @@ async def run_code(request: Request):
 async def lint_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
+    _debug_dataset_transfer("/lint request body", body)
     code = body['code']
     question_config = body.get('questionConfigDto') or {}
     linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
@@ -253,6 +355,7 @@ async def lint_code(request: Request):
 async def check_code(request: Request):
     _ensure_authorized(request)
     body = await request.json()
+    _debug_dataset_transfer("/check request body", body)
     code = body['code']
     testcode = body['testcode']
     try:
@@ -266,6 +369,7 @@ async def check_code(request: Request):
 async def score_plugin(request: Request):
     _ensure_authorized(request)
     body = await request.json()
+    _debug_dataset_transfer("/scorePlugin request body", body)
     code = body['code']
     testcode = body['testcode']
 

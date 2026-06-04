@@ -13,12 +13,15 @@ function configPluginPython(dtoString) {
     // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
+    const dtoParams = (dto.params && typeof dto.params === "object")
+        ? dto.params
+        : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
     const jsonData = parseDtoJsonData(dto);
 
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
-    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
-    const pluginToken = (dto.params && dto.params.pluginToken) || "";
+    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "");
+    const pluginToken = dtoParams.pluginToken || "";
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -47,6 +50,8 @@ function configPluginPython(dtoString) {
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
+    const datasetVariables = extractDatasetVariablesForQuestionConfig(dto, jsonData, questionConfigDto);
+    questionConfigDto.datasetVariables = datasetVariables;
 
     drawForm();
     ensureStyles();
@@ -61,6 +66,102 @@ function configPluginPython(dtoString) {
     renderHelp();
     saveConfig();
 
+
+    function extractDatasetVariablesForQuestionConfig(sourceDto, sourceJsonData, sourceQuestionConfigDto) {
+        const candidates = [
+            dtoParams,
+            sourceDto && sourceDto.params,
+            sourceDto && sourceDto.q,
+            sourceDto,
+            sourceJsonData && sourceJsonData.q,
+            sourceJsonData,
+            sourceQuestionConfigDto
+        ];
+        for (const candidate of candidates) {
+            const variables = extractDatasetVariables(candidate);
+            if (variables.length) return variables;
+        }
+        return [];
+    }
+
+    function extractDatasetVariables(value) {
+        if (!value || typeof value !== "object") return [];
+        if (Array.isArray(value)) return normalizeDatasetVariableList(value);
+        if (value.datasetVariables != null) return extractDatasetVariables(parseMaybeJson(value.datasetVariables));
+        if (value.params && typeof value.params === "object") {
+            const fromParams = extractDatasetVariables(value.params);
+            if (fromParams.length) return fromParams;
+        }
+        if (value.vars != null) return extractDatasetVariablesFromVarHash(value.vars);
+        return [];
+    }
+
+    function normalizeDatasetVariableList(value) {
+        return value
+            .filter((item) => item && typeof item === "object" && typeof item.name === "string" && item.name)
+            .map((item) => ({ name: item.name, value: item.value, unit: item.unit == null ? null : item.unit }));
+    }
+
+    function extractDatasetVariablesFromVarHash(varHash) {
+        const vars = varHash && typeof varHash === "object" && varHash.vars && typeof varHash.vars === "object"
+            ? varHash.vars
+            : varHash;
+        if (!vars || typeof vars !== "object" || Array.isArray(vars)) return [];
+        return Object.keys(vars).map((name) => {
+            const variable = extractDatasetVariableValue(vars[name]);
+            return { name: name, value: variable.value, unit: variable.unit };
+        });
+    }
+
+    function extractDatasetVariableValue(variableDto) {
+        const calcResult = variableDto && typeof variableDto === "object" ? variableDto.calcErgebnisDto : null;
+        const parsedJson = parseMaybeJson(calcResult && calcResult.json) || {};
+        const calcString = calcResult && typeof calcResult.string === "string" ? calcResult.string : "";
+        return {
+            value: extractDatasetValue(parsedJson, calcString),
+            unit: cleanDatasetUnit(parsedJson.originalEinheitString || parsedJson.grundEinheitString || extractDatasetUnitFromString(calcString) || (variableDto && variableDto.ze))
+        };
+    }
+
+    function extractDatasetValue(parsedJson, calcString) {
+        if (Object.prototype.hasOwnProperty.call(parsedJson, "d")) {
+            return normalizeDatasetNumber(parsedJson.d);
+        }
+        const match = typeof calcString === "string" ? calcString.match(/^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)/) : null;
+        return match ? normalizeDatasetNumber(match[1]) : calcString;
+    }
+
+    function extractDatasetUnitFromString(calcString) {
+        if (typeof calcString !== "string") return null;
+        const quoted = calcString.match(/'([^']+)'/);
+        if (quoted) return quoted[1];
+        const unquoted = calcString.match(/^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*([^\s]+)\s*$/);
+        return unquoted ? unquoted[1] : null;
+    }
+
+    function normalizeDatasetNumber(value) {
+        if (typeof value !== "string") return value;
+        const parsed = Number(value);
+        return Number.isNaN(parsed) ? value : parsed;
+    }
+
+    function cleanDatasetUnit(unit) {
+        if (unit == null) return null;
+        let unitText = String(unit).trim();
+        if (unitText.indexOf(",") >= 0) unitText = unitText.split(",", 1)[0];
+        unitText = unitText.replace(/^['"]+|['"]+$/g, "").trim();
+        return unitText || null;
+    }
+
+    function parseMaybeJson(value) {
+        if (typeof value !== "string") return value;
+        if (!value) return null;
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            return null;
+        }
+    }
 
     function parseDtoJsonData(sourceDto) {
         if (!sourceDto || !sourceDto.jsonData) return {};
@@ -890,8 +991,8 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
-        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
+        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
     }
@@ -973,10 +1074,11 @@ function configPluginPython(dtoString) {
             outputEl.textContent = "";
 
             try {
+                const payload = bodyBuilder();
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
                     headers: buildHeaders(),
-                    body: JSON.stringify(bodyBuilder())
+                    body: JSON.stringify(payload)
                 });
                 const data = await response.json();
                 outputEl.textContent = data && data.output ? data.output : JSON.stringify(data);
@@ -989,13 +1091,18 @@ function configPluginPython(dtoString) {
         });
     }
 
-    function buildQuestionConfigDtoPayload() {
+    function buildQuestionConfigDtoPayload(options) {
         syncOptionsStateFromInputs();
-        return {
+        const includeDataset = !options || options.includeDataset !== false;
+        const payload = {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
             files: currentStoredFiles()
         };
+        if (includeDataset) {
+            payload.datasetVariables = datasetVariables;
+        }
+        return payload;
     }
 
     function saveConfig() {
@@ -1008,7 +1115,8 @@ function configPluginPython(dtoString) {
             files: currentStoredFiles(),
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
-            linterWeight: Number(state.linterWeight || 0.0)
+            linterWeight: Number(state.linterWeight || 0.0),
+            datasetVariables: datasetVariables
         };
 
         questionConfigDto.validation = pluginConfig.validation;
@@ -1017,19 +1125,20 @@ function configPluginPython(dtoString) {
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
+        questionConfigDto.datasetVariables = pluginConfig.datasetVariables;
 
         configField.value = JSON.stringify(questionConfigDto);
     }
 
     function renderHelp() {
-        if (dto.params && dto.params.help != null) {
+        if (dtoParams.help != null) {
             const helpElement = document.getElementById("configPluginHelp");
-            helpElement.innerHTML = dto.params.help;
+            helpElement.innerHTML = dtoParams.help;
         }
 
-        if (dto.params && dto.params.wikiurl != null) {
+        if (dtoParams.wikiurl != null) {
             const wikiElement = document.getElementById("configPluginWiki");
-            wikiElement.innerHTML = '<iframe src="' + dto.params.wikiurl + '"></iframe>';
+            wikiElement.innerHTML = '<iframe src="' + dtoParams.wikiurl + '"></iframe>';
         }
     }
 
