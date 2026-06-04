@@ -22,6 +22,9 @@ FILE_STORAGE_ROOT = Path(os.getenv("PLUGIN_FILE_STORAGE_DIR", "/opt/letto/images
 REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "true").lower() == "true"
 EXEC_TOKEN = secrets.token_urlsafe(32)
 
+TRACE_LOG_LEVEL = 5
+logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
+
 router = APIRouter()
 logger = logging.getLogger("plugin-python.dataset")
 
@@ -102,7 +105,12 @@ def _dataset_transfer_summary(value: Any) -> dict[str, Any]:
 
 
 def _debug_dataset_transfer(label: str, value: Any) -> None:
-    logger.info("[pluginpython dataset] %s: %s", label, _dataset_transfer_summary(value))
+    logger.log(
+        TRACE_LOG_LEVEL,
+        "[pluginpython dataset] %s: %s",
+        label,
+        _dataset_transfer_summary(value),
+    )
 
 def get_exec_token() -> str:
     return EXEC_TOKEN

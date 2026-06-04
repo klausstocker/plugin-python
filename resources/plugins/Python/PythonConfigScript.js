@@ -71,10 +71,12 @@ function configPluginPython(dtoString) {
 
 
     function logDatasetTransfer(label, value) {
-        if (!window.console || typeof window.console.log !== "function") return;
+        if (!window.console) return;
+        const logFn = window.console.trace || window.console.debug || window.console.log;
+        if (typeof logFn !== "function") return;
 
         const summary = summarizeDatasetVariables(value);
-        window.console.log(`[pluginpython dataset] ${label}`, summary, value);
+        logFn.call(window.console, `[pluginpython dataset] ${label}`, summary, value);
     }
 
     function summarizeDatasetVariables(value) {

@@ -37,6 +37,9 @@ from shared.score import scoreCode
 from shared.jobe_wrapper import JobeWrapper
 from pydantic import ValidationError
 
+TRACE_LOG_LEVEL = 5
+logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
+
 # --------------------------
 # CONFIGURATION
 # --------------------------
@@ -152,7 +155,12 @@ class HealthcheckFilter(logging.Filter):
 def configureLogging() -> Logger:
     log_handlers: List[logging.Handler] = [logging.StreamHandler()]
     try:
-        resolved_log_level = logging.getLevelName(os.getenv("PluginPythonLogLevel", "INFO").upper())
+        log_level_name = os.getenv("PluginPythonLogLevel", "INFO").upper()
+        resolved_log_level = (
+            TRACE_LOG_LEVEL
+            if log_level_name == "TRACE"
+            else logging.getLevelName(log_level_name)
+        )
         print(f'{resolved_log_level=}')
         os.makedirs("/log", exist_ok=True)
         log_handlers.append(
@@ -867,7 +875,8 @@ def log_dataset_transfer(
     vars_question: Optional[VarHashDto] = None,
     plugin_dto: Optional[PluginDto] = None,
 ) -> None:
-    logger.info(
+    logger.log(
+        TRACE_LOG_LEVEL,
         "[pluginpython dataset] %s: question=%s varsQuestion=%s pluginDto=%s",
         label,
         _question_dataset_summary(question),
