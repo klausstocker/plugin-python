@@ -53,7 +53,6 @@ function initPluginPython(dtoString, active) {
     const linterConfig = dtoData.linterConfig || "";
     const linterWeight = Number(dtoData.linterWeight || 0.0);
     const files = dtoData.files || {};
-    const datasetVariables = Array.isArray(dtoData.datasetVariables) ? dtoData.datasetVariables : [];
 
     // Do not write fallback/indication text into the persisted answer field on render.
     // The hidden answer field is updated only after the student edits the editor below.
@@ -351,8 +350,8 @@ function initPluginPython(dtoString, active) {
         setupLayoutControls();
         const out = document.getElementById(outputId);
 
-        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files, datasetVariables: datasetVariables } }), out);
-        bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files, datasetVariables: datasetVariables } }), out);
+        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files } }), out);
+        bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files } }), out);
     }
 
     function setupLayoutControls() {

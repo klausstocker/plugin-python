@@ -1072,8 +1072,8 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
-        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
+        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
     }
@@ -1173,14 +1173,17 @@ function configPluginPython(dtoString) {
         });
     }
 
-    function buildQuestionConfigDtoPayload() {
+    function buildQuestionConfigDtoPayload(options) {
         syncOptionsStateFromInputs();
+        const includeDataset = !options || options.includeDataset !== false;
         const payload = {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
-            files: currentStoredFiles(),
-            datasetVariables: datasetVariables
+            files: currentStoredFiles()
         };
+        if (includeDataset) {
+            payload.datasetVariables = datasetVariables;
+        }
         logDatasetTransfer("config buildQuestionConfigDtoPayload", payload);
         return payload;
     }

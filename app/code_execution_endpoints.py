@@ -208,7 +208,7 @@ def _debug_file_config_entries(source: str, files_config: Any) -> None:
     print(f"[pluginpython files] {source}: gathered {len(entries)} file(s): {entries}", flush=True)
 
 
-def _file_specs_from_body(body: dict) -> dict[str, bytes]:
+def _file_specs_from_body(body: dict, include_dataset: bool = True) -> dict[str, bytes]:
     question_config = body.get('questionConfigDto') or {}
     question_files = question_config.get('files') if isinstance(question_config, dict) else None
 
@@ -218,7 +218,7 @@ def _file_specs_from_body(body: dict) -> dict[str, bytes]:
         if isinstance(question_config, dict)
         else {}
     )
-    if isinstance(question_config, dict):
+    if include_dataset and isinstance(question_config, dict):
         file_data.update(dataset_file_from_payload(question_config))
 
     gathered = [
@@ -229,8 +229,10 @@ def _file_specs_from_body(body: dict) -> dict[str, bytes]:
     return file_data
 
 
-def _jobe_files_from_body(body: dict):
-    return JobeWrapper.createFiles(_file_specs_from_body(body))
+def _jobe_files_from_body(body: dict, include_dataset: bool = True):
+    return JobeWrapper.createFiles(
+        _file_specs_from_body(body, include_dataset=include_dataset)
+    )
 
 
 def _debug_run_file_metadata(body: dict) -> None:
@@ -312,7 +314,7 @@ async def run_code(request: Request):
     code = body['code']
     try:
         _debug_run_file_metadata(body)
-        files = _jobe_files_from_body(body)
+        files = _jobe_files_from_body(body, include_dataset=False)
         for file_id, filename, content in files:
             print(
                 f"[pluginpython /run] uploading to Jobe: filename={filename!r}, "
