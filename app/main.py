@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
-from app.dataset import extract_question_dataset_variables
+from app.dataset_helper import extract_question_dataset_variables
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from PIL import Image, ImageDraw
