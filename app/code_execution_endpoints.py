@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.dataset_helper import dataset_file_from_payload
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
@@ -51,6 +52,13 @@ def _dataset_field_summary(value: Any) -> dict[str, Any]:
         return {"present": False}
     if isinstance(value, str):
         return {"present": True, "type": "str", "length": len(value), "preview": value[:200]}
+    if isinstance(value, list):
+        return {
+            "present": True,
+            "type": "list",
+            "count": len(value),
+            "variables": value,
+        }
     if isinstance(value, dict):
         vars_map = value.get("vars") if isinstance(value.get("vars"), dict) else value
         return {
@@ -74,7 +82,14 @@ def _dataset_transfer_summary(value: Any) -> dict[str, Any]:
         "topLevelKeys": list(value.keys()),
         "datasetFields": {},
     }
-    for field in ("vars", "cvars", "varsMaxima", "mvars", "varsQuestion"):
+    for field in (
+        "vars",
+        "cvars",
+        "varsMaxima",
+        "mvars",
+        "varsQuestion",
+        "datasetVariables",
+    ):
         if field in value:
             summary["datasetFields"][field] = _dataset_field_summary(value.get(field))
 
@@ -198,9 +213,18 @@ def _file_specs_from_body(body: dict) -> dict[str, bytes]:
     question_files = question_config.get('files') if isinstance(question_config, dict) else None
 
     _debug_file_config_entries('questionConfigDto.files', question_files)
-    file_data = _file_specs_from_config(question_files or {}) if isinstance(question_config, dict) else {}
+    file_data = (
+        _file_specs_from_config(question_files or {})
+        if isinstance(question_config, dict)
+        else {}
+    )
+    if isinstance(question_config, dict):
+        file_data.update(dataset_file_from_payload(question_config))
 
-    gathered = [f"filename={name!r}, size={len(content)}" for name, content in file_data.items()]
+    gathered = [
+        f"filename={name!r}, size={len(content)}"
+        for name, content in file_data.items()
+    ]
     print(f"[pluginpython files] _file_specs_from_body final filenames: {gathered}", flush=True)
     return file_data
 

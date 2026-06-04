@@ -49,6 +49,8 @@ function configPluginPython(dtoString) {
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
+    const datasetVariables = extractDatasetVariablesForQuestionConfig(dto, jsonData, questionConfigDto);
+    questionConfigDto.datasetVariables = datasetVariables;
     logDatasetTransfer("config parsed questionConfigDto", questionConfigDto);
 
     drawForm();
@@ -80,7 +82,7 @@ function configPluginPython(dtoString) {
         };
         if (!value || typeof value !== "object") return result;
 
-        ["vars", "cvars", "varsMaxima", "mvars", "varsQuestion"].forEach((field) => {
+        ["vars", "cvars", "varsMaxima", "mvars", "varsQuestion", "datasetVariables"].forEach((field) => {
             if (value[field] != null) {
                 result.datasetFields[field] = summarizeDatasetField(value[field]);
             }
@@ -140,6 +142,102 @@ function configPluginPython(dtoString) {
             ze: variableValue.ze,
             hasCalcParams: variableValue.cp != null
         };
+    }
+
+
+    function extractDatasetVariablesForQuestionConfig(sourceDto, sourceJsonData, sourceQuestionConfigDto) {
+        const candidates = [
+            sourceDto && sourceDto.params,
+            sourceDto && sourceDto.q,
+            sourceDto,
+            sourceJsonData && sourceJsonData.q,
+            sourceJsonData,
+            sourceQuestionConfigDto
+        ];
+        for (const candidate of candidates) {
+            const variables = extractDatasetVariables(candidate);
+            if (variables.length) return variables;
+        }
+        return [];
+    }
+
+    function extractDatasetVariables(value) {
+        if (!value || typeof value !== "object") return [];
+        if (Array.isArray(value)) return normalizeDatasetVariableList(value);
+        if (value.datasetVariables != null) return extractDatasetVariables(parseMaybeJson(value.datasetVariables));
+        if (value.params && typeof value.params === "object") {
+            const fromParams = extractDatasetVariables(value.params);
+            if (fromParams.length) return fromParams;
+        }
+        if (value.vars != null) return extractDatasetVariablesFromVarHash(value.vars);
+        return [];
+    }
+
+    function normalizeDatasetVariableList(value) {
+        return value
+            .filter((item) => item && typeof item === "object" && typeof item.name === "string" && item.name)
+            .map((item) => ({ name: item.name, value: item.value, unit: item.unit == null ? null : item.unit }));
+    }
+
+    function extractDatasetVariablesFromVarHash(varHash) {
+        const vars = varHash && typeof varHash === "object" && varHash.vars && typeof varHash.vars === "object"
+            ? varHash.vars
+            : varHash;
+        if (!vars || typeof vars !== "object" || Array.isArray(vars)) return [];
+        return Object.keys(vars).map((name) => {
+            const variable = extractDatasetVariableValue(vars[name]);
+            return { name: name, value: variable.value, unit: variable.unit };
+        });
+    }
+
+    function extractDatasetVariableValue(variableDto) {
+        const calcResult = variableDto && typeof variableDto === "object" ? variableDto.calcErgebnisDto : null;
+        const parsedJson = parseMaybeJson(calcResult && calcResult.json) || {};
+        const calcString = calcResult && typeof calcResult.string === "string" ? calcResult.string : "";
+        return {
+            value: extractDatasetValue(parsedJson, calcString),
+            unit: cleanDatasetUnit(parsedJson.originalEinheitString || parsedJson.grundEinheitString || extractDatasetUnitFromString(calcString) || (variableDto && variableDto.ze))
+        };
+    }
+
+    function extractDatasetValue(parsedJson, calcString) {
+        if (Object.prototype.hasOwnProperty.call(parsedJson, "d")) {
+            return normalizeDatasetNumber(parsedJson.d);
+        }
+        const match = typeof calcString === "string" ? calcString.match(/^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)/) : null;
+        return match ? normalizeDatasetNumber(match[1]) : calcString;
+    }
+
+    function extractDatasetUnitFromString(calcString) {
+        if (typeof calcString !== "string") return null;
+        const quoted = calcString.match(/'([^']+)'/);
+        if (quoted) return quoted[1];
+        const unquoted = calcString.match(/^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*([^\s]+)\s*$/);
+        return unquoted ? unquoted[1] : null;
+    }
+
+    function normalizeDatasetNumber(value) {
+        if (typeof value !== "string") return value;
+        const parsed = Number(value);
+        return Number.isNaN(parsed) ? value : parsed;
+    }
+
+    function cleanDatasetUnit(unit) {
+        if (unit == null) return null;
+        let unitText = String(unit).trim();
+        if (unitText.indexOf(",") >= 0) unitText = unitText.split(",", 1)[0];
+        unitText = unitText.replace(/^['"]+|['"]+$/g, "").trim();
+        return unitText || null;
+    }
+
+    function parseMaybeJson(value) {
+        if (typeof value !== "string") return value;
+        if (!value) return null;
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            return null;
+        }
     }
 
     function parseDtoJsonData(sourceDto) {
@@ -1076,7 +1174,8 @@ function configPluginPython(dtoString) {
         const payload = {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
-            files: currentStoredFiles()
+            files: currentStoredFiles(),
+            datasetVariables: datasetVariables
         };
         logDatasetTransfer("config buildQuestionConfigDtoPayload", payload);
         return payload;
@@ -1092,7 +1191,8 @@ function configPluginPython(dtoString) {
             files: currentStoredFiles(),
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
-            linterWeight: Number(state.linterWeight || 0.0)
+            linterWeight: Number(state.linterWeight || 0.0),
+            datasetVariables: datasetVariables
         };
 
         questionConfigDto.validation = pluginConfig.validation;
@@ -1101,6 +1201,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
+        questionConfigDto.datasetVariables = pluginConfig.datasetVariables;
 
         logDatasetTransfer("config saveConfig questionConfigDto", questionConfigDto);
         configField.value = JSON.stringify(questionConfigDto);

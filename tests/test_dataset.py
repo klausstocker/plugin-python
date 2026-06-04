@@ -2,7 +2,9 @@ import unittest
 
 from app.dataset_helper import (
     DatasetVariable,
+    dataset_file_from_payload,
     dataset_file_from_variables,
+    dataset_variables_from_payload,
     dataset_variables_to_python_source,
     extract_dataset_variables,
     extract_question_dataset_variables,
@@ -79,6 +81,25 @@ class TestDatasetVariableExtraction(unittest.TestCase):
         self.assertEqual(namespace["myVar"].unit, "m1s-1")
         self.assertEqual(namespace["DATASET_VARIABLES"]["myVar"].value, 42.0)
         self.assertEqual(namespace["DATASET_VARIABLES"]["myVar"].unit, "m1s-1")
+
+    def test_normalizes_extracted_dataset_variable_payload(self):
+        payload = {
+            "datasetVariables": [
+                {"name": "myVar", "value": 42.0, "unit": "m1s-1"}
+            ]
+        }
+
+        self.assertEqual(
+            dataset_variables_from_payload(payload),
+            [DatasetVariable(name="myVar", value=42.0, unit="m1s-1")],
+        )
+        self.assertEqual(list(dataset_file_from_payload(payload).keys()), ["dataset.py"])
+        self.assertEqual(
+            dataset_variables_from_payload(
+                '[{"name":"myVar","value":42.0,"unit":"m1s-1"}]'
+            ),
+            [DatasetVariable(name="myVar", value=42.0, unit="m1s-1")],
+        )
 
     def test_dataset_file_from_variables_builds_jobe_upload_file(self):
         files = dataset_file_from_variables([

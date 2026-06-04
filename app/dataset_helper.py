@@ -72,6 +72,33 @@ def dataset_file_from_variables(variables: list[DatasetVariable]) -> dict[str, b
     return {"dataset.py": dataset_variables_to_python_source(variables).encode("utf-8")}
 
 
+def dataset_variables_from_payload(value: Any) -> list[DatasetVariable]:
+    """Normalize extracted dataset-variable payloads back to dataclasses."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        return dataset_variables_from_payload(parsed)
+    if isinstance(value, list):
+        return [
+            variable
+            for item in value
+            for variable in [_dataset_variable_from_item(item)]
+            if variable is not None
+        ]
+    if isinstance(value, dict) and "datasetVariables" in value:
+        return dataset_variables_from_payload(value.get("datasetVariables"))
+    return extract_dataset_variables(value)
+
+
+def dataset_file_from_payload(value: Any) -> dict[str, bytes]:
+    """Return a Jobe dataset.py file map for an extracted-variable payload."""
+    return dataset_file_from_variables(dataset_variables_from_payload(value))
+
+
 def _vars_mapping(var_hash: Any) -> dict[str, Any]:
     if var_hash is None:
         return {}
@@ -193,3 +220,18 @@ def _python_literal(value: Any) -> str:
         suffix = "," if len(value) == 1 else ""
         return "(" + items + suffix + ")"
     return repr(value)
+
+
+def _dataset_variable_from_item(value: Any) -> Optional[DatasetVariable]:
+    if isinstance(value, DatasetVariable):
+        return value
+    if not isinstance(value, dict):
+        return None
+    name = value.get("name")
+    if not isinstance(name, str) or not name:
+        return None
+    return DatasetVariable(
+        name=name,
+        value=value.get("value"),
+        unit=value.get("unit"),
+    )
