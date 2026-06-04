@@ -17,8 +17,6 @@ function configPluginPython(dtoString) {
         ? dto.params
         : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
     const jsonData = parseDtoJsonData(dto);
-    logDatasetTransfer("config init dto", dto);
-    logDatasetTransfer("config init jsonData", jsonData);
 
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
@@ -54,7 +52,6 @@ function configPluginPython(dtoString) {
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
     const datasetVariables = extractDatasetVariablesForQuestionConfig(dto, jsonData, questionConfigDto);
     questionConfigDto.datasetVariables = datasetVariables;
-    logDatasetTransfer("config parsed questionConfigDto", questionConfigDto);
 
     drawForm();
     ensureStyles();
@@ -68,86 +65,6 @@ function configPluginPython(dtoString) {
     setupExamples();
     renderHelp();
     saveConfig();
-
-
-    function logDatasetTransfer(label, value) {
-        if (!window.console) return;
-        const logFn = window.console.trace || window.console.debug || window.console.log;
-        if (typeof logFn !== "function") return;
-
-        const summary = summarizeDatasetVariables(value);
-        logFn.call(window.console, `[pluginpython dataset] ${label}`, summary, value);
-    }
-
-    function summarizeDatasetVariables(value) {
-        const result = {
-            hasValue: !!value,
-            topLevelKeys: value && typeof value === "object" ? Object.keys(value) : [],
-            datasetFields: {}
-        };
-        if (!value || typeof value !== "object") return result;
-
-        ["vars", "cvars", "varsMaxima", "mvars", "varsQuestion", "datasetVariables"].forEach((field) => {
-            if (value[field] != null) {
-                result.datasetFields[field] = summarizeDatasetField(value[field]);
-            }
-        });
-
-        if (value.q && typeof value.q === "object") {
-            result.q = summarizeDatasetVariables(value.q).datasetFields;
-        }
-        if (value.params && typeof value.params === "object") {
-            result.params = summarizeDatasetVariables(value.params).datasetFields;
-        }
-        if (value.pluginDto && typeof value.pluginDto === "object") {
-            result.pluginDto = summarizeDatasetVariables(value.pluginDto);
-        }
-        if (value.questionConfigDto && typeof value.questionConfigDto === "object") {
-            result.questionConfigDto = summarizeDatasetVariables(value.questionConfigDto);
-        }
-
-        return result;
-    }
-
-    function summarizeDatasetField(fieldValue) {
-        if (typeof fieldValue === "string") {
-            return { type: "string", length: fieldValue.length, preview: fieldValue.slice(0, 200) };
-        }
-        if (!fieldValue || typeof fieldValue !== "object") {
-            return { type: typeof fieldValue, value: fieldValue };
-        }
-        const vars = fieldValue.vars && typeof fieldValue.vars === "object" ? fieldValue.vars : fieldValue;
-        const variableValues = {};
-        if (vars && typeof vars === "object") {
-            Object.keys(vars).forEach((name) => {
-                variableValues[name] = summarizeDatasetVariable(vars[name]);
-            });
-        }
-        return {
-            type: Array.isArray(fieldValue) ? "array" : "object",
-            keys: Object.keys(fieldValue),
-            variableNames: vars && typeof vars === "object" ? Object.keys(vars) : [],
-            variableValues: variableValues
-        };
-    }
-
-    function summarizeDatasetVariable(variableValue) {
-        if (!variableValue || typeof variableValue !== "object") {
-            return { type: typeof variableValue, value: variableValue };
-        }
-        const calcResult = variableValue.calcErgebnisDto || {};
-        return {
-            type: "object",
-            keys: Object.keys(variableValue),
-            calcErgebnisDto: variableValue.calcErgebnisDto && typeof variableValue.calcErgebnisDto === "object" ? {
-                type: calcResult.type,
-                string: calcResult.string,
-                json: calcResult.json
-            } : null,
-            ze: variableValue.ze,
-            hasCalcParams: variableValue.cp != null
-        };
-    }
 
 
     function extractDatasetVariablesForQuestionConfig(sourceDto, sourceJsonData, sourceQuestionConfigDto) {
@@ -1158,7 +1075,6 @@ function configPluginPython(dtoString) {
 
             try {
                 const payload = bodyBuilder();
-                logDatasetTransfer(`config request ${endpoint} payload`, payload);
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
                     headers: buildHeaders(),
@@ -1186,7 +1102,6 @@ function configPluginPython(dtoString) {
         if (includeDataset) {
             payload.datasetVariables = datasetVariables;
         }
-        logDatasetTransfer("config buildQuestionConfigDtoPayload", payload);
         return payload;
     }
 
@@ -1212,7 +1127,6 @@ function configPluginPython(dtoString) {
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
         questionConfigDto.datasetVariables = pluginConfig.datasetVariables;
 
-        logDatasetTransfer("config saveConfig questionConfigDto", questionConfigDto);
         configField.value = JSON.stringify(questionConfigDto);
     }
 
