@@ -45,6 +45,7 @@ function configPluginPython(dtoString) {
         splitHandleId: `splitHandle_${pluginTag}`
     };
 
+    const varsQuestion = parseVarsQuestion(dto);
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
 
@@ -90,6 +91,21 @@ function configPluginPython(dtoString) {
         if (!parsed) return {};
         if (parsed.files && typeof parsed.files === "object") return parsed.files;
         return {};
+    }
+
+    function parseVarsQuestion(sourceDto) {
+        const params = sourceDto && sourceDto.params && typeof sourceDto.params === "object" ? sourceDto.params : {};
+        const rawVars = params.varsQuestion || params.vars_question;
+        if (rawVars && typeof rawVars === "object") return rawVars;
+        if (typeof rawVars === "string") {
+            const parsed = parseJsonObject(rawVars);
+            if (parsed) return parsed;
+        }
+        return {};
+    }
+
+    function currentVarsQuestion() {
+        return varsQuestion && typeof varsQuestion === "object" ? varsQuestion : {};
     }
 
     function currentStoredFiles() {
@@ -994,7 +1010,8 @@ function configPluginPython(dtoString) {
         return {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
-            files: currentStoredFiles()
+            files: currentStoredFiles(),
+            varsQuestion: currentVarsQuestion()
         };
     }
 
@@ -1006,6 +1023,7 @@ function configPluginPython(dtoString) {
             indication: getPreviewCode(),
             validation: getUnitCode(),
             files: currentStoredFiles(),
+            varsQuestion: currentVarsQuestion(),
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0)
@@ -1014,6 +1032,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.validation = pluginConfig.validation;
         questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.files = pluginConfig.files;
+        questionConfigDto.varsQuestion = pluginConfig.varsQuestion;
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;

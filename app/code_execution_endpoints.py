@@ -1,4 +1,6 @@
 import hmac
+import json
+import keyword
 import os
 import re
 import secrets
@@ -51,6 +53,106 @@ def _ensure_authorized(request: Request) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid plugin execution token",
         )
+
+
+DATASET_FILENAME = "dataset.py"
+
+
+def _require_dataset_identifier(name: str) -> str:
+    if not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name):
+        raise ValueError(f"Invalid dataset variable name: {name!r}")
+    return name
+
+
+def _coerce_dataset_value(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    stripped = value.strip()
+    if stripped == "":
+        return value
+    try:
+        return json.loads(stripped)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return value
+
+
+def _dataset_value_from_var(var_info: Any) -> Any:
+    if not isinstance(var_info, dict):
+        return None
+
+    calc_result = var_info.get("calcErgebnisDto") or {}
+    if isinstance(calc_result, dict):
+        json_value = calc_result.get("json")
+        if json_value is None:
+            json_value = calc_result.get("json_value")
+        if json_value is not None:
+            return _coerce_dataset_value(json_value)
+        if "string" in calc_result:
+            return _coerce_dataset_value(calc_result.get("string"))
+
+    if "value" in var_info:
+        return _coerce_dataset_value(var_info.get("value"))
+    return None
+
+
+def _dataset_unit_from_var(var_info: Any) -> str:
+    if not isinstance(var_info, dict):
+        return ""
+    unit = var_info.get("unit")
+    if unit is None:
+        unit = var_info.get("ze")
+    return "" if unit is None else str(unit)
+
+
+def _dataset_vars_from_config(vars_config: Any) -> dict[str, Any]:
+    if not isinstance(vars_config, dict):
+        return {}
+    vars_map = vars_config.get("vars") if isinstance(vars_config.get("vars"), dict) else vars_config
+    return vars_map if isinstance(vars_map, dict) else {}
+
+
+def _dataset_source_from_question_config(question_config: Any) -> Any:
+    if not isinstance(question_config, dict):
+        return None
+    return question_config.get("varsQuestion") or question_config.get("vars")
+
+
+def _dataset_file_from_vars(vars_config: Any) -> bytes | None:
+    vars_map = _dataset_vars_from_config(vars_config)
+    if not vars_map:
+        return None
+
+    lines = [
+        "from dataclasses import dataclass",
+        "from typing import Any",
+        "",
+        "",
+        "@dataclass(frozen=True)",
+        "class DatasetVariable:",
+        "    name: str",
+        "    value: Any",
+        "    unit: str",
+        "",
+    ]
+
+    seen_names: set[str] = set()
+    for raw_name, var_info in vars_map.items():
+        variable_name = _require_dataset_identifier(str(raw_name))
+        if variable_name in seen_names:
+            raise ValueError(f"Duplicate dataset variable name: {variable_name!r}")
+        seen_names.add(variable_name)
+        lines.append(
+            f"{variable_name} = DatasetVariable("
+            f"name={str(raw_name)!r}, "
+            f"value={_dataset_value_from_var(var_info)!r}, "
+            f"unit={_dataset_unit_from_var(var_info)!r})"
+        )
+
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def _dataset_file_from_question_config(question_config: Any) -> bytes | None:
+    return _dataset_file_from_vars(_dataset_source_from_question_config(question_config))
 
 
 def _to_float(value: Any) -> float:
@@ -133,6 +235,9 @@ def _file_specs_from_body(body: dict) -> dict[str, bytes]:
 
     _debug_file_config_entries('questionConfigDto.files', question_files)
     file_data = _file_specs_from_config(question_files or {}) if isinstance(question_config, dict) else {}
+    dataset_file = _dataset_file_from_question_config(question_config)
+    if dataset_file is not None:
+        file_data[DATASET_FILENAME] = dataset_file
 
     gathered = [f"filename={name!r}, size={len(content)}" for name, content in file_data.items()]
     print(f"[pluginpython files] _file_specs_from_body final filenames: {gathered}", flush=True)

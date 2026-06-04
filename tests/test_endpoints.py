@@ -147,6 +147,104 @@ class TestEndpoints(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["typ"], "PIG")
 
+
+    def test_configuration_ui_receives_structured_question_vars(self):
+        self.client.post(
+            f"{BASE_PATH}/open/configurationinfo",
+            json={
+                "typ": "PIG",
+                "name": "PluginVomTester",
+                "config": "",
+                "configurationID": "cfg-vars",
+                "timeout": 300,
+            },
+        )
+
+        response = self.client.post(
+            f"{BASE_PATH}/open/setconfigurationdata",
+            json={
+                "typ": "PIG",
+                "configurationID": "cfg-vars",
+                "configuration": "",
+                "questionDto": {
+                    "id": 17,
+                    "vars": {
+                        "vars": {
+                            "mass": {
+                                "calcErgebnisDto": {"string": "12.5", "type": "NUMBER"},
+                                "ze": "kg",
+                            }
+                        }
+                    },
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        vars_question = response.json()["params"]["varsQuestion"]
+        self.assertEqual(vars_question["vars"]["mass"]["calcErgebnisDto"]["string"], "12.5")
+        self.assertEqual(vars_question["vars"]["mass"]["ze"], "kg")
+
+    def test_dataset_file_is_created_from_question_vars(self):
+        file_data = code_execution_endpoints._file_specs_from_body({
+            "questionConfigDto": {
+                "varsQuestion": {
+                    "vars": {
+                        "mass": {
+                            "calcErgebnisDto": {"string": "12.5", "type": "NUMBER"},
+                            "ze": "kg",
+                        },
+                        "label": {
+                            "calcErgebnisDto": {"string": "sample", "type": "STRING"},
+                            "ze": "",
+                        },
+                    }
+                }
+            }
+        })
+
+        self.assertIn("dataset.py", file_data)
+        dataset_source = file_data["dataset.py"].decode("utf-8")
+        self.assertIn("@dataclass(frozen=True)", dataset_source)
+        self.assertIn("class DatasetVariable:", dataset_source)
+        self.assertIn("mass = DatasetVariable(name='mass', value=12.5, unit='kg')", dataset_source)
+        self.assertIn("label = DatasetVariable(name='label', value='sample', unit='')", dataset_source)
+
+
+    @patch("app.code_execution_endpoints.scoreCode")
+    def test_score_plugin_forwards_dataset_file_to_jobe(self, score_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        score_mock.return_value = (1.0, "score result")
+
+        response = self.client.post(
+            f"{BASE_PATH}/scorePlugin",
+            headers=headers,
+            json={
+                "code": "print(1)",
+                "testcode": "",
+                "questionConfigDto": {
+                    "varsQuestion": {
+                        "vars": {
+                            "distance": {
+                                "calcErgebnisDto": {"string": "42", "type": "NUMBER"},
+                                "ze": "m",
+                            }
+                        }
+                    }
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        score_mock.assert_called_once()
+        files = score_mock.call_args.kwargs["files"]
+        dataset_specs = [spec for spec in files if spec[1] == "dataset.py"]
+        self.assertEqual(len(dataset_specs), 1)
+        self.assertIn(
+            "distance = DatasetVariable(name='distance', value=42, unit='m')",
+            dataset_specs[0][2].decode("utf-8"),
+        )
+
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}

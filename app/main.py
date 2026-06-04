@@ -1231,6 +1231,11 @@ def create_or_update_configuration_state(
             if state.questionDto.vars is not None
             else "null"
         )
+        state.pluginConfigDto.params["varsQuestion"] = (
+            state.questionDto.vars.model_dump(by_alias=True)
+            if state.questionDto.vars is not None
+            else {}
+        )
 
     state.touch()
     return state

@@ -12,6 +12,7 @@ class QuestionConfigDto(BaseModel):
     indication: str = ""
     validation: str = ""
     files: dict[str, Any] = Field(default_factory=dict)
+    varsQuestion: dict[str, Any] = Field(default_factory=dict)
     evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterConfig: str = ""
     linterWeight: float = 0.0
