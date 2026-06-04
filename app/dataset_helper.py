@@ -40,18 +40,26 @@ def dataset_variables_to_python_source(variables: list[DatasetVariable]) -> str:
     lines = [
         '"""Generated dataset variables for the Python plugin."""',
         "",
-        f"DATASET_VARIABLES = {_python_literal(variable_dicts)}",
-        "DATASET_UNITS = "
-        f"{_python_literal({variable.name: variable.unit for variable in variables})}",
+        "from dataclasses import dataclass",
         "",
-        "for _dataset_variable in DATASET_VARIABLES:",
-        "    globals()[_dataset_variable['name']] = _dataset_variable['value']",
-        "    if _dataset_variable['unit'] is not None:",
-        (
-            "        globals()["
-            "f\"{_dataset_variable['name']}_unit\"] = "
-            "_dataset_variable['unit']"
-        ),
+        "",
+        "@dataclass(frozen=True)",
+        "class DatasetVariable:",
+        "    value: object = None",
+        "    unit: object = None",
+        "",
+        f"_DATASET_VARIABLE_VALUES = {_python_literal(variable_dicts)}",
+        "DATASET_VARIABLES = {}",
+        "",
+        "for _dataset_variable in _DATASET_VARIABLE_VALUES:",
+        "    _dataset_value = DatasetVariable(",
+        "        value=_dataset_variable['value'],",
+        "        unit=_dataset_variable['unit'],",
+        "    )",
+        "    DATASET_VARIABLES[_dataset_variable['name']] = _dataset_value",
+        "    globals()[_dataset_variable['name']] = _dataset_value",
+        "",
+        "del _dataset_variable, _dataset_value",
         "",
     ]
     return "\n".join(lines)

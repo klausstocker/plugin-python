@@ -75,13 +75,10 @@ class TestDatasetVariableExtraction(unittest.TestCase):
 
         exec(source, namespace)
 
-        self.assertEqual(namespace["myVar"], 42.0)
-        self.assertEqual(namespace["myVar_unit"], "m1s-1")
-        self.assertEqual(namespace["DATASET_UNITS"], {"myVar": "m1s-1"})
-        self.assertEqual(
-            namespace["DATASET_VARIABLES"],
-            [{"name": "myVar", "value": 42.0, "unit": "m1s-1"}],
-        )
+        self.assertEqual(namespace["myVar"].value, 42.0)
+        self.assertEqual(namespace["myVar"].unit, "m1s-1")
+        self.assertEqual(namespace["DATASET_VARIABLES"]["myVar"].value, 42.0)
+        self.assertEqual(namespace["DATASET_VARIABLES"]["myVar"].unit, "m1s-1")
 
     def test_dataset_file_from_variables_builds_jobe_upload_file(self):
         files = dataset_file_from_variables([
@@ -89,6 +86,7 @@ class TestDatasetVariableExtraction(unittest.TestCase):
         ])
 
         self.assertEqual(list(files.keys()), ["dataset.py"])
+        self.assertIn(b"class DatasetVariable", files["dataset.py"])
         self.assertIn(b"myVar", files["dataset.py"])
 
 
