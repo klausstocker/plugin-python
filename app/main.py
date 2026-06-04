@@ -791,6 +791,28 @@ class UploadResponseDto(BaseModel):
 
 
 
+def _calc_result_summary(calc_result: Optional[CalcErgebnisDto]) -> dict[str, Any]:
+    if calc_result is None:
+        return {"present": False}
+    return {
+        "present": True,
+        "type": calc_result.type,
+        "string": calc_result.string,
+        "json": calc_result.json_value,
+    }
+
+
+def _var_summary(var_dto: Optional[VarDto]) -> dict[str, Any]:
+    if var_dto is None:
+        return {"present": False}
+    return {
+        "present": True,
+        "calcErgebnisDto": _calc_result_summary(var_dto.calcErgebnisDto),
+        "ze": var_dto.ze,
+        "hasCalcParams": var_dto.cp is not None,
+    }
+
+
 def _var_hash_summary(var_hash: Optional[VarHashDto]) -> dict[str, Any]:
     if var_hash is None:
         return {"present": False}
@@ -799,6 +821,7 @@ def _var_hash_summary(var_hash: Optional[VarHashDto]) -> dict[str, Any]:
         "present": True,
         "variableNames": list(vars_map.keys()),
         "count": len(vars_map),
+        "variables": {name: _var_summary(var_dto) for name, var_dto in vars_map.items()},
     }
 
 

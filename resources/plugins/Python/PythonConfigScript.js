@@ -110,10 +110,35 @@ function configPluginPython(dtoString) {
             return { type: typeof fieldValue, value: fieldValue };
         }
         const vars = fieldValue.vars && typeof fieldValue.vars === "object" ? fieldValue.vars : fieldValue;
+        const variableValues = {};
+        if (vars && typeof vars === "object") {
+            Object.keys(vars).forEach((name) => {
+                variableValues[name] = summarizeDatasetVariable(vars[name]);
+            });
+        }
         return {
             type: Array.isArray(fieldValue) ? "array" : "object",
             keys: Object.keys(fieldValue),
-            variableNames: vars && typeof vars === "object" ? Object.keys(vars) : []
+            variableNames: vars && typeof vars === "object" ? Object.keys(vars) : [],
+            variableValues: variableValues
+        };
+    }
+
+    function summarizeDatasetVariable(variableValue) {
+        if (!variableValue || typeof variableValue !== "object") {
+            return { type: typeof variableValue, value: variableValue };
+        }
+        const calcResult = variableValue.calcErgebnisDto || {};
+        return {
+            type: "object",
+            keys: Object.keys(variableValue),
+            calcErgebnisDto: variableValue.calcErgebnisDto && typeof variableValue.calcErgebnisDto === "object" ? {
+                type: calcResult.type,
+                string: calcResult.string,
+                json: calcResult.json
+            } : null,
+            ze: variableValue.ze,
+            hasCalcParams: variableValue.cp != null
         };
     }
 

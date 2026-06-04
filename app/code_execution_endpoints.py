@@ -26,6 +26,26 @@ logger = logging.getLogger("plugin-python.dataset")
 
 
 
+def _dataset_variable_summary(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {"present": False}
+    if isinstance(value, dict):
+        calc_result = value.get("calcErgebnisDto")
+        if isinstance(calc_result, dict):
+            return {
+                "present": True,
+                "calcErgebnisDto": {
+                    "type": calc_result.get("type"),
+                    "string": calc_result.get("string"),
+                    "json": calc_result.get("json"),
+                },
+                "ze": value.get("ze"),
+                "hasCalcParams": value.get("cp") is not None,
+            }
+        return {"present": True, "type": "dict", "keys": list(value.keys()), "repr": repr(value)[:200]}
+    return {"present": True, "type": type(value).__name__, "repr": repr(value)[:200]}
+
+
 def _dataset_field_summary(value: Any) -> dict[str, Any]:
     if value is None:
         return {"present": False}
@@ -38,6 +58,10 @@ def _dataset_field_summary(value: Any) -> dict[str, Any]:
             "type": "dict",
             "keys": list(value.keys()),
             "variableNames": list(vars_map.keys()) if isinstance(vars_map, dict) else [],
+            "variables": {
+                name: _dataset_variable_summary(var_value)
+                for name, var_value in vars_map.items()
+            } if isinstance(vars_map, dict) else {},
         }
     return {"present": True, "type": type(value).__name__, "repr": repr(value)[:200]}
 
