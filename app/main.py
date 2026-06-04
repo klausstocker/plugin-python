@@ -20,10 +20,11 @@ from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
+from app.dataset import extract_question_dataset_variables
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from PIL import Image, ImageDraw
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import IntEnum
 from shared.question_config import QuestionConfigDto
 from shared.check import checkCode
@@ -836,6 +837,10 @@ def _question_dataset_summary(question: Optional[PluginQuestionDto]) -> dict[str
         "cvars": _var_hash_summary(question.cvars),
         "varsMaxima": _var_hash_summary(question.varsMaxima),
         "mvars": _var_hash_summary(question.mvars),
+        "datasetVariables": [
+            asdict(variable)
+            for variable in extract_question_dataset_variables(question)
+        ],
     }
 
 
