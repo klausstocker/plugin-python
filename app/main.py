@@ -1329,10 +1329,10 @@ def create_or_update_configuration_state(
             if state.questionDto.vars is not None
             else "null"
         )
-        state.pluginConfigDto.params["datasetVariables"] = [
+        state.pluginConfigDto.params["datasetVariables"] = json.dumps([
             asdict(variable)
             for variable in extract_question_dataset_variables(state.questionDto)
-        ]
+        ])
 
     log_dataset_transfer(
         "create_or_update_configuration_state",

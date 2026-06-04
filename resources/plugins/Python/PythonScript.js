@@ -4,6 +4,7 @@ try {
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
+    const dtoParams = dto.params && typeof dto.params === "object" ? dto.params : {};
     logDatasetTransfer("runtime init dto", dto);
     let dtoData = {};
     try {
@@ -30,7 +31,7 @@ function initPluginPython(dtoString, active) {
         active: !!active,
         serviceBase: (dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
-    const pluginToken = (dto.params && dto.params.pluginToken) || "";
+    const pluginToken = dtoParams.pluginToken || "";
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;

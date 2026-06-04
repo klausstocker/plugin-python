@@ -13,14 +13,17 @@ function configPluginPython(dtoString) {
     // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
+    const dtoParams = (dto.params && typeof dto.params === "object")
+        ? dto.params
+        : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
     const jsonData = parseDtoJsonData(dto);
     logDatasetTransfer("config init dto", dto);
     logDatasetTransfer("config init jsonData", jsonData);
 
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
-    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || "/pluginpython").replace(/\/$/, "");
-    const pluginToken = (dto.params && dto.params.pluginToken) || "";
+    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "");
+    const pluginToken = dtoParams.pluginToken || "";
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -147,6 +150,7 @@ function configPluginPython(dtoString) {
 
     function extractDatasetVariablesForQuestionConfig(sourceDto, sourceJsonData, sourceQuestionConfigDto) {
         const candidates = [
+            dtoParams,
             sourceDto && sourceDto.params,
             sourceDto && sourceDto.q,
             sourceDto,
@@ -1208,14 +1212,14 @@ function configPluginPython(dtoString) {
     }
 
     function renderHelp() {
-        if (dto.params && dto.params.help != null) {
+        if (dtoParams.help != null) {
             const helpElement = document.getElementById("configPluginHelp");
-            helpElement.innerHTML = dto.params.help;
+            helpElement.innerHTML = dtoParams.help;
         }
 
-        if (dto.params && dto.params.wikiurl != null) {
+        if (dtoParams.wikiurl != null) {
             const wikiElement = document.getElementById("configPluginWiki");
-            wikiElement.innerHTML = '<iframe src="' + dto.params.wikiurl + '"></iframe>';
+            wikiElement.innerHTML = '<iframe src="' + dtoParams.wikiurl + '"></iframe>';
         }
     }
 
