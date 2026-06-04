@@ -4,6 +4,7 @@ try {
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
+    logDatasetTransfer("runtime init dto", dto);
     let dtoData = {};
     try {
         if (dto.jsonData) {
@@ -19,6 +20,8 @@ function initPluginPython(dtoString, active) {
     } catch (e) {
         dtoData = {};
     }
+
+    logDatasetTransfer("runtime init jsonData", dtoData);
 
     const plugin_div = "#" + dto.tagName + "_div";
     const plugin_inp = "." + dto.tagName + "_inp";
@@ -214,6 +217,58 @@ function initPluginPython(dtoString, active) {
         document.head.appendChild(style);
     }
 
+    function logDatasetTransfer(label, value) {
+        if (!window.console || typeof window.console.log !== "function") return;
+
+        const summary = summarizeDatasetVariables(value);
+        window.console.log(`[pluginpython dataset] ${label}`, summary, value);
+    }
+
+    function summarizeDatasetVariables(value) {
+        const result = {
+            hasValue: !!value,
+            topLevelKeys: value && typeof value === "object" ? Object.keys(value) : [],
+            datasetFields: {}
+        };
+        if (!value || typeof value !== "object") return result;
+
+        ["vars", "cvars", "varsMaxima", "mvars", "varsQuestion"].forEach((field) => {
+            if (value[field] != null) {
+                result.datasetFields[field] = summarizeDatasetField(value[field]);
+            }
+        });
+
+        if (value.q && typeof value.q === "object") {
+            result.q = summarizeDatasetVariables(value.q).datasetFields;
+        }
+        if (value.params && typeof value.params === "object") {
+            result.params = summarizeDatasetVariables(value.params).datasetFields;
+        }
+        if (value.pluginDto && typeof value.pluginDto === "object") {
+            result.pluginDto = summarizeDatasetVariables(value.pluginDto);
+        }
+        if (value.questionConfigDto && typeof value.questionConfigDto === "object") {
+            result.questionConfigDto = summarizeDatasetVariables(value.questionConfigDto);
+        }
+
+        return result;
+    }
+
+    function summarizeDatasetField(fieldValue) {
+        if (typeof fieldValue === "string") {
+            return { type: "string", length: fieldValue.length, preview: fieldValue.slice(0, 200) };
+        }
+        if (!fieldValue || typeof fieldValue !== "object") {
+            return { type: typeof fieldValue, value: fieldValue };
+        }
+        const vars = fieldValue.vars && typeof fieldValue.vars === "object" ? fieldValue.vars : fieldValue;
+        return {
+            type: Array.isArray(fieldValue) ? "array" : "object",
+            keys: Object.keys(fieldValue),
+            variableNames: vars && typeof vars === "object" ? Object.keys(vars) : []
+        };
+    }
+
     function ensureAceLoaded() {
         return new Promise((resolve) => {
             if (window.ace) {
@@ -335,6 +390,7 @@ function initPluginPython(dtoString, active) {
 
         btn.addEventListener("click", async function () {
             const payload = bodyBuilder();
+            logDatasetTransfer(`runtime request ${endpoint} payload`, payload);
             const originalText = btn.textContent;
             btn.disabled = true;
             btn.textContent = "Working...";

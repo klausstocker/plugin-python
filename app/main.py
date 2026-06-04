@@ -789,6 +789,60 @@ class UploadResponseDto(BaseModel):
     filename: Optional[str] = ""
 
 
+
+
+def _var_hash_summary(var_hash: Optional[VarHashDto]) -> dict[str, Any]:
+    if var_hash is None:
+        return {"present": False}
+    vars_map = var_hash.vars or {}
+    return {
+        "present": True,
+        "variableNames": list(vars_map.keys()),
+        "count": len(vars_map),
+    }
+
+
+def _question_dataset_summary(question: Optional[PluginQuestionDto]) -> dict[str, Any]:
+    if question is None:
+        return {"present": False}
+    return {
+        "present": True,
+        "id": question.id,
+        "dsNr": question.dsNr,
+        "vars": _var_hash_summary(question.vars),
+        "cvars": _var_hash_summary(question.cvars),
+        "varsMaxima": _var_hash_summary(question.varsMaxima),
+        "mvars": _var_hash_summary(question.mvars),
+    }
+
+
+def _plugin_dto_dataset_summary(plugin_dto: Optional[PluginDto]) -> dict[str, Any]:
+    if plugin_dto is None:
+        return {"present": False}
+    params = plugin_dto.params or {}
+    return {
+        "present": True,
+        "tagName": plugin_dto.tagName,
+        "paramKeys": list(params.keys()),
+        "paramsVarsLength": len(params.get("vars") or "") if isinstance(params.get("vars"), str) else None,
+        "jsonDataLength": len(plugin_dto.jsonData or ""),
+    }
+
+
+def log_dataset_transfer(
+    label: str,
+    question: Optional[PluginQuestionDto] = None,
+    vars_question: Optional[VarHashDto] = None,
+    plugin_dto: Optional[PluginDto] = None,
+) -> None:
+    logger.info(
+        "[pluginpython dataset] %s: question=%s varsQuestion=%s pluginDto=%s",
+        label,
+        _question_dataset_summary(question),
+        _var_hash_summary(vars_question),
+        _plugin_dto_dataset_summary(plugin_dto),
+    )
+
 # --------------------------
 # Plugin: die eigentliche Pluginklasse
 # --------------------------
@@ -1232,6 +1286,12 @@ def create_or_update_configuration_state(
             else "null"
         )
 
+    log_dataset_transfer(
+        "create_or_update_configuration_state",
+        question=state.questionDto,
+        plugin_dto=state.pluginConfigDto.pluginDto,
+    )
+
     state.touch()
     return state
 
@@ -1322,6 +1382,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/score", response_model=PluginScoreInfoDto)
     def score(req: PluginScoreRequestDto):
+        log_dataset_transfer("/open score request", vars_question=req.varsQuestion, plugin_dto=req.pluginDto)
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginScoreInfoDto()
@@ -1346,11 +1407,12 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/loadplugindto", response_model=PluginDto)
     def load_plugin_dto(req: LoadPluginRequestDto):
+        log_dataset_transfer("/open loadplugindto request", question=req.q)
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginDto()
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
-        return PluginDto(
+        plugin_dto = PluginDto(
             tagName=tag_name,
             imageUrl="",
             width=CONF_width,
@@ -1358,6 +1420,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             params={"pluginToken": get_exec_token()},
             jsonData=encode_question_config_base64(req.config)
         )
+        log_dataset_transfer("/open loadplugindto response", question=req.q, plugin_dto=plugin_dto)
+        return plugin_dto
 
     @r.post("/renderlatex", response_model=PluginRenderDto)
     def render_latex(req: PluginRenderLatexRequestDto):
@@ -1387,6 +1451,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
     # Die configurationID wird also als Authentifizierung an den Open-Endpoints verwendet.<br>
     @r.post("/configurationinfo", response_model=PluginConfigurationInfoDto)
     def configuration_info(req: PluginConfigurationInfoRequestDto):
+        log_dataset_transfer("/open configurationinfo request")
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginConfigurationInfoDto(
@@ -1423,6 +1488,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/setconfigurationdata", response_model=PluginConfigDto)
     def set_configuration_data(req: PluginSetConfigurationDataRequestDto):
+        log_dataset_transfer("/open setconfigurationdata request", question=req.questionDto)
         state = get_configuration_state(req.configurationID)
         if state is None:
             return PluginConfigDto(
@@ -1462,6 +1528,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 
     @r.post("/reloadplugindto", response_model=PluginDto)
     def reload_plugin_dto(req: LoadPluginRequestDto):
+        log_dataset_transfer("/open reloadplugindto request", question=req.q)
         effective_typ = req.typ or ""
         effective_name = req.name or ""
         effective_config = req.config or ""
@@ -1480,7 +1547,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             return PluginDto()
 
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
-        return PluginDto(
+        plugin_dto = PluginDto(
             tagName=tag_name,
             imageUrl="",
             width=CONF_width,
@@ -1488,6 +1555,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             params={"config": effective_config, "pluginToken": get_exec_token()},
             jsonData=encode_question_config_base64(effective_config),
         )
+        log_dataset_transfer("/open reloadplugindto response", question=effective_question, plugin_dto=plugin_dto)
+        return plugin_dto
 
     return r
 
