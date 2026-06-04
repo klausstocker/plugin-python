@@ -221,7 +221,7 @@ function initPluginPython(dtoString, active) {
                 return;
             }
             const script = document.createElement("script");
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js";
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.min.js";
             script.onload = () => resolve(true);
             script.onerror = () => resolve(false);
             document.head.appendChild(script);
