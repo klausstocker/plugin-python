@@ -322,7 +322,6 @@ function configPluginPython(dtoString) {
                             </div>
 
                             <div class="tab-panel" id="tab-options">
-                                <h3>Configuration flags</h3>
                                 <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">
                                     <span>Script build: <span data-build-role="script">${escapeHtml(PYTHON_CONFIG_SCRIPT_COMMIT_HASH)}</span></span>
                                     <span class="build-separator"> | </span>
@@ -332,18 +331,22 @@ function configPluginPython(dtoString) {
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
                                 </div>
-                                <div class="linter-head-row">
-                                    <label for="${ids.linterConfigId}">Linter configuration</label>
-                                    <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
-                                    <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
-                                </div>
-                                <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
-                                <div class="dataset-variable-section" title="Dataset variables are provided to UnitTest as a generated dataset.py file. Use from dataset import DATASET_VARIABLES and then DATASET_VARIABLES[&quot;name&quot;].value or .unit. Valid Python identifiers can also be imported directly, e.g. from dataset import myVar.">
-                                    <div class="dataset-variable-head-row">
-                                        <h4>Available dataset variables</h4>
-                                        <span class="dataset-variable-help" aria-label="Dataset variable usage help">?</span>
+                                <div class="config-horizontal-row">
+                                    <div class="linter-config-section">
+                                        <div class="linter-head-row">
+                                            <label for="${ids.linterConfigId}">Linter configuration</label>
+                                            <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                            <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                                        </div>
+                                        <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
                                     </div>
-                                    <div id="${ids.datasetVariablesId}" class="dataset-variable-list">${renderDatasetVariableList(datasetVariables)}</div>
+                                    <div class="dataset-variable-section" title="Dataset variables are provided to UnitTest as a generated dataset.py file. Use from dataset import DATASET_VARIABLES and then DATASET_VARIABLES[&quot;name&quot;].value or .unit. Valid Python identifiers can also be imported directly, e.g. from dataset import myVar.">
+                                        <div class="dataset-variable-head-row">
+                                            <h4>Available dataset variables</h4>
+                                            <span class="dataset-variable-help" aria-label="Dataset variable usage help">?</span>
+                                        </div>
+                                        <div id="${ids.datasetVariablesId}" class="dataset-variable-list">${renderDatasetVariableList(datasetVariables)}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -615,6 +618,25 @@ function configPluginPython(dtoString) {
                 color: #d00;
                 font-weight: 700;
             }
+            .pluginConfigForm .config-horizontal-row {
+                display: flex;
+                gap: 8px;
+                align-items: stretch;
+                min-height: 0;
+            }
+            .pluginConfigForm .linter-config-section,
+            .pluginConfigForm .dataset-variable-section {
+                flex: 1 1 0;
+                min-width: 0;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                padding: 8px;
+                background: #fafafa;
+            }
+            .pluginConfigForm .linter-config-section {
+                display: flex;
+                flex-direction: column;
+            }
             .pluginConfigForm .linter-head-row {
                 display: flex;
                 align-items: center;
@@ -625,11 +647,14 @@ function configPluginPython(dtoString) {
                 width: 90px;
                 margin: 0;
             }
+            .pluginConfigForm .linter-config-section textarea {
+                flex: 1;
+                min-height: 120px;
+                margin-bottom: 0;
+            }
             .pluginConfigForm .dataset-variable-section {
-                border: 1px solid #d0d0d0;
-                border-radius: 4px;
-                padding: 8px;
-                background: #fafafa;
+                display: flex;
+                flex-direction: column;
             }
             .pluginConfigForm .dataset-variable-head-row {
                 display: flex;
