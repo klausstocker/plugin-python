@@ -42,6 +42,7 @@ function configPluginPython(dtoString) {
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
+        datasetVariablesId: `datasetVariables_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
         outputToggleId: `outputToggle_${pluginTag}`,
         mainSplitId: `mainSplit_${pluginTag}`,
@@ -321,7 +322,6 @@ function configPluginPython(dtoString) {
                             </div>
 
                             <div class="tab-panel" id="tab-options">
-                                <h3>Configuration flags</h3>
                                 <div id="${ids.buildInfoId}" class="build-info" title="Source commit or build revision for this configuration script">
                                     <span>Script build: <span data-build-role="script">${escapeHtml(PYTHON_CONFIG_SCRIPT_COMMIT_HASH)}</span></span>
                                     <span class="build-separator"> | </span>
@@ -331,12 +331,23 @@ function configPluginPython(dtoString) {
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
                                 </div>
-                                <div class="linter-head-row">
-                                    <label for="${ids.linterConfigId}">Linter configuration</label>
-                                    <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
-                                    <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                                <div class="config-horizontal-row">
+                                    <div class="linter-config-section">
+                                        <div class="linter-head-row">
+                                            <label for="${ids.linterConfigId}">Linter configuration</label>
+                                            <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                            <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                                        </div>
+                                        <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                                    </div>
+                                    <div class="dataset-variable-section" title="Dataset variables are provided to UnitTest as a generated dataset.py file. Use from dataset import DATASET_VARIABLES and then DATASET_VARIABLES[&quot;name&quot;].value or .unit. Valid Python identifiers can also be imported directly, e.g. from dataset import myVar.">
+                                        <div class="dataset-variable-head-row">
+                                            <h4>Available dataset variables</h4>
+                                            <span class="dataset-variable-help" aria-label="Dataset variable usage help">?</span>
+                                        </div>
+                                        <div id="${ids.datasetVariablesId}" class="dataset-variable-list">${renderDatasetVariableList(datasetVariables)}</div>
+                                    </div>
                                 </div>
-                                <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
                             </div>
                         </div>
 
@@ -607,6 +618,25 @@ function configPluginPython(dtoString) {
                 color: #d00;
                 font-weight: 700;
             }
+            .pluginConfigForm .config-horizontal-row {
+                display: flex;
+                gap: 8px;
+                align-items: stretch;
+                min-height: 0;
+            }
+            .pluginConfigForm .linter-config-section,
+            .pluginConfigForm .dataset-variable-section {
+                flex: 1 1 0;
+                min-width: 0;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                padding: 8px;
+                background: #fafafa;
+            }
+            .pluginConfigForm .linter-config-section {
+                display: flex;
+                flex-direction: column;
+            }
             .pluginConfigForm .linter-head-row {
                 display: flex;
                 align-items: center;
@@ -616,6 +646,62 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .linter-weight-input {
                 width: 90px;
                 margin: 0;
+            }
+            .pluginConfigForm .linter-config-section textarea {
+                flex: 1;
+                min-height: 120px;
+                margin-bottom: 0;
+            }
+            .pluginConfigForm .dataset-variable-section {
+                display: flex;
+                flex-direction: column;
+            }
+            .pluginConfigForm .dataset-variable-head-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 6px;
+            }
+            .pluginConfigForm .dataset-variable-head-row h4 {
+                margin: 0;
+            }
+            .pluginConfigForm .dataset-variable-help {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 16px;
+                height: 16px;
+                border: 1px solid #888;
+                border-radius: 50%;
+                color: #444;
+                font-size: 11px;
+                font-weight: 700;
+                cursor: help;
+            }
+            .pluginConfigForm .dataset-variable-list {
+                max-height: 160px;
+                overflow: auto;
+            }
+            .pluginConfigForm .dataset-variable-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-family: monospace;
+                font-size: 12px;
+            }
+            .pluginConfigForm .dataset-variable-table th,
+            .pluginConfigForm .dataset-variable-table td {
+                border: 1px solid #ddd;
+                padding: 4px 6px;
+                text-align: left;
+                vertical-align: top;
+            }
+            .pluginConfigForm .dataset-variable-table th {
+                background: #f0f0f0;
+            }
+            .pluginConfigForm .dataset-variable-empty {
+                margin: 0;
+                color: #666;
+                font-size: 12px;
             }
             .pluginConfigForm .small-gap {
                 gap: 8px;
@@ -1140,6 +1226,45 @@ function configPluginPython(dtoString) {
             const wikiElement = document.getElementById("configPluginWiki");
             wikiElement.innerHTML = '<iframe src="' + dtoParams.wikiurl + '"></iframe>';
         }
+    }
+
+    function renderDatasetVariableList(variables) {
+        if (!variables || !variables.length) {
+            return '<p class="dataset-variable-empty">No dataset variables available for this question.</p>';
+        }
+
+        const rows = variables.map((variable) => {
+            const name = variable && variable.name != null ? variable.name : "";
+            const unit = variable && variable.unit != null ? variable.unit : "";
+            return `
+                <tr>
+                    <td>${escapeHtml(name)}</td>
+                    <td>${escapeHtml(formatDatasetVariableValue(variable && variable.value))}</td>
+                    <td>${escapeHtml(unit)}</td>
+                </tr>
+            `;
+        }).join("");
+
+        return `
+            <table class="dataset-variable-table" aria-label="Available dataset variables">
+                <thead>
+                    <tr><th>Name</th><th>Value</th><th>Unit</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    function formatDatasetVariableValue(value) {
+        if (value == null) return "";
+        if (typeof value === "object") {
+            try {
+                return JSON.stringify(value);
+            } catch (e) {
+                return String(value);
+            }
+        }
+        return String(value);
     }
 
     function escapeHtml(s) {
