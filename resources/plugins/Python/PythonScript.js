@@ -47,13 +47,16 @@ function initPluginPython(dtoString, active) {
     let aceEditor = null;
 
     const answerField = $(plugin_inp)[0];
-    const initialMain = (answerField && answerField.value) || dtoData.indication || "# Write your Python code here\n";
+    const defaultMain = dtoData.indication || "# Write your Python code here\n";
+    const initialMain = (answerField && answerField.value) || defaultMain;
     const linterConfig = dtoData.linterConfig || "";
     const linterWeight = Number(dtoData.linterWeight || 0.0);
     const files = dtoData.files || {};
 
-    // Do not write fallback/indication text into the persisted answer field on render.
-    // The hidden answer field is updated only after the student edits the editor below.
+    // Let LeTTo score the initially rendered question by submitting the visible starter code.
+    if (answerField && !answerField.value) {
+        answerField.value = defaultMain;
+    }
 
     drawLayout();
     ensureStyles();
