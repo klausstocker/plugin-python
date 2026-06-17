@@ -999,6 +999,7 @@ class PluginPython:
               grade: float, config: str = "", pluginDto: Optional[PluginDto] = None,
               varsQuestion: Optional[VarHashDto] = None) -> PluginScoreInfoDto:
         ze = answerDto.ze if answerDto else ""
+        student_code = _extract_student_code(antwort, answerDto)
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
         linter_config, linter_weight = _extract_linter_settings(answerDto, config, pluginDto)
 
@@ -1020,7 +1021,7 @@ class PluginPython:
             file_specs = JobeWrapper.createFiles(files_for_jobe)
             total_score, result = scoreCode(
                 'jobe:80',
-                antwort or "",
+                student_code,
                 validation_code or "",
                 linter_config,
                 linter_weight,
@@ -1710,6 +1711,21 @@ app.include_router(extern_router)
 
 
 
+
+
+def _extract_student_code(antwort: Optional[str], answer_dto: Optional[PluginAnswerDto] = None) -> str:
+    """Return the submitted Python code from the same source used by LeTTo scoring.
+
+    The interactive `/scorePlugin` endpoint receives code as a top-level `code`
+    field. During real `/open/score` grading, LeTTo may provide the plugin
+    answer either as `antwort` or as `answerDto.answerText`. Prefer the direct
+    `antwort` value when it contains code, but fall back to `answerText` so the
+    generated `answer.py` upload is not empty.
+    """
+    if isinstance(antwort, str) and antwort.strip():
+        return antwort
+    answer_text = answer_dto.answerText if answer_dto else None
+    return answer_text if isinstance(answer_text, str) else ""
 
 def _extract_file_specs_from_config(plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> dict[str, bytes]:
     """Extract configured files and prepare them for Jobe under their display names."""
