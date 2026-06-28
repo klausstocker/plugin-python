@@ -15,6 +15,10 @@ def QuestionConfigDtoExamples():
         validation=_example_file("calculate_sum", "test_answer.py"),
         linterConfig="--disable=C0114,C0115,C0116"),
     QuestionConfigDto(
+        indication=_example_file("minimum_bmi", "answer.py"),
+        validation=_example_file("minimum_bmi", "test_answer.py"),
+        linterConfig="--disable=C0114,C0115,C0116"),
+    QuestionConfigDto(
         indication="""
 def countPointingAt0(start: int, rotations: list[str]):
     return 0
@@ -203,4 +207,4 @@ class Checker(unittest.TestCase): # do not rename
 
 def QuestionConfigDtoExamplesWorkingIndication():
     ex = QuestionConfigDtoExamples()
-    return [ex[0], ex[2], ex[3]]
+    return [ex[0], ex[1], ex[3], ex[4]]
