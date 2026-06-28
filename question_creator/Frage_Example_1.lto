@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<letto mode="101" databaseinfo="sql">
+<question type="MoodleClozeCalc">
+   <id>42281599</id>
+   <idUser>540</idUser>
+   <questionType>22</questionType>
+   <single>0</single>
+   <name><![CDATA[Example 1]]></name>
+   <punkte>1.0</punkte>
+   <penalty/>
+   <hidden>0</hidden>
+   <tag/>
+   <noAutoCorrect>0</noAutoCorrect>
+   <usecase>0</usecase>
+   <synchronize>0</synchronize>
+   <shuffleAnswers>1</shuffleAnswers>
+   <answerNumbering><![CDATA[abc]]></answerNumbering>
+   <unitGradingType>2</unitGradingType>
+   <unitPenalty>0.1</unitPenalty>
+   <showUnits>0</showUnits>
+   <unitsLeft>0</unitsLeft>
+   <maxima/>
+   <responseFormat><![CDATA[editor]]></responseFormat>
+   <responseFieldLines>10</responseFieldLines>
+   <attachments>3</attachments>
+   <md5/>
+   <units/>
+   <plugins><![CDATA[[PI Plugin1 Python "{"validation":"\ndef correctImplementation(arg1, arg2):\n    sum = arg1 + arg2\n    print(f'the sum is {sum}')\n    return sum\n\nimport unittest\nimport answer\n\nclass Checker(unittest.TestCase): # do not rename\n    def test_return(self): # test method names must start with 'test_'\n        args = (1, 2)\n        student_result = answer.calculate_sum(*args) # call to students implementation\n        expected_result = correctImplementation(*args)\n        self.assertEqual(student_result, expected_result)\n\n    def test_output(self):\n        args = (3, 4)\n        with RedirectedStdout() as student_out:\n            answer.calculate_sum(*args)\n        with RedirectedStdout() as expected_out:\n            correctImplementation(*args)\n        self.assertEqual(str(student_out), str(expected_out))\n","indication":"\ndef calculate_sum(a, b):\n    print('the sum is ' + str(a + b))\n    return a + b\n","linterConfig":"--disable=C0114,C0115,C0116","linterWeight":0.5,"config":"{\"indication\":\"\\ndef calculate_sum(a, b):\\n    print('the sum is ' + str(a + b))\\n    return a + b\\n\\ncalculate_sum(2, 3)\\n\",\"validation\":\"\\ndef correctImplementation(arg1, arg2):\\n    sum = arg1 + arg2\\n    print(f'the sum is {sum}')\\n    return sum\\n\\nimport unittest\\n\\nclass Checker(unittest.TestCase): # do not rename\\n    def test_return(self): # test method names must start with 'test_'\\n        args = (1, 2)\\n        student_result = calculate_sum(*args) # call to students implementation\\n        expected_result = correctImplementation(*args)\\n        self.assertEqual(student_result, expected_result)\\n\\n    def test_output(self):\\n        args = (3, 4)\\n        with RedirectedStdout() as student_out:\\n            calculate_sum(*args)\\n        with RedirectedStdout() as expected_out:\\n            correctImplementation(*args)\\n        self.assertEqual(str(student_out), str(expected_out))\\n\",\"files\":{},\"evalConfig\":{\"runAtTest\":true,\"lintAtTest\":true},\"linterConfig\":\"--disable=C0114,C0115,C0116\",\"linterWeight\":0}","datasetVariables":[],"files":{},"evalConfig":{"runAtTest":true,"lintAtTest":true}}"]]]></plugins>
+   <sendToParser>true</sendToParser>
+   <preCalc>true</preCalc>
+   <streng>false</streng>
+   <licenceKey />
+   <konstanteMitProzent>true</konstanteMitProzent>
+   <useSymbolicMode>false</useSymbolicMode>
+   <addDocumentsPossible>false</addDocumentsPossible>
+   <info/>
+   <randomDataset>false</randomDataset>
+   <creationDate></creationDate>
+   <lastChange></lastChange>
+   <security/>
+   <copyright/>
+   <onRamp>false</onRamp>
+   <jsonMap><![CDATA[{}]]></jsonMap>
+   <changeLogMap><![CDATA[{}]]></changeLogMap>
+   <questionCommentMsg/>
+   <questionCommentIcon>PROCESSING</questionCommentIcon>
+   <text art="Questiontext" id="42353691" format="">   <inhalt><![CDATA[<p>Erstelle eine Funktion, die die Summe aus zwei Zahlen berechnet, zur&uuml;ckgibt und am stdout in der Form: &quot;the sum is {a+b}&quot; ausgibt.</p>
+
+<p>[Q0]</p>
+]]></inhalt>
+</text>
+   <text art="general feedback" id="42353692" format="">   <inhalt/>
+</text>
+   <text art="correct feedback" id="42353693" format="">   <inhalt/>
+</text>
+   <text art="partially correct feedback" id="42353694" format="">   <inhalt/>
+</text>
+   <text art="incorrect feedback" id="42353695" format="">   <inhalt/>
+</text>
+   <text art="grader info" id="42353696" format="">   <inhalt/>
+</text>
+   <subquestion>
+      <id>42327802</id>
+      <grade>1.0</grade>
+      <mode>6</mode>
+      <name><![CDATA[Q0]]></name>
+      <maxima/>
+      <plugininfo><![CDATA[Plugin1:]]></plugininfo>
+      <shuffleAnswers>1</shuffleAnswers>
+      <schwierigkeit>0</schwierigkeit>
+      <answer>
+         <id>42362665</id>
+         <fraction>100.0</fraction>
+         <format><![CDATA[html]]></format>
+         <text/>
+         <feedback/>
+         <tolerance><![CDATA[1%]]></tolerance>
+         <correctAnswerFormat>2</correctAnswerFormat>
+         <correctAnswerLength>5</correctAnswerLength>
+         <maxima/>
+         <answer><![CDATA[""]]></answer>
+         <einheit/>
+      </answer>
+   </subquestion>
+</question>
+</letto>
