@@ -1,36 +1,22 @@
+from pathlib import Path
+
 from shared.question_config import QuestionConfigDto
+
+_EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
+
+
+def _example_file(example_name: str, filename: str) -> str:
+    return (_EXAMPLES_DIR / example_name / filename).read_text(encoding="utf-8")
+
 
 def QuestionConfigDtoExamples():
     return [QuestionConfigDto(
-        indication="""
-def calculate_sum(a, b):
-    print('the sum is ' + str(a + b))
-    return a + b
-""",
-        validation="""
-def correctImplementation(arg1, arg2):
-    sum = arg1 + arg2
-    print(f'the sum is {sum}')
-    return sum
-
-import unittest
-import answer
-
-class Checker(unittest.TestCase): # do not rename
-    def test_return(self): # test method names must start with 'test_'
-        args = (1, 2)
-        student_result = answer.calculate_sum(*args) # call to students implementation
-        expected_result = correctImplementation(*args)
-        self.assertEqual(student_result, expected_result)
-
-    def test_output(self):
-        args = (3, 4)
-        with RedirectedStdout() as student_out:
-            answer.calculate_sum(*args)
-        with RedirectedStdout() as expected_out:
-            correctImplementation(*args)
-        self.assertEqual(str(student_out), str(expected_out))
-""",
+        indication=_example_file("calculate_sum", "answer.py"),
+        validation=_example_file("calculate_sum", "test_answer.py"),
+        linterConfig="--disable=C0114,C0115,C0116"),
+    QuestionConfigDto(
+        indication=_example_file("minimum_bmi", "answer.py"),
+        validation=_example_file("minimum_bmi", "test_answer.py"),
         linterConfig="--disable=C0114,C0115,C0116"),
     QuestionConfigDto(
         indication="""
@@ -221,4 +207,4 @@ class Checker(unittest.TestCase): # do not rename
 
 def QuestionConfigDtoExamplesWorkingIndication():
     ex = QuestionConfigDtoExamples()
-    return [ex[0], ex[2], ex[3]]
+    return [ex[0], ex[1], ex[3], ex[4]]
