@@ -6,9 +6,6 @@ const PYTHON_SCRIPT_COMMIT_HASH = "c70dad38cc61";
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
-    const dtoParams = (dto.params && typeof dto.params === "object")
-        ? dto.params
-        : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
     let dtoData = {};
     try {
         if (dto.jsonData) {
@@ -33,7 +30,7 @@ function initPluginPython(dtoString, active) {
         active: !!active,
         serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
-    const pluginToken = dtoParams.pluginToken || "";
+    const pluginToken = readDtoParam(dto, "pluginToken") || "";
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
@@ -97,8 +94,8 @@ Server build: loading...">?</span>
                 </div>
 
                 <div class="btn-container">
-                    <button class="black-button" id="${runButtonId}" ${plugin.active ? "" : "disabled"}>Run Code</button>
-                    <button class="black-button" id="${lintButtonId}" ${plugin.active ? "" : "disabled"}>Lint Code</button>
+                    <button class="black-button" id="${runButtonId}" type="button" ${plugin.active ? "" : "disabled"}>Run Code</button>
+                    <button class="black-button" id="${lintButtonId}" type="button" ${plugin.active ? "" : "disabled"}>Lint Code</button>
                 </div>
             </div>
         `);
@@ -402,7 +399,8 @@ Server build: unavailable`;
         const btn = document.getElementById(buttonId);
         if (!btn) return;
 
-        btn.addEventListener("click", async function () {
+        btn.addEventListener("click", async function (event) {
+            event.preventDefault();
             const payload = bodyBuilder();
             const originalText = btn.textContent;
             btn.disabled = true;
@@ -422,6 +420,19 @@ Server build: unavailable`;
                 btn.textContent = originalText;
             }
         });
+    }
+
+    function readDtoParam(sourceDto, key) {
+        const candidates = [
+            sourceDto && sourceDto.params,
+            sourceDto && sourceDto.pluginDto && sourceDto.pluginDto.params
+        ];
+        for (const candidate of candidates) {
+            if (candidate && typeof candidate === "object" && candidate[key] != null) {
+                return candidate[key];
+            }
+        }
+        return "";
     }
 
     function escapeHtml(s) {
