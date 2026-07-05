@@ -234,6 +234,7 @@ def encode_question_config_base64(config_raw: Optional[str]) -> str:
     json_payload = question_config.model_dump_json()
     return base64.b64encode(json_payload.encode("utf-8")).decode("ascii")
 
+
 log_external_uri_configuration()
 
 
@@ -1315,7 +1316,7 @@ def create_or_update_configuration_state(
         state.pluginConfigDto.params = {}
 
     state.pluginConfigDto.params["config"] = state.config
-    state.pluginConfigDto.params["pluginToken"] = get_exec_token()
+    state.pluginConfigDto.params.pop("pluginToken", None)
 
     if state.pluginPython is not None:
         state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
@@ -1512,7 +1513,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"pluginToken": get_exec_token()},
+            params={},
             jsonData=encode_question_config_base64(req.config)
         )
         log_dataset_transfer("/open loadplugindto response", question=req.q, plugin_dto=plugin_dto)
@@ -1647,7 +1648,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"config": effective_config, "pluginToken": get_exec_token()},
+            params={"config": effective_config},
             jsonData=encode_question_config_base64(effective_config),
         )
         log_dataset_transfer("/open reloadplugindto response", question=effective_question, plugin_dto=plugin_dto)
@@ -1732,7 +1733,7 @@ def extern_reload(req: LoadPluginRequestDto):
         imageUrl="",
         width=CONF_width,
         height=CONF_height,
-        params={"pluginToken": get_exec_token()},
+        params={},
     )
 
 

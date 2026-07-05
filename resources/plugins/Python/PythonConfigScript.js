@@ -21,7 +21,7 @@ function configPluginPython(dtoString) {
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "");
-    const pluginToken = dtoParams.pluginToken || "";
+    const pluginTokenPromise = requestExecutionToken();
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -930,7 +930,9 @@ function configPluginPython(dtoString) {
                     const info = getFileInfo(name);
                     if (info.storedName) {
                         const a = document.createElement("a");
-                        a.href = `${serviceBase}/files/download/${encodeURIComponent(info.storedName)}?name=${encodeURIComponent(name)}${pluginToken ? `&token=${encodeURIComponent(pluginToken)}` : ""}`;
+                        const token = await pluginTokenPromise;
+                        const tokenQuery = token ? `&token=${encodeURIComponent(token)}` : "";
+                        a.href = `${serviceBase}/files/download/${encodeURIComponent(info.storedName)}?name=${encodeURIComponent(name)}${tokenQuery}`;
                         a.download = name;
                         a.click();
                     } else {
@@ -966,7 +968,8 @@ function configPluginPython(dtoString) {
         formData.append("file", file);
         const response = await fetch(serviceBase + "/files/upload", {
             method: "POST",
-            headers: buildAuthHeaders(),
+            headers: await buildAuthHeaders(),
+            credentials: "include",
             body: formData
         });
         if (!response.ok) throw new Error("File upload failed");
@@ -976,7 +979,8 @@ function configPluginPython(dtoString) {
     async function requestFileDelete(storedName) {
         const response = await fetch(serviceBase + "/files/delete", {
             method: "POST",
-            headers: buildHeaders(),
+            headers: await buildHeaders(),
+            credentials: "include",
             body: JSON.stringify({ storedName: storedName })
         });
         if (!response.ok) throw new Error("File delete failed");
@@ -1002,7 +1006,8 @@ function configPluginPython(dtoString) {
         try {
             const response = await fetch(serviceBase + "/buildhash", {
                 method: "GET",
-                headers: buildAuthHeaders()
+                headers: await buildAuthHeaders(),
+                credentials: "include"
             });
             if (!response.ok) throw new Error("Build hash request failed");
 
@@ -1118,7 +1123,8 @@ function configPluginPython(dtoString) {
         try {
             const response = await fetch(serviceBase + "/example", {
                 method: "POST",
-                headers: buildHeaders(),
+                headers: await buildHeaders(),
+                credentials: "include",
                 body: JSON.stringify({ index: index })
             });
             return await response.json();
@@ -1163,7 +1169,8 @@ function configPluginPython(dtoString) {
                 const payload = bodyBuilder();
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
-                    headers: buildHeaders(),
+                    headers: await buildHeaders(),
+                    credentials: "include",
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
@@ -1282,15 +1289,30 @@ function configPluginPython(dtoString) {
             .replace(/>/g, "&gt;");
     }
 
-    function buildAuthHeaders() {
+    async function requestExecutionToken() {
+        try {
+            const response = await fetch(serviceBase + "/exectoken", {
+                method: "GET",
+                credentials: "include"
+            });
+            if (!response.ok) throw new Error("Execution token request failed");
+            const body = await response.json();
+            return body && body.token ? String(body.token) : "";
+        } catch (e) {
+            return "";
+        }
+    }
+
+    async function buildAuthHeaders() {
         const headers = {};
-        if (pluginToken) {
-            headers["Authorization"] = "Bearer " + pluginToken;
+        const token = await pluginTokenPromise;
+        if (token) {
+            headers["Authorization"] = "Bearer " + token;
         }
         return headers;
     }
 
-    function buildHeaders() {
-        return { "Content-Type": "application/json", ...buildAuthHeaders() };
+    async function buildHeaders() {
+        return { "Content-Type": "application/json", ...(await buildAuthHeaders()) };
     }
 }

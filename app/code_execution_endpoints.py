@@ -119,6 +119,13 @@ def get_commit_hash() -> str:
     return os.getenv("PLUGIN_BUILD_HASH", "").strip() or "unknown"
 
 
+@router.get(f"{SERVICEPATH}/exectoken")
+async def execution_token():
+    # Deliberately unsecured for now: callers that can load the plugin script fetch
+    # a fresh in-memory token on startup instead of receiving it in persisted DTOs.
+    return JSONResponse({"token": get_exec_token()})
+
+
 def _extract_exec_token(request: Request) -> str:
     auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
