@@ -2,6 +2,8 @@ try {
     $ = jQuery;
 } catch (e) { }
 
+const PYTHON_SCRIPT_COMMIT_HASH = "c70dad38cc61";
+
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
     const dtoParams = (dto.params && typeof dto.params === "object")
@@ -41,6 +43,7 @@ function initPluginPython(dtoString, active) {
     const mainPanelId = `mainPanel_${plugin.name}`;
     const outputPanelId = `outputPanel_${plugin.name}`;
     const toggleLayoutButtonId = `toggleLayout_${plugin.name}`;
+    const buildInfoId = `buildInfo_${plugin.name}`;
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
     const defaultRatio = 2 / 3;
@@ -64,6 +67,7 @@ function initPluginPython(dtoString, active) {
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
+    setupBuildInfo();
 
     function drawLayout() {
         const clsName = "." + rootClass;
@@ -77,7 +81,11 @@ function initPluginPython(dtoString, active) {
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
                             <span>main.py</span>
-                            <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
+                            <span class="header-actions">
+                                <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
+                                <span id="${buildInfoId}" class="build-info-help" title="Script build: ${escapeHtmlAttr(PYTHON_SCRIPT_COMMIT_HASH)}
+Server build: loading...">?</span>
+                            </span>
                         </div>
                         <div id="${mainEditorId}" class="editor-box"></div>
                     </div>
@@ -141,8 +149,13 @@ function initPluginPython(dtoString, active) {
                 align-items: center;
                 justify-content: space-between;
             }
+            .code-runner-root .header-actions {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
             .code-runner-root .layout-toggle-button {
-                margin: 0 8px;
+                margin: 0;
                 min-width: 36px;
                 height: 32px;
                 border: 1px solid #b8b8b8;
@@ -151,6 +164,27 @@ function initPluginPython(dtoString, active) {
                 cursor: pointer;
                 font-size: 16px;
                 line-height: 1;
+            }
+            .code-runner-root .build-info-help {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 18px;
+                height: 18px;
+                border: 1px solid #888;
+                border-radius: 50%;
+                background: #f7f7f7;
+                color: #444;
+                font-family: sans-serif;
+                font-size: 12px;
+                font-weight: 700;
+                cursor: help;
+                line-height: 1;
+            }
+            .code-runner-root .build-info-help.build-mismatch {
+                border-color: #d00;
+                background: #fff0f0;
+                color: #d00;
             }
             .code-runner-root .container {
                 display: flex;
@@ -280,6 +314,34 @@ function initPluginPython(dtoString, active) {
         bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files } }), out);
     }
 
+    async function setupBuildInfo() {
+        const buildInfo = document.getElementById(buildInfoId);
+        if (!buildInfo) return;
+
+        const scriptHash = PYTHON_SCRIPT_COMMIT_HASH || "unknown";
+        buildInfo.title = `Script build: ${scriptHash}
+Server build: loading...`;
+
+        try {
+            const response = await fetch(plugin.serviceBase + "/buildhash", {
+                method: "GET",
+                headers: buildAuthHeaders()
+            });
+            if (!response.ok) throw new Error("Build hash request failed");
+
+            const body = await response.json();
+            const serverHash = body && body.commitHash ? String(body.commitHash) : "unknown";
+            const mismatch = serverHash !== scriptHash;
+            buildInfo.title = `Script build: ${scriptHash}
+Server build: ${serverHash}`;
+            buildInfo.classList.toggle("build-mismatch", mismatch);
+        } catch (e) {
+            buildInfo.title = `Script build: ${scriptHash}
+Server build: unavailable`;
+            buildInfo.classList.add("build-mismatch");
+        }
+    }
+
     function setupLayoutControls() {
         const container = document.getElementById(containerId);
         const mainPanel = document.getElementById(mainPanelId);
@@ -369,11 +431,23 @@ function initPluginPython(dtoString, active) {
             .replace(/>/g, "&gt;");
     }
 
-    function buildHeaders() {
-        const headers = { "Content-Type": "application/json" };
+    function escapeHtmlAttr(s) {
+        return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    function buildAuthHeaders() {
+        const headers = {};
         if (pluginToken) {
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
+    }
+
+    function buildHeaders() {
+        return { "Content-Type": "application/json", ...buildAuthHeaders() };
     }
 }
