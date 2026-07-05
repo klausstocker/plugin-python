@@ -288,9 +288,6 @@ def _debug_run_file_metadata(body: dict) -> None:
 
 @router.get(f"{SERVICEPATH}/buildhash")
 async def get_buildhash(request: Request):
-    auth_error = _authorize_or_response(request, "/buildhash")
-    if auth_error is not None:
-        return auth_error
     commit_hash = get_commit_hash()
     logger.info("Build hash requested: %s", commit_hash)
     return JSONResponse({"commitHash": commit_hash})
