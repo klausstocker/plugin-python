@@ -26,7 +26,7 @@ TRACE_LOG_LEVEL = 5
 logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
 router = APIRouter()
-logger = logging.getLogger("plugin-python.dataset")
+logger = logging.getLogger("plugin-python.endpoints")
 
 
 
@@ -142,6 +142,25 @@ def _ensure_authorized(request: Request) -> None:
         )
 
 
+def _authorize_or_response(request: Request, endpoint: str) -> JSONResponse | None:
+    try:
+        _ensure_authorized(request)
+    except HTTPException as exc:
+        logger.warning("Authorization failed for %s: %s", endpoint, exc.detail)
+        return JSONResponse(
+            {"detail": exc.detail},
+            status_code=exc.status_code,
+            headers=exc.headers,
+        )
+    except Exception as exc:
+        logger.exception("Unexpected authorization error for %s", endpoint)
+        return JSONResponse(
+            {"detail": f"Authorization failed: {exc}"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    return None
+
+
 def _to_float(value: Any) -> float:
     if isinstance(value, str):
         value = value.strip().replace(",", ".")
@@ -197,7 +216,7 @@ def _file_specs_from_config(files_config: Any) -> dict[str, bytes]:
 
 def _debug_file_config_entries(source: str, files_config: Any) -> None:
     if not isinstance(files_config, dict):
-        print(f"[pluginpython files] {source}: no file mapping", flush=True)
+        logger.debug("[pluginpython files] %s: no file mapping", source)
         return
 
     entries = []
@@ -213,7 +232,7 @@ def _debug_file_config_entries(source: str, files_config: Any) -> None:
             size = "<unknown>"
         entries.append(f"filename={display_name!r}, storedName={stored_name!r}, size={size}")
 
-    print(f"[pluginpython files] {source}: gathered {len(entries)} file(s): {entries}", flush=True)
+    logger.debug("[pluginpython files] %s: gathered %s file(s): %s", source, len(entries), entries)
 
 
 def _file_specs_from_body(body: dict, include_dataset: bool = True) -> dict[str, bytes]:
@@ -233,7 +252,7 @@ def _file_specs_from_body(body: dict, include_dataset: bool = True) -> dict[str,
         f"filename={name!r}, size={len(content)}"
         for name, content in file_data.items()
     ]
-    print(f"[pluginpython files] _file_specs_from_body final filenames: {gathered}", flush=True)
+    logger.debug("[pluginpython files] _file_specs_from_body final filenames: %s", gathered)
     return file_data
 
 
@@ -259,22 +278,29 @@ def _debug_run_file_metadata(body: dict) -> None:
         else:
             stored_name = "<unsupported>"
             size = "<unknown>"
-        print(
-            f"[pluginpython /run] questionConfigDto.files: filename={display_name!r}, "
-            f"storedName={stored_name!r}, size={size}",
-            flush=True,
+        logger.debug(
+            "[pluginpython /run] questionConfigDto.files: filename=%r, storedName=%r, size=%s",
+            display_name,
+            stored_name,
+            size,
         )
 
 
 @router.get(f"{SERVICEPATH}/buildhash")
 async def get_buildhash(request: Request):
-    _ensure_authorized(request)
-    return JSONResponse({"commitHash": get_commit_hash()})
+    auth_error = _authorize_or_response(request, "/buildhash")
+    if auth_error is not None:
+        return auth_error
+    commit_hash = get_commit_hash()
+    logger.info("Build hash requested: %s", commit_hash)
+    return JSONResponse({"commitHash": commit_hash})
 
 
 @router.post(f"{SERVICEPATH}/files/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
-    _ensure_authorized(request)
+    auth_error = _authorize_or_response(request, "/files/upload")
+    if auth_error is not None:
+        return auth_error
     FILE_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
     display_name = _safe_display_name(file.filename or "uploaded-file")
     extension = Path(display_name).suffix
@@ -285,6 +311,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     file_path = FILE_STORAGE_ROOT / stored_name
     content = await file.read()
     file_path.write_bytes(content)
+    logger.info("Uploaded file: displayName=%r storedName=%r size=%s", display_name, stored_name, len(content))
     return JSONResponse({
         "displayName": display_name,
         "storedName": stored_name,
@@ -294,57 +321,86 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
 
 @router.post(f"{SERVICEPATH}/files/delete")
 async def delete_file(request: Request):
-    _ensure_authorized(request)
+    auth_error = _authorize_or_response(request, "/files/delete")
+    if auth_error is not None:
+        return auth_error
     body = await request.json()
     stored_name = body.get("storedName") if isinstance(body, dict) else None
     if not stored_name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing storedName")
     file_path = _stored_file_path(str(stored_name))
+    deleted = False
     if file_path.exists():
         file_path.unlink()
+        deleted = True
+    logger.info("Delete file requested: storedName=%r deleted=%s", stored_name, deleted)
     return JSONResponse({"deleted": True})
 
 
 @router.get(f"{SERVICEPATH}/files/download/{{stored_name}}")
 async def download_file(request: Request, stored_name: str, name: str = ""):
-    _ensure_authorized(request)
+    auth_error = _authorize_or_response(request, "/files/download")
+    if auth_error is not None:
+        return auth_error
     file_path = _stored_file_path(stored_name)
     if not file_path.is_file():
+        logger.warning("Download requested for missing file: storedName=%r", stored_name)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    logger.info("Download file requested: storedName=%r as name=%r", stored_name, name or stored_name)
     return FileResponse(file_path, filename=_safe_display_name(name or stored_name))
 
 
 @router.post(f"{SERVICEPATH}/run")
 async def run_code(request: Request):
-    _ensure_authorized(request)
-    body = await request.json()
-    _debug_dataset_transfer("/run request body", body)
-    code = body['code']
+    auth_error = _authorize_or_response(request, "/run")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+        _debug_dataset_transfer("/run request body", body)
+        code = body['code']
+    except Exception as e:
+        logger.exception("Invalid /run request")
+        return JSONResponse({'output': f'Invalid run request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
     try:
         _debug_run_file_metadata(body)
         files = _jobe_files_from_body(body, include_dataset=False)
         for file_id, filename, content in files:
-            print(
-                f"[pluginpython /run] uploading to Jobe: filename={filename!r}, "
-                f"jobeFileId={file_id!r}, size={len(content)}",
-                flush=True,
+            logger.debug(
+                "[pluginpython /run] uploading to Jobe: filename=%r, jobeFileId=%r, size=%s",
+                filename,
+                file_id,
+                len(content),
             )
         jobe = JobeWrapper('jobe:80')
         result = jobe.run_test('python3', code, 'test.py', files)
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
+        logger.exception("Error running code via Jobe")
         return JSONResponse({'output': f'Error running code: {e}'})
 
 
 @router.post(f"{SERVICEPATH}/lint")
 async def lint_code(request: Request):
-    _ensure_authorized(request)
-    body = await request.json()
-    _debug_dataset_transfer("/lint request body", body)
-    code = body['code']
+    auth_error = _authorize_or_response(request, "/lint")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+        _debug_dataset_transfer("/lint request body", body)
+        code = body['code']
+    except Exception as e:
+        logger.exception("Invalid /lint request")
+        return JSONResponse({'output': f'Invalid lint request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
     question_config = body.get('questionConfigDto') or {}
     linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
-    score, messages = lintCode(code, linter_config)
+    logger.info("Lint request received: codeLength=%s linterConfigLength=%s", len(code), len(linter_config))
+    try:
+        score, messages = lintCode(code, linter_config)
+    except Exception as e:
+        logger.exception("Error linting code")
+        return JSONResponse({'output': f'Error linting code: {e}'})
+
     messagesText = f'Your code has been rated: {score:.2f}/10.0'
     for m in messages:
         messagesText += f'\nline: {m.line}: {m.msg_id}: {m.msg}, {m.category}'
@@ -353,25 +409,38 @@ async def lint_code(request: Request):
 
 @router.post(f"{SERVICEPATH}/check")
 async def check_code(request: Request):
-    _ensure_authorized(request)
-    body = await request.json()
-    _debug_dataset_transfer("/check request body", body)
-    code = body['code']
-    testcode = body['testcode']
+    auth_error = _authorize_or_response(request, "/check")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+        _debug_dataset_transfer("/check request body", body)
+        code = body['code']
+        testcode = body['testcode']
+    except Exception as e:
+        logger.exception("Invalid /check request")
+        return JSONResponse({'output': f'Invalid check request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
     try:
         result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body))
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
+        logger.exception("Error checking code via Jobe")
         return JSONResponse({'output': f'Error checking code: {e}'})
 
 
 @router.post(f"{SERVICEPATH}/scorePlugin")
 async def score_plugin(request: Request):
-    _ensure_authorized(request)
-    body = await request.json()
-    _debug_dataset_transfer("/scorePlugin request body", body)
-    code = body['code']
-    testcode = body['testcode']
+    auth_error = _authorize_or_response(request, "/scorePlugin")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+        _debug_dataset_transfer("/scorePlugin request body", body)
+        code = body['code']
+        testcode = body['testcode']
+    except Exception as e:
+        logger.exception("Invalid /scorePlugin request")
+        return JSONResponse({'output': f'Invalid score request: {e}', 'score': 0.0}, status_code=status.HTTP_400_BAD_REQUEST)
 
     question_config = body.get('questionConfigDto') or {}
     linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
@@ -382,13 +451,20 @@ async def score_plugin(request: Request):
         score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body))
         return JSONResponse({'output': result.__repr__(), 'score': score})
     except Exception as e:
+        logger.exception("Error scoring code via Jobe")
         return JSONResponse({'output': f'Error scoring code: {e}', 'score': 0.0})
 
 
 @router.post(f"{SERVICEPATH}/example")
 async def get_example(request: Request):
-    _ensure_authorized(request)
-    body = await request.json()
+    auth_error = _authorize_or_response(request, "/example")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+    except Exception as e:
+        logger.exception("Invalid /example request")
+        return JSONResponse({'count': 0, 'output': None, 'error': f'Invalid example request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
     index = body.get("index", 0)
 
     examples = QuestionConfigDtoExamples()

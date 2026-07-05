@@ -3,6 +3,7 @@ import re
 import json
 import math
 import base64
+import binascii
 import ast
 import io
 import asyncio
@@ -18,7 +19,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, APIRouter, Body, UploadFile, File
+from fastapi import FastAPI, APIRouter, Body, UploadFile, File, Request
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
 from app.dataset_helper import (
     dataset_file_from_variables,
@@ -154,14 +155,15 @@ class HealthcheckFilter(logging.Filter):
 
 def configureLogging() -> Logger:
     log_handlers: List[logging.Handler] = [logging.StreamHandler()]
+    log_level_name = os.getenv("PluginPythonLogLevel", "INFO").upper()
+    resolved_log_level = (
+        TRACE_LOG_LEVEL
+        if log_level_name == "TRACE"
+        else logging.getLevelName(log_level_name)
+    )
+    if not isinstance(resolved_log_level, int):
+        resolved_log_level = logging.INFO
     try:
-        log_level_name = os.getenv("PluginPythonLogLevel", "INFO").upper()
-        resolved_log_level = (
-            TRACE_LOG_LEVEL
-            if log_level_name == "TRACE"
-            else logging.getLevelName(log_level_name)
-        )
-        print(f'{resolved_log_level=}')
         os.makedirs("/log", exist_ok=True)
         log_handlers.append(
             RotatingFileHandler(
@@ -171,9 +173,9 @@ def configureLogging() -> Logger:
                 encoding="utf-8",
             )
         )
-    except Exception:
+    except Exception as ex:
         # Falls /log nicht beschreibbar ist, bleiben Logs auf stdout/stderr verfügbar.
-        pass
+        logging.getLogger(__name__).warning("Could not configure /log/pluginpython.log file logging: %s", ex)
 
     logging.basicConfig(
         level=resolved_log_level,
@@ -980,7 +982,7 @@ class PluginPython:
                 hh = int(hh_s) % 24
                 mm = int(mm_s) % 60
             except Exception:
-                pass
+                logger.exception("Invalid time parameter ignored: %s", params)
         png = draw_clock_png(hh, mm, 320, bgcolor=self.bgcolor)
         return ImageBase64Dto(base64Image=png_b64(png), imageInfoDto=ImageInfoDto(filename="", url=""), error=self.configMessage)
 
@@ -1030,7 +1032,7 @@ class PluginPython:
             info.status  = result.check_result.status()
             info.schuelerErgebnis = CalcErgebnisDto(string=result.__repr__())
         except Exception:
-            pass
+            logger.exception("Scoring failed; returning zero score")
         return info
 
 
@@ -1372,6 +1374,33 @@ app = FastAPI(
     version=CONF_VERSION,
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def log_http_requests(request: Request, call_next):
+    start = time.perf_counter()
+    logger.info("HTTP request started: %s %s", request.method, request.url.path)
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.exception(
+            "HTTP request failed: %s %s after %.1f ms",
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+        raise
+
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "HTTP request completed: %s %s -> %s in %.1f ms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 
 def mount_internal_open(router_prefix: str) -> APIRouter:
@@ -1720,7 +1749,8 @@ def _extract_file_specs_from_config(plugin_config: str = "", plugin_dto: Optiona
         try:
             obj = json.loads(raw)
             return obj if isinstance(obj, dict) else None
-        except Exception:
+        except (json.JSONDecodeError, TypeError) as ex:
+            logger.debug("Could not parse JSON configuration: %s", ex)
             return None
 
     def _extract_from_dict(data: dict) -> dict[str, bytes]:
@@ -1734,8 +1764,8 @@ def _extract_file_specs_from_config(plugin_config: str = "", plugin_dto: Optiona
                 file_data = _extract_from_dict(data)
                 if file_data:
                     return file_data
-        except Exception:
-            pass
+        except (ValueError, UnicodeDecodeError, binascii.Error) as ex:
+            logger.warning("Could not decode files from pluginDto.jsonData: %s", ex)
 
     config_obj = _parse_json_string(plugin_config or "")
     if config_obj:
@@ -1752,7 +1782,8 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
         try:
             obj = json.loads(raw)
             return obj if isinstance(obj, dict) else None
-        except Exception:
+        except (json.JSONDecodeError, TypeError) as ex:
+            logger.debug("Could not parse JSON configuration: %s", ex)
             return None
 
     def _to_float(value: Any) -> float:
@@ -1760,7 +1791,7 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
             value = value.strip().replace(",", ".")
         try:
             return float(value)
-        except Exception:
+        except (TypeError, ValueError):
             return 0.0
 
     def _extract_from_dict(data: dict) -> tuple[str, float]:
@@ -1774,8 +1805,8 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
             data = _parse_json_string(payload)
             if data:
                 return _extract_from_dict(data)
-        except Exception:
-            pass
+        except (ValueError, UnicodeDecodeError, binascii.Error) as ex:
+            logger.warning("Could not decode linter settings from pluginDto.jsonData: %s", ex)
 
     config_obj = _parse_json_string(plugin_config or "")
     if config_obj:
@@ -1791,7 +1822,8 @@ def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_confi
         try:
             obj = json.loads(raw)
             return obj if isinstance(obj, dict) else None
-        except Exception:
+        except (json.JSONDecodeError, TypeError) as ex:
+            logger.debug("Could not parse JSON configuration: %s", ex)
             return None
 
     def _extract_from_dict(data: dict) -> str:
@@ -1806,8 +1838,8 @@ def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_confi
                 found = _extract_from_dict(data)
                 if found:
                     return found
-        except Exception:
-            pass
+        except (ValueError, UnicodeDecodeError, binascii.Error) as ex:
+            logger.warning("Could not decode validation code from pluginDto.jsonData: %s", ex)
 
     config_obj = _parse_json_string(plugin_config or "")
     if config_obj:
@@ -1821,7 +1853,8 @@ def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_confi
         if m:
             try:
                 return ast.literal_eval(f"'{m.group(1)}'")
-            except Exception:
+            except (SyntaxError, ValueError) as ex:
+                logger.debug("Could not literal-eval validation fallback: %s", ex)
                 return m.group(1).encode('utf-8').decode('unicode_escape')
 
     return ""
