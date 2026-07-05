@@ -30,7 +30,6 @@ router = APIRouter()
 logger = logging.getLogger("plugin-python.endpoints")
 
 
-
 def _dataset_variable_summary(value: Any) -> dict[str, Any]:
     if value is None:
         return {"present": False}
@@ -137,7 +136,14 @@ def _ensure_authorized(request: Request) -> None:
     if not REQUIRE_EXEC_TOKEN:
         return
     presented_token = _extract_exec_token(request)
-    if not EXEC_TOKEN or not hmac.compare_digest(presented_token, EXEC_TOKEN):
+    token_matches = bool(EXEC_TOKEN) and hmac.compare_digest(presented_token, EXEC_TOKEN)
+    logger.info(
+        "Compared plugin execution token: presented=%r expected=%r matches=%s",
+        presented_token,
+        EXEC_TOKEN,
+        token_matches,
+    )
+    if not token_matches:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid plugin execution token",
