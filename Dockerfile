@@ -26,7 +26,7 @@ COPY app ./app
 COPY shared ./shared
 # resources folder exists, but JS libs can be copied in later (see README)
 COPY resources       ./resources
-RUN python -c "from pathlib import Path; import re; h='${PLUGIN_BUILD_HASH}'; p=Path('resources/plugins/Python/PythonConfigScript.js'); s=p.read_text(); p.write_text(re.sub(r'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"[^\"]*\";', 'const PYTHON_CONFIG_SCRIPT_COMMIT_HASH = \"' + h + '\";', s))"
+RUN python -c "from pathlib import Path; import re; h='${PLUGIN_BUILD_HASH}'; replacements={'resources/plugins/Python/PythonConfigScript.js':'PYTHON_CONFIG_SCRIPT_COMMIT_HASH','resources/plugins/Python/PythonScript.js':'PYTHON_SCRIPT_COMMIT_HASH'}; [Path(path).write_text(re.sub(r'const ' + const + r' = \"[^\"]*\";', 'const ' + const + ' = \"' + h + '\";', Path(path).read_text())) for path, const in replacements.items()]"
 COPY scripts/*.sh    /scripts/
 COPY README.md .
 RUN dos2unix /scripts/*.sh
