@@ -194,6 +194,7 @@ def configureLogging() -> Logger:
 
 
 logger = configureLogging()
+logger.info("Created plugin execution token: %s", get_exec_token())
 
 
 def log_external_uri_configuration() -> None:
