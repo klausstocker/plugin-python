@@ -33,7 +33,7 @@ function initPluginPython(dtoString, active) {
         active: !!active,
         serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
-    const pluginToken = dtoParams.pluginToken || "";
+    const pluginTokenPromise = requestExecutionToken();
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
@@ -325,7 +325,8 @@ Server build: loading...`;
         try {
             const response = await fetch(plugin.serviceBase + "/buildhash", {
                 method: "GET",
-                headers: buildAuthHeaders()
+                headers: await buildAuthHeaders(),
+                credentials: "include"
             });
             if (!response.ok) throw new Error("Build hash request failed");
 
@@ -410,7 +411,8 @@ Server build: unavailable`;
             try {
                 const res = await fetch(plugin.serviceBase + endpoint, {
                     method: "POST",
-                    headers: buildHeaders(),
+                    headers: await buildHeaders(),
+                    credentials: "include",
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -439,15 +441,30 @@ Server build: unavailable`;
             .replace(/>/g, "&gt;");
     }
 
-    function buildAuthHeaders() {
+    async function requestExecutionToken() {
+        try {
+            const response = await fetch(plugin.serviceBase + "/exectoken", {
+                method: "GET",
+                credentials: "include"
+            });
+            if (!response.ok) throw new Error("Execution token request failed");
+            const body = await response.json();
+            return body && body.token ? String(body.token) : "";
+        } catch (e) {
+            return "";
+        }
+    }
+
+    async function buildAuthHeaders() {
         const headers = {};
-        if (pluginToken) {
-            headers["Authorization"] = "Bearer " + pluginToken;
+        const token = await pluginTokenPromise;
+        if (token) {
+            headers["Authorization"] = "Bearer " + token;
         }
         return headers;
     }
 
-    function buildHeaders() {
-        return { "Content-Type": "application/json", ...buildAuthHeaders() };
+    async function buildHeaders() {
+        return { "Content-Type": "application/json", ...(await buildAuthHeaders()) };
     }
 }

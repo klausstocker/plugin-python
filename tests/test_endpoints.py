@@ -51,6 +51,23 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(body["configurationMode"], 0)
         self.assertTrue(body["useQuestion"])
 
+
+    def test_loadplugindto_does_not_serialize_token(self):
+        response = self.client.post(
+            f"{BASE_PATH}/open/loadplugindto",
+            json={"typ": "PIG", "name": "PluginVomTester", "config": ""},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertNotIn("pluginToken", body.get("params") or {})
+
+    def test_exectoken_returns_execution_token_for_script_startup(self):
+        response = self.client.get(f"{BASE_PATH}/exectoken")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"token": code_execution_endpoints.get_exec_token()})
+
     def test_get_buildhash_returns_commit_hash(self):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
         original_env = os.environ.get("PLUGIN_BUILD_HASH")
