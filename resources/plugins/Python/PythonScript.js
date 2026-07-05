@@ -4,7 +4,9 @@ try {
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
-    const dtoParams = dto.params && typeof dto.params === "object" ? dto.params : {};
+    const dtoParams = (dto.params && typeof dto.params === "object")
+        ? dto.params
+        : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
     let dtoData = {};
     try {
         if (dto.jsonData) {
@@ -27,7 +29,7 @@ function initPluginPython(dtoString, active) {
     const plugin = {
         name: dto.tagName,
         active: !!active,
-        serviceBase: (dto.serviceBase || "/pluginpython").replace(/\/$/, "")
+        serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
     const pluginToken = dtoParams.pluginToken || "";
 
