@@ -2,10 +2,9 @@ try {
     $ = jQuery;
 } catch (e) { }
 
-const PYTHON_SCRIPT_COMMIT_HASH = "c70dad38cc61";
-
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
+    const dtoParams = dto.params && typeof dto.params === "object" ? dto.params : {};
     let dtoData = {};
     try {
         if (dto.jsonData) {
@@ -28,9 +27,10 @@ function initPluginPython(dtoString, active) {
     const plugin = {
         name: dto.tagName,
         active: !!active,
-        serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
+        serviceBase: (dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
-    const pluginToken = readDtoParam(dto, "pluginToken") || "";
+    const pluginToken = dtoParams.pluginToken || "";
+    console.log("[pluginpython PythonScript] execution token read from dto:", pluginToken);
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
@@ -40,7 +40,6 @@ function initPluginPython(dtoString, active) {
     const mainPanelId = `mainPanel_${plugin.name}`;
     const outputPanelId = `outputPanel_${plugin.name}`;
     const toggleLayoutButtonId = `toggleLayout_${plugin.name}`;
-    const buildInfoId = `buildInfo_${plugin.name}`;
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
     const defaultRatio = 2 / 3;
@@ -64,7 +63,6 @@ function initPluginPython(dtoString, active) {
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
-    setupBuildInfo();
 
     function drawLayout() {
         const clsName = "." + rootClass;
@@ -78,11 +76,7 @@ function initPluginPython(dtoString, active) {
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
                             <span>main.py</span>
-                            <span class="header-actions">
-                                <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
-                                <span id="${buildInfoId}" class="build-info-help" title="Script build: ${escapeHtmlAttr(PYTHON_SCRIPT_COMMIT_HASH)}
-Server build: loading...">?</span>
-                            </span>
+                            <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
                         </div>
                         <div id="${mainEditorId}" class="editor-box"></div>
                     </div>
@@ -94,8 +88,8 @@ Server build: loading...">?</span>
                 </div>
 
                 <div class="btn-container">
-                    <button class="black-button" id="${runButtonId}" type="button" ${plugin.active ? "" : "disabled"}>Run Code</button>
-                    <button class="black-button" id="${lintButtonId}" type="button" ${plugin.active ? "" : "disabled"}>Lint Code</button>
+                    <button class="black-button" id="${runButtonId}" ${plugin.active ? "" : "disabled"}>Run Code</button>
+                    <button class="black-button" id="${lintButtonId}" ${plugin.active ? "" : "disabled"}>Lint Code</button>
                 </div>
             </div>
         `);
@@ -146,13 +140,8 @@ Server build: loading...">?</span>
                 align-items: center;
                 justify-content: space-between;
             }
-            .code-runner-root .header-actions {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-            }
             .code-runner-root .layout-toggle-button {
-                margin: 0;
+                margin: 0 8px;
                 min-width: 36px;
                 height: 32px;
                 border: 1px solid #b8b8b8;
@@ -161,27 +150,6 @@ Server build: loading...">?</span>
                 cursor: pointer;
                 font-size: 16px;
                 line-height: 1;
-            }
-            .code-runner-root .build-info-help {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 18px;
-                height: 18px;
-                border: 1px solid #888;
-                border-radius: 50%;
-                background: #f7f7f7;
-                color: #444;
-                font-family: sans-serif;
-                font-size: 12px;
-                font-weight: 700;
-                cursor: help;
-                line-height: 1;
-            }
-            .code-runner-root .build-info-help.build-mismatch {
-                border-color: #d00;
-                background: #fff0f0;
-                color: #d00;
             }
             .code-runner-root .container {
                 display: flex;
@@ -311,34 +279,6 @@ Server build: loading...">?</span>
         bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files } }), out);
     }
 
-    async function setupBuildInfo() {
-        const buildInfo = document.getElementById(buildInfoId);
-        if (!buildInfo) return;
-
-        const scriptHash = PYTHON_SCRIPT_COMMIT_HASH || "unknown";
-        buildInfo.title = `Script build: ${scriptHash}
-Server build: loading...`;
-
-        try {
-            const response = await fetch(plugin.serviceBase + "/buildhash", {
-                method: "GET",
-                headers: buildAuthHeaders()
-            });
-            if (!response.ok) throw new Error("Build hash request failed");
-
-            const body = await response.json();
-            const serverHash = body && body.commitHash ? String(body.commitHash) : "unknown";
-            const mismatch = serverHash !== scriptHash;
-            buildInfo.title = `Script build: ${scriptHash}
-Server build: ${serverHash}`;
-            buildInfo.classList.toggle("build-mismatch", mismatch);
-        } catch (e) {
-            buildInfo.title = `Script build: ${scriptHash}
-Server build: unavailable`;
-            buildInfo.classList.add("build-mismatch");
-        }
-    }
-
     function setupLayoutControls() {
         const container = document.getElementById(containerId);
         const mainPanel = document.getElementById(mainPanelId);
@@ -399,13 +339,13 @@ Server build: unavailable`;
         const btn = document.getElementById(buttonId);
         if (!btn) return;
 
-        btn.addEventListener("click", async function (event) {
-            event.preventDefault();
+        btn.addEventListener("click", async function () {
             const payload = bodyBuilder();
             const originalText = btn.textContent;
             btn.disabled = true;
             btn.textContent = "Working...";
             try {
+                console.log("[pluginpython PythonScript] sending execution token to endpoint", endpoint, pluginToken);
                 const res = await fetch(plugin.serviceBase + endpoint, {
                     method: "POST",
                     headers: buildHeaders(),
@@ -422,19 +362,6 @@ Server build: unavailable`;
         });
     }
 
-    function readDtoParam(sourceDto, key) {
-        const candidates = [
-            sourceDto && sourceDto.params,
-            sourceDto && sourceDto.pluginDto && sourceDto.pluginDto.params
-        ];
-        for (const candidate of candidates) {
-            if (candidate && typeof candidate === "object" && candidate[key] != null) {
-                return candidate[key];
-            }
-        }
-        return "";
-    }
-
     function escapeHtml(s) {
         return String(s)
             .replace(/&/g, "&amp;")
@@ -442,23 +369,12 @@ Server build: unavailable`;
             .replace(/>/g, "&gt;");
     }
 
-    function escapeHtmlAttr(s) {
-        return String(s)
-            .replace(/&/g, "&amp;")
-            .replace(/"/g, "&quot;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-    }
-
-    function buildAuthHeaders() {
-        const headers = {};
+    function buildHeaders() {
+        const headers = { "Content-Type": "application/json" };
         if (pluginToken) {
+            console.log("[pluginpython PythonScript] adding execution token to Authorization header:", pluginToken);
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
-    }
-
-    function buildHeaders() {
-        return { "Content-Type": "application/json", ...buildAuthHeaders() };
     }
 }

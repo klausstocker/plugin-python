@@ -27,6 +27,7 @@ logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
 router = APIRouter()
 logger = logging.getLogger("plugin-python.endpoints")
+logger.warning("Created plugin execution token: %s", EXEC_TOKEN)
 
 
 
@@ -133,9 +134,19 @@ def _extract_exec_token(request: Request) -> str:
 
 def _ensure_authorized(request: Request) -> None:
     if not REQUIRE_EXEC_TOKEN:
+        logger.info("Execution token check skipped because PLUGIN_EXEC_REQUIRE_TOKEN is disabled")
         return
     presented_token = _extract_exec_token(request)
-    if not EXEC_TOKEN or not hmac.compare_digest(presented_token, EXEC_TOKEN):
+    token_matches = bool(EXEC_TOKEN) and hmac.compare_digest(presented_token, EXEC_TOKEN)
+    logger.warning(
+        "Comparing plugin execution token for %s %s: expected=%s presented=%s match=%s",
+        request.method,
+        request.url.path,
+        EXEC_TOKEN,
+        presented_token,
+        token_matches,
+    )
+    if not token_matches:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid plugin execution token",

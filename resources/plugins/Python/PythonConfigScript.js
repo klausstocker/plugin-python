@@ -22,6 +22,7 @@ function configPluginPython(dtoString) {
     const pluginTag = dto.tagName || "pluginpython";
     const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "");
     const pluginToken = dtoParams.pluginToken || "";
+    console.log("[pluginpython PythonConfigScript] execution token read from dto:", pluginToken);
 
     const ids = {
         rootClass: "pluginConfigForm",
@@ -1161,6 +1162,7 @@ function configPluginPython(dtoString) {
 
             try {
                 const payload = bodyBuilder();
+                console.log("[pluginpython PythonConfigScript] sending execution token to endpoint", endpoint, pluginToken);
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
                     headers: buildHeaders(),
@@ -1285,6 +1287,7 @@ function configPluginPython(dtoString) {
     function buildAuthHeaders() {
         const headers = {};
         if (pluginToken) {
+            console.log("[pluginpython PythonConfigScript] adding execution token to Authorization header:", pluginToken);
             headers["Authorization"] = "Bearer " + pluginToken;
         }
         return headers;
