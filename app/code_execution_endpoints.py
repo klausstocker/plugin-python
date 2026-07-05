@@ -27,7 +27,6 @@ logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
 router = APIRouter()
 logger = logging.getLogger("plugin-python.endpoints")
-logger.info("Created plugin execution token: %s", EXEC_TOKEN)
 
 
 def _dataset_variable_summary(value: Any) -> dict[str, Any]:
