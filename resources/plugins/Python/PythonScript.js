@@ -34,7 +34,7 @@ function initPluginPython(dtoString, active) {
         serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
     const pluginToken = dtoParams.pluginToken || "";
-
+    console.log(pluginToken);
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
     const outputId = `output_${plugin.name}`;
