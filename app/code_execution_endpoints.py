@@ -21,6 +21,7 @@ SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 FILE_STORAGE_ROOT = Path(os.getenv("PLUGIN_FILE_STORAGE_DIR", "/opt/letto/images/pluginpython/files"))
 REQUIRE_EXEC_TOKEN = os.getenv("PLUGIN_EXEC_REQUIRE_TOKEN", "true").lower() == "true"
 EXEC_TOKEN = secrets.token_urlsafe(32)
+EXEC_TOKEN_COOKIE_NAME = os.getenv("PLUGIN_EXEC_TOKEN_COOKIE_NAME", "pluginpython_exec_token")
 
 TRACE_LOG_LEVEL = 5
 logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
@@ -126,6 +127,7 @@ def _extract_exec_token(request: Request) -> str:
         return auth[7:].strip()
     return (
         request.headers.get("x-plugin-token")
+        or request.cookies.get(EXEC_TOKEN_COOKIE_NAME)
         or request.query_params.get("token")
         or ""
     ).strip()

@@ -19,8 +19,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, APIRouter, Body, UploadFile, File, Request
-from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
+from fastapi import FastAPI, APIRouter, Body, UploadFile, File, Request, Response
+from app.code_execution_endpoints import EXEC_TOKEN_COOKIE_NAME, _file_specs_from_config, get_exec_token, router as code_execution_router
 from app.dataset_helper import (
     dataset_file_from_variables,
     extract_dataset_variables,
@@ -232,6 +232,18 @@ def encode_question_config_base64(config_raw: Optional[str]) -> str:
 
     json_payload = question_config.model_dump_json()
     return base64.b64encode(json_payload.encode("utf-8")).decode("ascii")
+
+
+def attach_exec_token_cookie(response: Response) -> None:
+    """Store the execution token in a browser-managed cookie, not in persisted question config."""
+    response.set_cookie(
+        key=EXEC_TOKEN_COOKIE_NAME,
+        value=get_exec_token(),
+        httponly=True,
+        secure=os.getenv("PLUGIN_EXEC_COOKIE_SECURE", "true").lower() == "true",
+        samesite=os.getenv("PLUGIN_EXEC_COOKIE_SAMESITE", "lax"),
+        path=SERVICEPATH or "/",
+    )
 
 log_external_uri_configuration()
 
@@ -1314,7 +1326,7 @@ def create_or_update_configuration_state(
         state.pluginConfigDto.params = {}
 
     state.pluginConfigDto.params["config"] = state.config
-    state.pluginConfigDto.params["pluginToken"] = get_exec_token()
+    state.pluginConfigDto.params.pop("pluginToken", None)
 
     if state.pluginPython is not None:
         state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
@@ -1500,18 +1512,19 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         return req.pluginstring
 
     @r.post("/loadplugindto", response_model=PluginDto)
-    def load_plugin_dto(req: LoadPluginRequestDto):
+    def load_plugin_dto(req: LoadPluginRequestDto, response: Response):
         log_dataset_transfer("/open loadplugindto request", question=req.q)
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         if not pi:
             return PluginDto()
         tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
+        attach_exec_token_cookie(response)
         plugin_dto = PluginDto(
             tagName=tag_name,
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"pluginToken": get_exec_token()},
+            params={},
             jsonData=encode_question_config_base64(req.config)
         )
         log_dataset_transfer("/open loadplugindto response", question=req.q, plugin_dto=plugin_dto)
@@ -1581,7 +1594,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         )
 
     @r.post("/setconfigurationdata", response_model=PluginConfigDto)
-    def set_configuration_data(req: PluginSetConfigurationDataRequestDto):
+    def set_configuration_data(req: PluginSetConfigurationDataRequestDto, response: Response):
         log_dataset_transfer("/open setconfigurationdata request", question=req.questionDto)
         state = get_configuration_state(req.configurationID)
         if state is None:
@@ -1608,7 +1621,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
                 config=updated_state.config or "",
                 q=updated_state.questionDto or None,
                 configurationID=updated_state.configurationID,
-            )
+            ),
+            response,
         )
 
         return updated_state.pluginConfigDto
@@ -1621,7 +1635,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         return state.config or ""
 
     @r.post("/reloadplugindto", response_model=PluginDto)
-    def reload_plugin_dto(req: LoadPluginRequestDto):
+    def reload_plugin_dto(req: LoadPluginRequestDto, response: Response):
         log_dataset_transfer("/open reloadplugindto request", question=req.q)
         effective_typ = req.typ or ""
         effective_name = req.name or ""
@@ -1641,12 +1655,13 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             return PluginDto()
 
         tag_name = f"{(effective_question.id if effective_question else 0)}_{effective_name}_{req.nr or 0}"
+        attach_exec_token_cookie(response)
         plugin_dto = PluginDto(
             tagName=tag_name,
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"config": effective_config, "pluginToken": get_exec_token()},
+            params={"config": effective_config},
             jsonData=encode_question_config_base64(effective_config),
         )
         log_dataset_transfer("/open reloadplugindto response", question=effective_question, plugin_dto=plugin_dto)
@@ -1720,18 +1735,19 @@ def extern_generalinfo(plugintyp: str = Body(..., embed=False)):
 
 
 @extern_router.post("/reloadplugindto", response_model=PluginDto)
-def extern_reload(req: LoadPluginRequestDto):
+def extern_reload(req: LoadPluginRequestDto, response: Response):
     # Use the /open implementation semantics
     pi = create_plugin(req.typ or "", req.name or "", req.config or "")
     if not pi:
         return PluginDto()
     tag_name = f"{(req.q.id if req.q else 0)}_{req.name}_{req.nr}"
+    attach_exec_token_cookie(response)
     return PluginDto(
         tagName=tag_name,
         imageUrl="",
         width=CONF_width,
         height=CONF_height,
-        params={"pluginToken": get_exec_token()},
+        params={},
     )
 
 

@@ -33,7 +33,6 @@ function initPluginPython(dtoString, active) {
         active: !!active,
         serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
-    const pluginToken = dtoParams.pluginToken || "";
 
     const rootClass = `codeRunner_${plugin.name}`;
     const mainEditorId = `editor_${plugin.name}`;
@@ -325,7 +324,8 @@ Server build: loading...`;
         try {
             const response = await fetch(plugin.serviceBase + "/buildhash", {
                 method: "GET",
-                headers: buildAuthHeaders()
+                headers: buildAuthHeaders(),
+                credentials: "include"
             });
             if (!response.ok) throw new Error("Build hash request failed");
 
@@ -411,6 +411,7 @@ Server build: unavailable`;
                 const res = await fetch(plugin.serviceBase + endpoint, {
                     method: "POST",
                     headers: buildHeaders(),
+                    credentials: "include",
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -441,9 +442,6 @@ Server build: unavailable`;
 
     function buildAuthHeaders() {
         const headers = {};
-        if (pluginToken) {
-            headers["Authorization"] = "Bearer " + pluginToken;
-        }
         return headers;
     }
 

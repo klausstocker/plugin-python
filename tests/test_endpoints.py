@@ -51,6 +51,27 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(body["configurationMode"], 0)
         self.assertTrue(body["useQuestion"])
 
+
+    def test_loadplugindto_sets_cookie_without_serializing_token(self):
+        response = self.client.post(
+            f"{BASE_PATH}/open/loadplugindto",
+            json={"typ": "PIG", "name": "PluginVomTester", "config": ""},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertNotIn("pluginToken", body.get("params") or {})
+        self.assertIn(code_execution_endpoints.EXEC_TOKEN_COOKIE_NAME, response.cookies)
+
+    def test_buildhash_accepts_execution_cookie(self):
+        response = self.client.get(
+            f"{BASE_PATH}/buildhash",
+            cookies={code_execution_endpoints.EXEC_TOKEN_COOKIE_NAME: code_execution_endpoints.get_exec_token()},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("commitHash", response.json())
+
     def test_get_buildhash_returns_commit_hash(self):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
         original_env = os.environ.get("PLUGIN_BUILD_HASH")
