@@ -70,7 +70,6 @@ class TestScoreResult(unittest.TestCase):
         from shared.check_result import CheckResult
         r = CheckResult({"count": 2, "failures": [], "failure_count": 1, "errors": [], "exceptions": []})
         text = r.__repr__()
-        self.assertIn("Ran 2 tests, 1 failures, 0 errors, 0 exceptions.", text)
         self.assertIn("Unit tests: 1 successful, 1 failing.", text)
         self.assertNotIn("AssertionError", text)
 

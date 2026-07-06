@@ -56,7 +56,6 @@ class CheckResult():
             ret += f'{str(ex)}\n'
         failing_count = self.negCount()
         successful_count = max(0, self.count - failing_count)
-        ret += f'Ran {self.count} tests, {self.failure_count} failures, {self.error_count} errors, {self.exception_count} exceptions.\n'
         ret += f'Unit tests: {successful_count} successful, {failing_count} failing.\n'
         ret += f'Unit test score: {(self.score() * 100.):.2f} %\n'
         return ret
