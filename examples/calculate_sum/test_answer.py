@@ -53,4 +53,5 @@ class Checker(unittest.TestCase):  # do not rename; plugin checks expect this na
             answer.calculate_sum(*args)
         with RedirectedStdout() as expected_out:
             correct_implementation(*args)
-        self.assertEqual(str(student_out), str(expected_out))
+        # messages in asserts are shown as feedback
+        self.assertEqual(str(student_out), str(expected_out), "think about print")
