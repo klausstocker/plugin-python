@@ -38,16 +38,41 @@ class RedirectedStdout:
 
 def main():
     unittestOutput = StringIO()
-    ret = {'count' : 0, 'errors': [], 'failures': [], 'exceptions': []}
+    ret = {'count' : 0, 'errors': [], 'failures': [], 'exceptions': [], 'failure_count': 0, 'error_count': 0}
+
+    def assertion_message(traceback_text):
+        lines = [line.strip() for line in str(traceback_text).splitlines() if line.strip()]
+        message = lines[-1] if lines else ''
+        if message.startswith('AssertionError:'):
+            message = message[len('AssertionError:'):].strip()
+        if ' : ' in message:
+            return message.rsplit(' : ', 1)[1].strip()
+        direct_assertion_fragments = [
+            ' != ',
+            ' == ',
+            ' is not ',
+            ' is ',
+            ' not found in ',
+            ' unexpectedly found in ',
+        ]
+        if any(fragment in message for fragment in direct_assertion_fragments):
+            return ''
+        return message
+
     try:
         suite = unittest.TestLoader().loadTestsFromTestCase(Checker)
         runner = unittest.TextTestRunner(verbosity=0, stream=unittestOutput)
         result = runner.run(suite)
         ret['count'] = result.testsRun
+        ret['failure_count'] = len(result.failures)
+        ret['error_count'] = len(result.errors)
         for error in result.errors:
             ret['errors'].append(error[1] if isinstance(error, tuple) else str(error))
         for failure in result.failures:
-            ret['failures'].append(failure[1] if isinstance(failure, tuple) else str(failure))
+            if isinstance(failure, tuple) and len(failure) > 0:
+                failure_message = assertion_message(failure[1])
+                if failure_message:
+                    ret['failures'].append(failure_message)
     except Exception as e:
         ret['exceptions'].append(str(e))
     return ret
