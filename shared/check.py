@@ -60,5 +60,12 @@ if __name__ == '__main__':
     jobe = JobeWrapper(server)
     result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files))
     if not result.success():
-        return CheckResult({'count': 0, 'errors': ['error running code']})
+        return CheckResult({
+            'count': 0,
+            'errors': [
+                'Error running Jobe unit tests. '
+                f'{result.__repr__().strip()} '
+                'Please check the validation tests, imports, uploaded files, and the submitted Python syntax.'
+            ],
+        })
     return CheckResult.from_str(result.stdout)
