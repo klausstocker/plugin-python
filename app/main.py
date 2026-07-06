@@ -10,6 +10,7 @@ import asyncio
 import logging
 import shutil
 import httpx
+import html
 import platform
 import socket
 import time
@@ -1030,11 +1031,20 @@ class PluginPython:
                 linter_weight,
                 files=file_specs,
             )
+            result_text = result.__repr__()
             info.punkteIst = float(grade * total_score)
             info.status  = result.check_result.status()
-            info.schuelerErgebnis = CalcErgebnisDto(string=result.__repr__())
-        except Exception:
+            info.schuelerErgebnis = CalcErgebnisDto(string=result_text)
+            info.feedback = result_text
+            info.htmlScoreInfo = f"<pre>{html.escape(result_text)}</pre>"
+        except Exception as ex:
             logger.exception("Scoring failed; returning zero score")
+            info.feedback = (
+                f"Error scoring code: {ex}. Please check the validation tests, "
+                "Jobe availability, imports, uploaded files, and the submitted Python syntax."
+            )
+            info.schuelerErgebnis = CalcErgebnisDto(string=info.feedback)
+            info.htmlScoreInfo = f"<pre>{html.escape(info.feedback)}</pre>"
         return info
 
 

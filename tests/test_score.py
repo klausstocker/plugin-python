@@ -13,6 +13,7 @@ from shared.score import scoreCode
 class FakeCheckResult:
     def __init__(self, value):
         self._value = value
+        self.count = 0
 
     def score(self):
         return self._value
@@ -51,6 +52,33 @@ if __name__ == '__main__':
 
 
 class TestScoreResult(unittest.TestCase):
+    def test_check_result_repr_includes_successful_and_failing_counts(self):
+        from shared.check_result import CheckResult
+        r = CheckResult({
+            "count": 3,
+            "failures": ["helpful message"],
+            "errors": ["error"],
+            "exceptions": [],
+            "failure_count": 1,
+            "error_count": 1,
+        })
+        text = r.__repr__()
+        self.assertIn("Unit tests: 1 successful, 2 failing.", text)
+        self.assertIn("Assertion message: helpful message", text)
+
+    def test_check_result_repr_can_count_failures_without_assertion_details(self):
+        from shared.check_result import CheckResult
+        r = CheckResult({"count": 2, "failures": [], "failure_count": 1, "errors": [], "exceptions": []})
+        text = r.__repr__()
+        self.assertIn("Unit tests: 1 successful, 1 failing.", text)
+        self.assertNotIn("AssertionError", text)
+
+    def test_check_result_from_str_reports_missing_jobe_result(self):
+        from shared.check_result import CheckResult
+        r = CheckResult.from_str("unexpected jobe output")
+        text = r.__repr__()
+        self.assertIn("Could not read the unit test result from Jobe output", text)
+
     def test_score_result_repr_with_lint_details(self):
         from shared.score_result import ScoreResult
         r = ScoreResult(FakeCheckResult(0.5), 0.7, 2.0)

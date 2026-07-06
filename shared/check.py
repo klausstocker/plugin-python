@@ -38,16 +38,43 @@ class RedirectedStdout:
 
 def main():
     unittestOutput = StringIO()
-    ret = {'count' : 0, 'errors': [], 'failures': [], 'exceptions': []}
+    ret = {'count' : 0, 'errors': [], 'failures': [], 'exceptions': [], 'failure_count': 0, 'error_count': 0}
+
+    def custom_assertion_message(traceback_text):
+        lines = [line.strip() for line in str(traceback_text).splitlines() if line.strip()]
+        message = lines[-1] if lines else ''
+        if message.startswith('AssertionError:'):
+            message = message[len('AssertionError:'):].strip()
+        if ' : ' in message:
+            return message.rsplit(' : ', 1)[1].strip()
+        default_assertion_fragments = [
+            ' != ',
+            ' == ',
+            ' not ',
+            ' is not ',
+            ' not found in ',
+            ' unexpectedly found in ',
+            'Regex didn\\'t match',
+            'Exception not raised',
+        ]
+        if any(fragment in message for fragment in default_assertion_fragments):
+            return ''
+        return message
+
     try:
         suite = unittest.TestLoader().loadTestsFromTestCase(Checker)
         runner = unittest.TextTestRunner(verbosity=0, stream=unittestOutput)
         result = runner.run(suite)
         ret['count'] = result.testsRun
+        ret['failure_count'] = len(result.failures)
+        ret['error_count'] = len(result.errors)
         for error in result.errors:
             ret['errors'].append(error[1] if isinstance(error, tuple) else str(error))
         for failure in result.failures:
-            ret['failures'].append(failure[1] if isinstance(failure, tuple) else str(failure))
+            if isinstance(failure, tuple) and len(failure) > 1:
+                failure_message = custom_assertion_message(failure[1])
+                if failure_message:
+                    ret['failures'].append(failure_message)
     except Exception as e:
         ret['exceptions'].append(str(e))
     return ret
@@ -60,5 +87,12 @@ if __name__ == '__main__':
     jobe = JobeWrapper(server)
     result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files))
     if not result.success():
-        return CheckResult({'count': 0, 'errors': ['error running code']})
+        return CheckResult({
+            'count': 0,
+            'errors': [
+                'Error running Jobe unit tests. '
+                f'{result.__repr__().strip()} '
+                'Please check the validation tests, imports, uploaded files, and the submitted Python syntax.'
+            ],
+        })
     return CheckResult.from_str(result.stdout)
