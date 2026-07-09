@@ -40,28 +40,29 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     echo "$TZ" > /etc/timezone && \
     apt-get update && \
     apt-get --no-install-recommends install -yq \
-        acl \
-        apache2 \
-        build-essential \
-        fp-compiler \
-        git \
-        libapache2-mod-php \
-        nano \
-        nodejs \
-        octave \
-        default-jdk \
-        php \
-        php-cli \
-        php-mbstring \
-        php-intl \
-        python3 \
-        python3-pip \
-        python3-setuptools \
-        pylint \
-        sqlite3 \
-        sudo \
-        tzdata \
-        unzip && \
+    acl \
+    apache2 \
+    build-essential \
+    fp-compiler \
+    git \
+    libapache2-mod-php \
+    nano \
+    nodejs \
+    octave \
+    default-jdk \
+    php \
+    php-cli \
+    php-mbstring \
+    php-intl \
+    python3 \
+    python3-numpy \
+    python3-pip \
+    python3-setuptools \
+    pylint \
+    sqlite3 \
+    sudo \
+    tzdata \
+    unzip && \
     pylint --reports=no --score=n --generate-rcfile > /etc/pylintrc && \
     ln -sf /proc/self/fd/1 /var/log/apache2/access.log && \
     ln -sf /proc/self/fd/1 /var/log/apache2/error.log && \
@@ -78,8 +79,8 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     apache2ctl start && \
     cd /var/www/html/jobe && \
     if [ -n "${API_KEYS}" ]; then \
-        sed -i 's/$require_api_keys = false/$require_api_keys = true/' /var/www/html/jobe/app/Config/Jobe.php && \
-        sed -i "s/'2AAA7A.*/$API_KEYS/" /var/www/html/jobe/app/Config/Jobe.php \
+    sed -i 's/$require_api_keys = false/$require_api_keys = true/' /var/www/html/jobe/app/Config/Jobe.php && \
+    sed -i "s/'2AAA7A.*/$API_KEYS/" /var/www/html/jobe/app/Config/Jobe.php \
     ; fi && \
     /usr/bin/python3 /var/www/html/jobe/install --max_uid=500 && \
     chown -R ${APACHE_RUN_USER}:${APACHE_RUN_GROUP} /var/www/html && \
