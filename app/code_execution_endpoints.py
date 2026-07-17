@@ -444,7 +444,9 @@ async def check_code(request: Request):
         logger.exception("Invalid /check request")
         return JSONResponse({'output': f'Invalid check request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
     try:
-        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body))
+        question_config = body.get('questionConfigDto') or {}
+        language, _ = _run_language_spec(question_config)
+        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body), language=language)
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error checking code via Jobe")
@@ -469,9 +471,10 @@ async def score_plugin(request: Request):
     linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
     linter_weight_raw = question_config.get('linterWeight', 0.0) if isinstance(question_config, dict) else 0.0
     linter_weight = _to_float(linter_weight_raw)
+    language, _ = _run_language_spec(question_config)
 
     try:
-        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body))
+        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body), language=language)
         return JSONResponse({'output': result.__repr__(), 'score': score})
     except Exception as e:
         logger.exception("Error scoring code via Jobe")

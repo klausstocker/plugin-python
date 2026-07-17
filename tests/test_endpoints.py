@@ -182,6 +182,24 @@ class TestEndpoints(unittest.TestCase):
         jobe_wrapper_mock.return_value.run_test.assert_called_once_with(
             "cpp", "int main() { return 0; }", "main.cpp", [])
 
+    @patch("app.code_execution_endpoints.checkCode")
+    def test_check_uses_catch2_for_cpp_questions(self, check_code_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        check_code_mock.return_value.__repr__.return_value = "check result"
+
+        response = self.client.post(
+            f"{BASE_PATH}/check",
+            headers=headers,
+            json={
+                "code": "int add() { return 3; }",
+                "testcode": 'TEST_CASE("add") {}',
+                "questionConfigDto": {"programmingLanguage": "cpp"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(check_code_mock.call_args.kwargs["language"], "cpp")
+
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
