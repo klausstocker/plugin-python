@@ -164,6 +164,24 @@ class TestEndpoints(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["typ"], "PIG")
 
+    @patch("app.code_execution_endpoints.JobeWrapper")
+    def test_run_uses_cpp_language_and_source_filename(self, jobe_wrapper_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        jobe_wrapper_mock.return_value.run_test.return_value = "run result"
+
+        response = self.client.post(
+            f"{BASE_PATH}/run",
+            headers=headers,
+            json={
+                "code": "int main() { return 0; }",
+                "questionConfigDto": {"programmingLanguage": "cpp"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        jobe_wrapper_mock.return_value.run_test.assert_called_once_with(
+            "cpp", "int main() { return 0; }", "main.cpp", [])
+
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}

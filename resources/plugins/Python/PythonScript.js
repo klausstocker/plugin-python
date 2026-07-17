@@ -331,7 +331,7 @@ Server build: loading...">?</span>
         setupLayoutControls();
         const out = document.getElementById(outputId);
 
-        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files } }), out);
+        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { programmingLanguage: programmingLanguage, files: files } }), out);
         bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files } }), out);
     }
 
