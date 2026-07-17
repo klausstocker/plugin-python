@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -163,6 +164,52 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["typ"], "PIG")
+
+    @patch("app.main.scoreCode")
+    def test_open_score_uses_answer_text_when_antwort_is_empty(self, score_mock):
+        class FakeCheckResult:
+            def status(self):
+                return "OK"
+
+        class FakeScoreResult:
+            check_result = FakeCheckResult()
+
+            def __repr__(self):
+                return "score details"
+
+        score_mock.return_value = (1.0, FakeScoreResult())
+
+        response = self.client.post(
+            f"{BASE_PATH}/open/score",
+            json={
+                "typ": "Python",
+                "name": "PluginVomTester",
+                "config": json.dumps({
+                    "validation": (
+                        "import unittest\n"
+                        "import answer\n"
+                        "class Checker(unittest.TestCase):\n"
+                        "    def test_return(self):\n"
+                        "        self.assertEqual(answer.calculate_sum(1, 2), 3)"
+                    ),
+                    "files": {"input.txt": "content"},
+                }),
+                "antwort": "",
+                "answerDto": {"answerText": "def calculate_sum(a, b):\n    return a + b\n", "ze": ""},
+                "grade": 2.0,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "OK")
+        score_mock.assert_called_once()
+        self.assertEqual(
+            score_mock.call_args.args[1],
+            "def calculate_sum(a, b):\n    return a + b\n",
+        )
+        uploaded_files = score_mock.call_args.kwargs["files"]
+        self.assertEqual(uploaded_files[0][1], "input.txt")
+        self.assertEqual(uploaded_files[0][2], b"content")
 
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
