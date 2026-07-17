@@ -43,6 +43,7 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     acl \
     apache2 \
     build-essential \
+    catch2 \
     fp-compiler \
     git \
     libapache2-mod-php \
