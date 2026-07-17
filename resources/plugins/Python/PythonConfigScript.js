@@ -1167,9 +1167,13 @@ function configPluginPython(dtoString) {
         if (!example) return;
         state.files = example.files || {};
         state.evalConfig = example.evalConfig || { runAtTest: true, lintAtTest: true };
+        state.programmingLanguage = normalizeProgrammingLanguage(example.programmingLanguage);
 
         if (configPluginPython._setUnitCode) configPluginPython._setUnitCode(example.validation || "");
         if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
+        if (configPluginPython._setEditorLanguage) {
+            configPluginPython._setEditorLanguage(state.programmingLanguage);
+        }
 
         setupFileTab();
         setupOptionsTab();
