@@ -119,6 +119,15 @@ class Checker(unittest.TestCase):
             self.assertEqual(submitted_files[1:], files)
             self.assertTrue(result.wasSuccessful())
 
+    def test_run_test_includes_configured_cputime_in_runspec(self):
+        jobe = JobeWrapper('jobe:80')
+
+        with patch.object(jobe, 'do_http', return_value={'outcome': 15}) as do_http:
+            jobe.run_test('python3', 'print(1)', 'test.py', cputime=12)
+
+        payload = do_http.call_args.args[3]
+        self.assertIn('"cputime":12', payload)
+
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
         fileId = 'B00WHrZtSjfile1gasdfaserscasdfaserasdfaserqwcasrweas'
@@ -144,7 +153,7 @@ class Checker(unittest.TestCase):
 
         self.assertEqual(result, 'result')
         run_test.assert_called_once_with(
-            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None)
+            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None, cputime=None)
 
     def test_run_cpp_uses_cpp_language_and_cpp_filename(self):
         jobe = JobeWrapper('jobe:80')
@@ -153,7 +162,7 @@ class Checker(unittest.TestCase):
 
         self.assertEqual(result, 'result')
         run_test.assert_called_once_with(
-            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None)
+            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None, cputime=None)
 
     def test_build_catch2_program_includes_c_solution_with_c_linkage(self):
         program = JobeWrapper.build_catch2_test_program(

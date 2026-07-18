@@ -195,6 +195,18 @@ def _to_float(value: Any) -> float:
         return 0.0
 
 
+def _to_positive_int(value: Any, default: int = 5) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _cputime_from_question_config(question_config: Any) -> int:
+    return _to_positive_int(question_config.get('cpuTime') if isinstance(question_config, dict) else None)
+
+
 def _safe_display_name(value: str) -> str:
     name = Path((value or "").strip()).name
     name = re.sub(r"[\\/]+", "_", name)
@@ -396,7 +408,7 @@ async def run_code(request: Request):
                 len(content),
             )
         jobe = JobeWrapper('jobe:80')
-        result = jobe.run_test(jobe_language, code, source_filename, files)
+        result = jobe.run_test(jobe_language, code, source_filename, files, cputime=_cputime_from_question_config(body.get("questionConfigDto")))
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error running code via Jobe")
@@ -446,7 +458,7 @@ async def check_code(request: Request):
     try:
         question_config = body.get('questionConfigDto') or {}
         language, _ = _run_language_spec(question_config)
-        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body), language=language)
+        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body), language=language, cputime=_cputime_from_question_config(question_config))
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error checking code via Jobe")
@@ -474,7 +486,7 @@ async def score_plugin(request: Request):
     language, _ = _run_language_spec(question_config)
 
     try:
-        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body), language=language)
+        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body), language=language, cputime=_cputime_from_question_config(question_config))
         return JSONResponse({'output': result.__repr__(), 'score': score})
     except Exception as e:
         logger.exception("Error scoring code via Jobe")

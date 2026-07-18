@@ -174,13 +174,13 @@ class TestEndpoints(unittest.TestCase):
             headers=headers,
             json={
                 "code": "int main() { return 0; }",
-                "questionConfigDto": {"programmingLanguage": "cpp"},
+                "questionConfigDto": {"programmingLanguage": "cpp", "cpuTime": 12},
             },
         )
 
         self.assertEqual(response.status_code, 200)
         jobe_wrapper_mock.return_value.run_test.assert_called_once_with(
-            "cpp", "int main() { return 0; }", "main.cpp", [])
+            "cpp", "int main() { return 0; }", "main.cpp", [], cputime=12)
 
     @patch("app.code_execution_endpoints.checkCode")
     def test_check_uses_catch2_for_cpp_questions(self, check_code_mock):
@@ -193,12 +193,13 @@ class TestEndpoints(unittest.TestCase):
             json={
                 "code": "int add() { return 3; }",
                 "testcode": 'TEST_CASE("add") {}',
-                "questionConfigDto": {"programmingLanguage": "cpp"},
+                "questionConfigDto": {"programmingLanguage": "cpp", "cpuTime": 12},
             },
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(check_code_mock.call_args.kwargs["language"], "cpp")
+        self.assertEqual(check_code_mock.call_args.kwargs["cputime"], 12)
 
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
@@ -214,6 +215,7 @@ class TestEndpoints(unittest.TestCase):
                 "questionConfigDto": {
                     "linterConfig": "--disable=C0114",
                     "linterWeight": "1,5",
+                    "cpuTime": "9",
                 },
             },
         )
@@ -222,6 +224,7 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(response.json()["score"], 0.75)
         score_mock.assert_called_once()
         self.assertEqual(score_mock.call_args.args[4], 1.5)
+        self.assertEqual(score_mock.call_args.kwargs["cputime"], 9)
 
 
 if __name__ == "__main__":

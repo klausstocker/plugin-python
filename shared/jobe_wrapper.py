@@ -115,7 +115,7 @@ class JobeWrapper():
         connect.request(method, resource, data, headers or {})
         return connect
 
-    def run_test(self, language, code, sourceFilename, files=None):
+    def run_test(self, language, code, sourceFilename, files=None, cputime=None):
         '''Execute the given code in the given language.
         Return the result object.'''
         runspec = {
@@ -124,6 +124,8 @@ class JobeWrapper():
             'sourcecode': code,
             'file_list': []
         }
+        if cputime is not None:
+            runspec['cputime'] = cputime
         
         for fileId, name, content in files or []:
             if self.put_file(fileId, content):
@@ -140,15 +142,15 @@ class JobeWrapper():
         result = self.do_http('POST', resource, headers, data)
         return RunResult(result)
 
-    def run_c(self, code, files=None, source_filename=None):
+    def run_c(self, code, files=None, source_filename=None, cputime=None):
         """Compile and run a standard C program with Jobe."""
         return self.run_test(
-            LANGUAGE_C, code, source_filename or SOURCE_FILENAMES[LANGUAGE_C], files)
+            LANGUAGE_C, code, source_filename or SOURCE_FILENAMES[LANGUAGE_C], files, cputime=cputime)
 
-    def run_cpp(self, code, files=None, source_filename=None):
+    def run_cpp(self, code, files=None, source_filename=None, cputime=None):
         """Compile and run a C++ program with Jobe."""
         return self.run_test(
-            LANGUAGE_CPP, code, source_filename or SOURCE_FILENAMES[LANGUAGE_CPP], files)
+            LANGUAGE_CPP, code, source_filename or SOURCE_FILENAMES[LANGUAGE_CPP], files, cputime=cputime)
 
     @staticmethod
     def build_catch2_test_program(solution_language, solution_filename, test_code):
@@ -174,7 +176,7 @@ class JobeWrapper():
             f'{test_code.rstrip()}\n'
         )
 
-    def run_catch2_tests(self, solution_language, solution_code, test_code, files=None):
+    def run_catch2_tests(self, solution_language, solution_code, test_code, files=None, cputime=None):
         """Run Catch2 tests against a C or C++ submission.
 
         The student submission is uploaded as ``answer.c`` or ``answer.cpp``.
@@ -194,7 +196,7 @@ class JobeWrapper():
         ]
         program = self.build_catch2_test_program(
             solution_language, solution_filename, test_code)
-        return self.run_cpp(program, [solution_file, *auxiliary_files], CATCH2_TEST_FILENAME)
+        return self.run_cpp(program, [solution_file, *auxiliary_files], CATCH2_TEST_FILENAME, cputime=cputime)
 
 
     def do_http(self, method, resource, headers=None, data=None):

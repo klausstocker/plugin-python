@@ -42,6 +42,7 @@ function configPluginPython(dtoString) {
         programmingLanguageId: `programmingLanguage_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
+        cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
         datasetVariablesId: `datasetVariables_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
@@ -216,7 +217,8 @@ function configPluginPython(dtoString) {
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
             },
             linterConfig: (fallbackData && fallbackData.linterConfig) || "",
-            linterWeight: parseWeightValue(fallbackData && fallbackData.linterWeight)
+            linterWeight: parseWeightValue(fallbackData && fallbackData.linterWeight),
+            cpuTime: parseCpuTimeValue(fallbackData && fallbackData.cpuTime)
         };
 
         if (!rawValue) return defaults;
@@ -233,7 +235,8 @@ function configPluginPython(dtoString) {
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
                 },
                 linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
-                linterWeight: parseWeightValue(parsed.linterWeight != null ? parsed.linterWeight : defaults.linterWeight)
+                linterWeight: parseWeightValue(parsed.linterWeight != null ? parsed.linterWeight : defaults.linterWeight),
+                cpuTime: parseCpuTimeValue(parsed.cpuTime != null ? parsed.cpuTime : defaults.cpuTime)
             };
         } catch (e) {
             return {
@@ -243,7 +246,8 @@ function configPluginPython(dtoString) {
                 files: defaults.files,
                 evalConfig: defaults.evalConfig,
                 linterConfig: defaults.linterConfig,
-                linterWeight: defaults.linterWeight
+                linterWeight: defaults.linterWeight,
+                cpuTime: defaults.cpuTime
             };
         }
     }
@@ -355,6 +359,8 @@ function configPluginPython(dtoString) {
                                             <label for="${ids.linterConfigId}">Linter configuration</label>
                                             <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
                                             <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                                            <label for="${ids.cpuTimeId}" title="Jobe run_spec cputime in seconds (default: 5)">CPU time (s)</label>
+                                            <input id="${ids.cpuTimeId}" type="number" min="1" step="1" class="text-input cpu-time-input" placeholder="5" />
                                         </div>
                                         <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
                                     </div>
@@ -1056,14 +1062,16 @@ function configPluginPython(dtoString) {
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
         const programmingLanguage = document.getElementById(ids.programmingLanguageId);
+        const cpuTime = document.getElementById(ids.cpuTimeId);
 
         if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
         if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
         if (linterConfig) linterConfig.value = state.linterConfig || "";
         if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
         if (programmingLanguage) programmingLanguage.value = state.programmingLanguage;
+        if (cpuTime) cpuTime.value = formatCpuTimeValue(state.cpuTime);
 
-        [runAtTest, lintAtTest, linterConfig, linterWeight, programmingLanguage].forEach((el) => {
+        [runAtTest, lintAtTest, linterConfig, linterWeight, programmingLanguage, cpuTime].forEach((el) => {
             if (!el) return;
             const onOptionChanged = (event) => {
                 syncOptionsStateFromInputs();
@@ -1073,6 +1081,9 @@ function configPluginPython(dtoString) {
                 saveConfig();
                 if (el === linterWeight && event && event.type === "change") {
                     linterWeight.value = formatWeightValue(state.linterWeight);
+                }
+                if (el === cpuTime && event && event.type === "change") {
+                    cpuTime.value = formatCpuTimeValue(state.cpuTime);
                 }
             };
             el.addEventListener("change", onOptionChanged);
@@ -1086,6 +1097,7 @@ function configPluginPython(dtoString) {
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
         const programmingLanguage = document.getElementById(ids.programmingLanguageId);
+        const cpuTime = document.getElementById(ids.cpuTimeId);
 
         state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
         state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
@@ -1094,6 +1106,7 @@ function configPluginPython(dtoString) {
 
         const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
+        state.cpuTime = parseCpuTimeValue(cpuTime ? cpuTime.value : state.cpuTime);
     }
 
     function parseWeightValue(rawValue) {
@@ -1107,6 +1120,15 @@ function configPluginPython(dtoString) {
         const parsed = Number(value);
         if (!Number.isFinite(parsed)) return "0.0";
         return String(parsed);
+    }
+
+    function parseCpuTimeValue(rawValue) {
+        const parsed = Number.parseInt(String(rawValue == null ? "" : rawValue).trim(), 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    }
+
+    function formatCpuTimeValue(value) {
+        return String(parseCpuTimeValue(value));
     }
 
     function bindSharedButtons() {
@@ -1225,6 +1247,7 @@ function configPluginPython(dtoString) {
             programmingLanguage: state.programmingLanguage,
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
+            cpuTime: parseCpuTimeValue(state.cpuTime),
             files: currentStoredFiles()
         };
         if (includeDataset) {
@@ -1245,6 +1268,7 @@ function configPluginPython(dtoString) {
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
+            cpuTime: parseCpuTimeValue(state.cpuTime),
             datasetVariables: datasetVariables
         };
 
@@ -1255,6 +1279,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
+        questionConfigDto.cpuTime = pluginConfig.cpuTime;
         questionConfigDto.datasetVariables = pluginConfig.datasetVariables;
 
         configField.value = JSON.stringify(questionConfigDto);
