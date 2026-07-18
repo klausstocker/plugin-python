@@ -1006,6 +1006,7 @@ class PluginPython:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
         linter_config, linter_weight = _extract_linter_settings(answerDto, config, pluginDto)
+        programming_language = _extract_programming_language(answerDto, config, pluginDto)
 
         # default result = wrong
         info = PluginScoreInfoDto(
@@ -1030,6 +1031,7 @@ class PluginPython:
                 linter_config,
                 linter_weight,
                 files=file_specs,
+                language=programming_language,
             )
             result_text = result.__repr__()
             info.punkteIst = float(grade * total_score)
@@ -1825,6 +1827,30 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
         return _extract_from_dict(config_obj)
 
     return "", 0.0
+
+
+def _extract_programming_language(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> str:
+    """Read the configured submission language, preserving Python for old questions."""
+    def _language_from_json(raw: str) -> Optional[str]:
+        try:
+            data = json.loads(raw) if raw else None
+        except (json.JSONDecodeError, TypeError):
+            return None
+        language = data.get("programmingLanguage") if isinstance(data, dict) else None
+        return language if language in ("c", "cpp", "python") else None
+
+    if plugin_dto and plugin_dto.jsonData:
+        try:
+            payload = base64.b64decode(plugin_dto.jsonData).decode("utf-8")
+            language = _language_from_json(payload)
+            if language:
+                return language
+        except (ValueError, UnicodeDecodeError, binascii.Error) as ex:
+            logger.warning("Could not decode programming language from pluginDto.jsonData: %s", ex)
+
+    return _language_from_json(plugin_config) or "python"
+
+
 def _extract_validation_code(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> str:
     """Extract validation unittest code from the flat question config payload."""
 

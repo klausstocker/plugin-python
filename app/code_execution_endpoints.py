@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.dataset_helper import dataset_file_from_payload
 from shared.check import checkCode
-from shared.jobe_wrapper import JobeWrapper
+from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, LANGUAGE_PYTHON, JobeWrapper
 from shared.lint import lintCode
 from shared.score import scoreCode
 from shared.question_examples import QuestionConfigDtoExamples
@@ -27,6 +27,18 @@ logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
 router = APIRouter()
 logger = logging.getLogger("plugin-python.endpoints")
+
+_RUN_LANGUAGE_SPECS = {
+    "python": (LANGUAGE_PYTHON, "test.py"),
+    "c": (LANGUAGE_C, "main.c"),
+    "cpp": (LANGUAGE_CPP, "main.cpp"),
+}
+
+
+def _run_language_spec(question_config: Any) -> tuple[str, str]:
+    """Return Jobe's language id and source filename for a question config."""
+    language = question_config.get("programmingLanguage") if isinstance(question_config, dict) else None
+    return _RUN_LANGUAGE_SPECS.get(language, _RUN_LANGUAGE_SPECS["python"])
 
 
 def _dataset_variable_summary(value: Any) -> dict[str, Any]:
@@ -375,6 +387,7 @@ async def run_code(request: Request):
     try:
         _debug_run_file_metadata(body)
         files = _jobe_files_from_body(body, include_dataset=False)
+        jobe_language, source_filename = _run_language_spec(body.get("questionConfigDto"))
         for file_id, filename, content in files:
             logger.debug(
                 "[pluginpython /run] uploading to Jobe: filename=%r, jobeFileId=%r, size=%s",
@@ -383,7 +396,7 @@ async def run_code(request: Request):
                 len(content),
             )
         jobe = JobeWrapper('jobe:80')
-        result = jobe.run_test('python3', code, 'test.py', files)
+        result = jobe.run_test(jobe_language, code, source_filename, files)
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error running code via Jobe")
@@ -431,7 +444,9 @@ async def check_code(request: Request):
         logger.exception("Invalid /check request")
         return JSONResponse({'output': f'Invalid check request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
     try:
-        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body))
+        question_config = body.get('questionConfigDto') or {}
+        language, _ = _run_language_spec(question_config)
+        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body), language=language)
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error checking code via Jobe")
@@ -456,9 +471,10 @@ async def score_plugin(request: Request):
     linter_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
     linter_weight_raw = question_config.get('linterWeight', 0.0) if isinstance(question_config, dict) else 0.0
     linter_weight = _to_float(linter_weight_raw)
+    language, _ = _run_language_spec(question_config)
 
     try:
-        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body))
+        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body), language=language)
         return JSONResponse({'output': result.__repr__(), 'score': score})
     except Exception as e:
         logger.exception("Error scoring code via Jobe")

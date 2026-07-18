@@ -52,7 +52,8 @@ function initPluginPython(dtoString, active) {
     let aceEditor = null;
 
     const answerField = $(plugin_inp)[0];
-    const defaultMain = dtoData.indication || "# Write your Python code here\n";
+    const programmingLanguage = normalizeProgrammingLanguage(dtoData.programmingLanguage);
+    const defaultMain = dtoData.indication || defaultStarterCode(programmingLanguage);
     const initialMain = (answerField && answerField.value) || defaultMain;
     const linterConfig = dtoData.linterConfig || "";
     const linterWeight = Number(dtoData.linterWeight || 0.0);
@@ -80,7 +81,7 @@ function initPluginPython(dtoString, active) {
                 <div class="container horizontal" id="${containerId}">
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
-                            <span>main.py</span>
+                            <span>${sourceFilename(programmingLanguage)}</span>
                             <span class="header-actions">
                                 <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
                                 <span id="${buildInfoId}" class="build-info-help" title="Script build: ${escapeHtmlAttr(PYTHON_SCRIPT_COMMIT_HASH)}
@@ -269,6 +270,26 @@ Server build: loading...">?</span>
         });
     }
 
+    function normalizeProgrammingLanguage(language) {
+        return ["python", "c", "cpp"].includes(language) ? language : "python";
+    }
+
+    function aceModeForLanguage(language) {
+        return language === "python" ? "ace/mode/python" : "ace/mode/c_cpp";
+    }
+
+    function sourceFilename(language) {
+        if (language === "c") return "main.c";
+        if (language === "cpp") return "main.cpp";
+        return "main.py";
+    }
+
+    function defaultStarterCode(language) {
+        if (language === "c") return "#include <stdio.h>\n\nint main(void) {\n    return 0;\n}\n";
+        if (language === "cpp") return "#include <iostream>\n\nint main() {\n    return 0;\n}\n";
+        return "# Write your Python code here\n";
+    }
+
     async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
         if (!aceAvailable || !window.ace) {
@@ -279,7 +300,7 @@ Server build: loading...">?</span>
         const editor = ace.edit(mainEditorId);
         aceEditor = editor;
         editor.setTheme("ace/theme/monokai");
-        editor.session.setMode("ace/mode/python");
+        editor.session.setMode(aceModeForLanguage(programmingLanguage));
         editor.getSession().setValue(initialMainCode);
 
         if (answerField) {
@@ -310,7 +331,7 @@ Server build: loading...">?</span>
         setupLayoutControls();
         const out = document.getElementById(outputId);
 
-        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files } }), out);
+        bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { programmingLanguage: programmingLanguage, files: files } }), out);
         bindRequest(lintButtonId, "/lint", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { linterConfig: linterConfig, linterWeight: linterWeight, files: files } }), out);
     }
 
