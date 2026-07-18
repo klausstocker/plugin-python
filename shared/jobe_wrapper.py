@@ -125,7 +125,7 @@ class JobeWrapper():
             'file_list': []
         }
         if cputime is not None:
-            runspec['cputime'] = cputime
+            runspec['parameters'] = {'cputime': cputime}
         
         for fileId, name, content in files or []:
             if self.put_file(fileId, content):

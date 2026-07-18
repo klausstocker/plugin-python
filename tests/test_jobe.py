@@ -146,7 +146,7 @@ print('finished cpu work')
             jobe.run_test('python3', 'print(1)', 'test.py', cputime=12)
 
         payload = do_http.call_args.args[3]
-        self.assertIn('"cputime":12', payload)
+        self.assertIn('"parameters":{"cputime":12}', payload)
 
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
