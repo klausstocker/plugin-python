@@ -119,11 +119,14 @@ class Checker(unittest.TestCase):
             self.assertEqual(submitted_files[1:], files)
             self.assertTrue(result.wasSuccessful())
 
-    def test_run_test_reports_error_when_sleep_exceeds_configured_cputime(self):
+    def test_run_test_reports_error_when_cpu_work_exceeds_configured_cputime(self):
         code = """
 import time
-time.sleep(2)
-print('finished sleeping')
+
+deadline = time.process_time() + 2
+while time.process_time() < deadline:
+    pass
+print('finished cpu work')
 """
         jobe = JobeWrapper('localhost:4000')
 
@@ -134,7 +137,7 @@ print('finished sleeping')
 
         long_result = jobe.run_test('python3', code, 'test.py', cputime=5)
         self.assertTrue(long_result.success())
-        self.assertEqual(long_result.stdout, 'finished sleeping\n')
+        self.assertEqual(long_result.stdout, 'finished cpu work\n')
 
     def test_run_test_includes_configured_cputime_in_runspec(self):
         jobe = JobeWrapper('jobe:80')
