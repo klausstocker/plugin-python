@@ -3,8 +3,8 @@ from shared.lint import lintCode
 from shared.score_result import ScoreResult
 
 
-def scoreCode(server: str, code: str, testcode: str, linter_config: str = "", linter_weight: float = 0.0, files=None):
-    check_result = checkCode(server, code, testcode, files=files)
+def scoreCode(server: str, code: str, testcode: str, linter_config: str = "", linter_weight: float = 0.0, files=None, cputime=None):
+    check_result = checkCode(server, code, testcode, files=files, cputime=cputime)
     linter_score = 0.0
 
     if linter_weight != 0.0:

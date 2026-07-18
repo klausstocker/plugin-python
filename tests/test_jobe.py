@@ -119,6 +119,15 @@ class Checker(unittest.TestCase):
             self.assertIn(b"class RedirectedStdout:", submitted_files[-1][2])
             self.assertTrue(result.wasSuccessful())
 
+    def test_run_test_includes_configured_cputime_in_runspec(self):
+        jobe = JobeWrapper('jobe:80')
+
+        with patch.object(jobe, 'do_http', return_value={'outcome': 15}) as do_http:
+            jobe.run_test('python3', 'print(1)', 'test.py', cputime=12)
+
+        payload = do_http.call_args.args[3]
+        self.assertIn('"cputime":12', payload)
+
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
         fileId = 'B00WHrZtSjfile1gasdfaserscasdfaserasdfaserqwcasrweas'

@@ -98,7 +98,7 @@ class JobeWrapper():
         connect.request(method, resource, data, headers)
         return connect
 
-    def run_test(self, language, code, sourceFilename, files=[]):
+    def run_test(self, language, code, sourceFilename, files=None, cputime=None):
         '''Execute the given code in the given language.
         Return the result object.'''
         runspec = {
@@ -107,8 +107,10 @@ class JobeWrapper():
             'sourcecode': code,
             'file_list': []
         }
+        if cputime is not None:
+            runspec['cputime'] = cputime
         
-        for fileId, name, content in files:
+        for fileId, name, content in files or []:
             if self.put_file(fileId, content):
                 return RunResult({'outcome': 99, 'stderr': f'could not upload file {name}'})
             exists = self.check_file(fileId)

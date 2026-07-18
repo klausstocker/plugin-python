@@ -164,6 +164,42 @@ class TestEndpoints(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["typ"], "PIG")
 
+    @patch("app.code_execution_endpoints.JobeWrapper")
+    def test_run_uses_configured_cputime(self, jobe_wrapper_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        jobe_wrapper_mock.return_value.run_test.return_value = "run result"
+
+        response = self.client.post(
+            f"{BASE_PATH}/run",
+            headers=headers,
+            json={
+                "code": "print(1)",
+                "questionConfigDto": {"cpuTime": 12},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        jobe_wrapper_mock.return_value.run_test.assert_called_once_with(
+            "python3", "print(1)", "test.py", [], cputime=12)
+
+    @patch("app.code_execution_endpoints.checkCode")
+    def test_check_uses_configured_cputime(self, check_code_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        check_code_mock.return_value.__repr__.return_value = "check result"
+
+        response = self.client.post(
+            f"{BASE_PATH}/check",
+            headers=headers,
+            json={
+                "code": "def add(): return 3",
+                "testcode": 'tests',
+                "questionConfigDto": {"cpuTime": 12},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(check_code_mock.call_args.kwargs["cputime"], 12)
+
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
@@ -178,6 +214,7 @@ class TestEndpoints(unittest.TestCase):
                 "questionConfigDto": {
                     "linterConfig": "--disable=C0114",
                     "linterWeight": "1,5",
+                    "cpuTime": "9",
                 },
             },
         )
@@ -186,6 +223,7 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(response.json()["score"], 0.75)
         score_mock.assert_called_once()
         self.assertEqual(score_mock.call_args.args[4], 1.5)
+        self.assertEqual(score_mock.call_args.kwargs["cputime"], 9)
 
 
 if __name__ == "__main__":

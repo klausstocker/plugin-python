@@ -22,7 +22,7 @@ def _with_student_answer_file(code: str, files=None):
     return _student_answer_file(code) + auxiliary_files + helper_files
 
 
-def checkCode(server, code, testCode, files=None):
+def checkCode(server, code, testCode, files=None, cputime=None):
     code2run = testCode + """
 import sys
 from io import StringIO
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     print(f'{__magic_string__}{json.dumps(ret, separators=(',', ':'))}')
 """
     jobe = JobeWrapper(server)
-    result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files))
+    result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files), cputime=cputime)
     if not result.success():
         return CheckResult({
             'count': 0,
