@@ -35,6 +35,7 @@ COPY jobe/000-jobe.conf /
 # Configure php
 # Install a header-only Catch2 v2 release because generated runners include
 # <catch2/catch.hpp>; Catch2 v3 removed that header and requires linker flags.
+# Install it below /usr/include, which is visible inside Jobe's compilation sandbox.
 # Get jobe
 # Handle jobe API keys
 # Install jobe
@@ -79,7 +80,7 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     chmod 777 /var/crash && \
     echo '<!DOCTYPE html><html lang="en"><title>Jobe</title><h1>Jobe</h1></html>' > /var/www/html/index.html && \
     git clone --depth 1 --branch ${CATCH2_VERSION} https://github.com/catchorg/Catch2.git /tmp/catch2 && \
-    install -D -m 0644 /tmp/catch2/single_include/catch2/catch.hpp /usr/local/include/catch2/catch.hpp && \
+    install -D -m 0644 /tmp/catch2/single_include/catch2/catch.hpp /usr/include/catch2/catch.hpp && \
     rm -rf /tmp/catch2 && \
     git clone --single-branch --branch ${JOBE_VERSION} https://github.com/trampgeek/jobe.git /var/www/html/jobe && \
     apache2ctl start && \
