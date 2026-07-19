@@ -344,6 +344,8 @@ function configPluginPython(dtoString) {
                                     <span>Server build: <span data-build-role="server">loading...</span></span>
                                 </div>
                                 <div class="flags-row">
+                                    <label for="${ids.cpuTimeId}" title="Jobe CPU time in seconds (default: 5)">CPU time limit</label>
+                                    <input id="${ids.cpuTimeId}" type="number" min="1" step="1" class="text-input cpu-time-input" placeholder="5" />
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> enable run</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> enable lint</label>
                                 </div>
@@ -353,8 +355,6 @@ function configPluginPython(dtoString) {
                                             <label for="${ids.linterConfigId}">Linter configuration</label>
                                             <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
                                             <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
-                                            <label for="${ids.cpuTimeId}" title="Jobe run_spec cputime in seconds (default: 5)">CPU time (s)</label>
-                                            <input id="${ids.cpuTimeId}" type="number" min="1" step="1" class="text-input cpu-time-input" placeholder="5" />
                                         </div>
                                         <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
                                     </div>
@@ -713,7 +713,8 @@ function configPluginPython(dtoString) {
                 justify-content: space-between;
                 gap: 8px;
             }
-            .pluginPythonConfigForm .linter-weight-input {
+            .pluginPythonConfigForm .linter-weight-input,
+            .pluginPythonConfigForm .cpu-time-input {
                 width: 90px;
                 margin: 0;
             }
@@ -1182,10 +1183,10 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl, { showTiming: true, label: "Run" });
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
-        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
-        bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
+        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Check" });
+        bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Score" });
     }
 
     async function setupExamples() {
@@ -1307,7 +1308,7 @@ function configPluginPython(dtoString) {
         return getPreviewCode();
     }
 
-    function bindRequest(buttonId, endpoint, bodyBuilder, outputEl) {
+    function bindRequest(buttonId, endpoint, bodyBuilder, outputEl, options) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
 
@@ -1317,12 +1318,32 @@ function configPluginPython(dtoString) {
             saveConfig();
             const oldText = btn.textContent;
             btn.dataset.requestPending = "true";
+            const showTiming = !!(options && options.showTiming);
+            const actionLabel = (options && options.label) || oldText;
+            const now = () => (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now());
+            const startedAt = now();
+            let countdownTimer = null;
+            let cpuTime = parseCpuTimeValue(state.cpuTime);
+
+            const elapsedSeconds = () => (now() - startedAt) / 1000;
+            const timingText = () => `${actionLabel} timing: ${elapsedSeconds().toFixed(2)}s elapsed (CPU time limit: ${cpuTime}s).`;
+            const updateCountdown = () => {
+                const remaining = Math.max(cpuTime - Math.floor(elapsedSeconds()), 0);
+                btn.textContent = `working... ${remaining}s`;
+                outputEl.textContent = `${actionLabel} running...\nCPU time limit: ${cpuTime}s\nEstimated remaining: ${remaining}s`;
+            };
+
             btn.disabled = true;
             btn.textContent = "working...";
             outputEl.textContent = "";
 
             try {
                 const payload = bodyBuilder();
+                cpuTime = parseCpuTimeValue(payload && payload.questionConfigDto && payload.questionConfigDto.cpuTime);
+                if (showTiming) {
+                    updateCountdown();
+                    countdownTimer = window.setInterval(updateCountdown, 1000);
+                }
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
                     headers: await buildHeaders(),
@@ -1330,11 +1351,14 @@ function configPluginPython(dtoString) {
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
-                outputEl.textContent = data && data.output ? data.output : JSON.stringify(data);
+                const responseText = data && data.output ? data.output : JSON.stringify(data);
+                outputEl.textContent = showTiming ? `${responseText}\n\n${timingText()}` : responseText;
             } catch (error) {
-                outputEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
+                const errorText = "Error: " + (error && error.message ? error.message : "request failed");
+                outputEl.textContent = showTiming ? `${errorText}\n\n${timingText()}` : errorText;
             } finally {
                 delete btn.dataset.requestPending;
+                if (countdownTimer !== null) window.clearInterval(countdownTimer);
                 btn.disabled = false;
                 if (buttonId === ids.btnRunId) updateRunButtonState();
                 btn.textContent = oldText;

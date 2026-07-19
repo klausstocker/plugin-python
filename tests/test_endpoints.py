@@ -166,6 +166,7 @@ class TestEndpoints(unittest.TestCase):
 
     @patch("app.code_execution_endpoints.JobeWrapper")
     def test_run_uses_configured_cputime(self, jobe_wrapper_mock):
+        jobe_wrapper_mock.createFiles.return_value = []
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
         jobe_wrapper_mock.return_value.run_test.return_value = "run result"
 
