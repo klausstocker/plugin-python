@@ -1103,6 +1103,7 @@ function configPluginPython(dtoString) {
         const configLabel = document.getElementById(ids.linterConfigLabelId);
         const weightLabel = document.getElementById(ids.linterWeightLabelId);
         const configInput = document.getElementById(ids.linterConfigId);
+        const lintButton = document.getElementById(ids.btnLintId);
         if (configLabel) configLabel.textContent = isPython ? "Linter configuration" : "Compiler configuration";
         if (weightLabel) {
             weightLabel.textContent = isPython ? "Weight" : "Warning weight";
@@ -1113,6 +1114,7 @@ function configPluginPython(dtoString) {
         if (configInput) {
             configInput.placeholder = isPython ? "e.g. --disable=C0114,C0116" : "e.g. -Wall -std=c99";
         }
+        if (lintButton) lintButton.textContent = isPython ? "lint" : "compile";
     }
 
     function syncOptionsStateFromInputs() {
@@ -1159,7 +1161,7 @@ function configPluginPython(dtoString) {
         const outputEl = document.getElementById(ids.outputId);
 
         bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl, { showTiming: true, label: "Run" });
-        bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
+        bindRequest(ids.btnLintId, () => state.programmingLanguage === "python" ? "/lint" : "/compile", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Check" });
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Score" });
     }
@@ -1267,7 +1269,8 @@ function configPluginPython(dtoString) {
                     updateCountdown();
                     countdownTimer = window.setInterval(updateCountdown, 1000);
                 }
-                const response = await fetch(serviceBase + endpoint, {
+                const targetEndpoint = typeof endpoint === "function" ? endpoint() : endpoint;
+                const response = await fetch(serviceBase + targetEndpoint, {
                     method: "POST",
                     headers: await buildHeaders(),
                     credentials: "include",

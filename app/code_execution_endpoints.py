@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.dataset_helper import dataset_file_from_payload
 from shared.check import checkCode
+from shared.compiler import parse_compiler_config
 from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, LANGUAGE_PYTHON, JobeWrapper
 from shared.lint import lintCode
 from shared.score import scoreCode
@@ -415,6 +416,19 @@ async def run_code(request: Request):
         return JSONResponse({'output': f'Error running code: {e}'})
 
 
+def _compile_output_from_result(result) -> str:
+    parts = []
+    if result.cmpinfo:
+        parts.append(result.cmpinfo.rstrip())
+    if result.stderr:
+        parts.append(f"stderr: {result.stderr.rstrip()}")
+    if parts:
+        return "\n".join(parts)
+    if result.success():
+        return "Compilation finished without compiler output."
+    return result.__repr__()
+
+
 @router.post(f"{SERVICEPATH}/lint")
 async def lint_code(request: Request):
     auth_error = _authorize_or_response(request, "/lint")
@@ -440,6 +454,38 @@ async def lint_code(request: Request):
     for m in messages:
         messagesText += f'\nline: {m.line}: {m.msg_id}: {m.msg}, {m.category}'
     return JSONResponse({'output': messagesText})
+
+
+@router.post(f"{SERVICEPATH}/compile")
+async def compile_code(request: Request):
+    auth_error = _authorize_or_response(request, "/compile")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+        code = body['code']
+    except Exception as e:
+        logger.exception("Invalid /compile request")
+        return JSONResponse({'output': f'Invalid compile request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    question_config = body.get('questionConfigDto') or {}
+    language, _ = _run_language_spec(question_config)
+    if language not in (LANGUAGE_C, LANGUAGE_CPP):
+        return JSONResponse({'output': 'Compile is available only for C and C++ questions.'})
+
+    compiler_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
+    try:
+        jobe = JobeWrapper('jobe:80')
+        result = jobe.compile_c_or_cpp(
+            language,
+            code,
+            compileargs=parse_compiler_config(compiler_config),
+            cputime=_cputime_from_question_config(question_config),
+        )
+        return JSONResponse({'output': _compile_output_from_result(result)})
+    except Exception as e:
+        logger.exception("Error compiling code via Jobe")
+        return JSONResponse({'output': f'Error compiling code: {e}'})
 
 
 @router.post(f"{SERVICEPATH}/check")

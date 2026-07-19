@@ -202,6 +202,32 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(check_code_mock.call_args.kwargs["cputime"], 12)
         self.assertEqual(check_code_mock.call_args.kwargs["compiler_config"], "-Wall")
 
+    @patch("app.code_execution_endpoints.JobeWrapper")
+    def test_compile_endpoint_uses_cpp_language_and_compiler_config(self, jobe_wrapper_mock):
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        compile_result = jobe_wrapper_mock.return_value.compile_c_or_cpp.return_value
+        compile_result.cmpinfo = "main.cpp:1:1: warning: unused variable"
+        compile_result.stderr = ""
+        compile_result.success.return_value = True
+
+        response = self.client.post(
+            f"{BASE_PATH}/compile",
+            headers=headers,
+            json={
+                "code": "int add() { return 3; }",
+                "questionConfigDto": {"programmingLanguage": "cpp", "linterConfig": "-Wall", "cpuTime": 8},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("unused variable", response.json()["output"])
+        jobe_wrapper_mock.return_value.compile_c_or_cpp.assert_called_once_with(
+            "cpp",
+            "int add() { return 3; }",
+            compileargs=["-Wall"],
+            cputime=8,
+        )
+
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}

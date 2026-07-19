@@ -4,7 +4,7 @@ from shared.compiler import (
     count_compiler_warnings,
     parse_compiler_config,
 )
-from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, SOURCE_FILENAMES, JobeWrapper
+from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, JobeWrapper
 from shared.lint import lintCode
 from shared.score_result import ScoreResult
 
@@ -73,13 +73,11 @@ class CompiledScoreBehaviour(ScoreBehaviour):
     def quality_score(self, code: str) -> float:
         compileargs = parse_compiler_config(self.config)
         jobe = JobeWrapper(self.server)
-        source_filename = SOURCE_FILENAMES.get(self.language, SOURCE_FILENAMES[LANGUAGE_CPP])
-        result = jobe.run_test(
+        result = jobe.compile_c_or_cpp(
             self.language,
             code,
-            source_filename,
+            compileargs=compileargs,
             cputime=self.cputime,
-            parameters={'compileargs': compileargs} if compileargs else None,
         )
         compiler_output = "\n".join(
             output for output in (result.cmpinfo, result.stderr) if output

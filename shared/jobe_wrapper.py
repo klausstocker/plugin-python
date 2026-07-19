@@ -3,6 +3,7 @@ import json
 import http.client
 import base64
 import uuid
+import re
 
 RESOURCE_BASE = '/jobe/index.php/restapi'
 
@@ -90,6 +91,30 @@ def trim(s):
 class JobeWrapper():
     def __init__(self, server):
         self.server = server
+
+    @staticmethod
+    def _has_main_function(code: str) -> bool:
+        return bool(re.search(r"\b(?:int|auto|void)\s+main\s*\(", code or ""))
+
+    @staticmethod
+    def build_compile_probe_code(language, code):
+        """Return code that can be compiled by Jobe without requiring a user main()."""
+        if language not in (LANGUAGE_C, LANGUAGE_CPP) or JobeWrapper._has_main_function(code):
+            return code
+        return f"{code.rstrip()}\n\nint main(void) {{ return 0; }}\n"
+
+    def compile_c_or_cpp(self, language, code, compileargs=None, cputime=None):
+        """Compile C/C++ code with optional compiler arguments and return Jobe's result."""
+        if language not in (LANGUAGE_C, LANGUAGE_CPP):
+            raise ValueError(f'compile supports only {LANGUAGE_C!r} and {LANGUAGE_CPP!r}, not {language!r}')
+        parameters = {'compileargs': compileargs} if compileargs else None
+        return self.run_test(
+            language,
+            self.build_compile_probe_code(language, code),
+            SOURCE_FILENAMES[language],
+            cputime=cputime,
+            parameters=parameters,
+        )
 
     @staticmethod
     def createFiles(files: dict):

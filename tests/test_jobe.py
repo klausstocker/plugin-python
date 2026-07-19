@@ -166,6 +166,28 @@ print('finished cpu work')
             self.assertNotIn(original_name, file_id)
             self.assertRegex(file_id, r"^[0-9a-f]+$")
 
+    def test_compile_c_or_cpp_adds_stub_main_when_submission_has_no_main(self):
+        jobe = JobeWrapper('jobe:80')
+        with patch.object(jobe, 'run_test', return_value='result') as run_test:
+            result = jobe.compile_c_or_cpp(LANGUAGE_C, 'int add(int a, int b) { return a + b; }', compileargs=['-Wall'])
+
+        self.assertEqual(result, 'result')
+        submitted_code = run_test.call_args.args[1]
+        self.assertIn('int add(int a, int b)', submitted_code)
+        self.assertIn('int main(void) { return 0; }', submitted_code)
+        run_test.assert_called_once_with(
+            LANGUAGE_C,
+            submitted_code,
+            'main.c',
+            cputime=None,
+            parameters={'compileargs': ['-Wall']},
+        )
+
+    def test_compile_c_or_cpp_keeps_existing_main(self):
+        code = 'int main(void) { return 0; }'
+
+        self.assertEqual(JobeWrapper.build_compile_probe_code(LANGUAGE_C, code), code)
+
     def test_run_c_uses_c_language_and_c_filename(self):
         jobe = JobeWrapper('jobe:80')
         with patch.object(jobe, 'run_test', return_value='result') as run_test:
