@@ -458,7 +458,15 @@ async def check_code(request: Request):
     try:
         question_config = body.get('questionConfigDto') or {}
         language, _ = _run_language_spec(question_config)
-        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body), language=language, cputime=_cputime_from_question_config(question_config))
+        result = checkCode(
+            'jobe:80',
+            code,
+            testcode,
+            files=_jobe_files_from_body(body),
+            language=language,
+            cputime=_cputime_from_question_config(question_config),
+            compiler_config=question_config.get('linterConfig', '') if isinstance(question_config, dict) else '',
+        )
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error checking code via Jobe")

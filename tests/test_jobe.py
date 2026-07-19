@@ -143,10 +143,10 @@ print('finished cpu work')
         jobe = JobeWrapper('jobe:80')
 
         with patch.object(jobe, 'do_http', return_value={'outcome': 15}) as do_http:
-            jobe.run_test('python3', 'print(1)', 'test.py', cputime=12)
+            jobe.run_test('python3', 'print(1)', 'test.py', cputime=12, parameters={'compileargs': ['-Wall']})
 
         payload = do_http.call_args.args[3]
-        self.assertIn('"parameters":{"cputime":12}', payload)
+        self.assertIn('"parameters":{"compileargs":["-Wall"],"cputime":12}', payload)
 
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
@@ -173,7 +173,7 @@ print('finished cpu work')
 
         self.assertEqual(result, 'result')
         run_test.assert_called_once_with(
-            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None, cputime=None)
+            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None, cputime=None, parameters=None)
 
     def test_run_cpp_uses_cpp_language_and_cpp_filename(self):
         jobe = JobeWrapper('jobe:80')
@@ -182,7 +182,7 @@ print('finished cpu work')
 
         self.assertEqual(result, 'result')
         run_test.assert_called_once_with(
-            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None, cputime=None)
+            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None, cputime=None, parameters=None)
 
     def test_build_catch2_program_includes_c_solution_with_c_linkage(self):
         program = JobeWrapper.build_catch2_test_program(
@@ -211,6 +211,7 @@ print('finished cpu work')
         self.assertEqual(files[0][1:], ('answer.cpp', b'int add(int left, int right) { return left + right; }'))
         self.assertRegex(files[0][0], r'^[0-9a-f]+$')
         self.assertEqual(files[1], auxiliary_file)
+        self.assertIsNone(run_cpp.call_args.kwargs.get('compileargs'))
 
     def test_run_catch2_tests_rejects_unsupported_language(self):
         jobe = JobeWrapper('jobe:80')

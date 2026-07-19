@@ -46,6 +46,39 @@ class TestScoreCode(unittest.TestCase):
         self.assertAlmostEqual(score, expected)
         lint_mock.assert_called_once_with('print(1)', '--disable=C0114')
 
+    @patch('shared.score.JobeWrapper')
+    @patch('shared.score.checkCode')
+    def test_c_score_with_warning_weight_counts_compiler_warnings(self, check_mock, wrapper_mock):
+        check_mock.return_value = FakeCheckResult(0.5)
+        run_result = wrapper_mock.return_value.run_test.return_value
+        run_result.cmpinfo = "main.c:1:1: warning: first warning\nmain.c:2:1: warning: second warning"
+        run_result.stderr = ""
+
+        score, result = scoreCode('jobe:80', 'int main(void) { return 0; }', '', '-Wall -std=c99', 1.0, language='c')
+
+        expected_warning_score = 0.8
+        self.assertAlmostEqual(score, (0.5 + expected_warning_score) / 2.0)
+        self.assertIn("Warning weight", result.__repr__())
+        wrapper_mock.return_value.run_test.assert_called_once_with(
+            'c',
+            'int main(void) { return 0; }',
+            'main.c',
+            cputime=None,
+            parameters={'compileargs': ['-Wall', '-std=c99']},
+        )
+
+    @patch('shared.score.JobeWrapper')
+    @patch('shared.score.checkCode')
+    def test_cpp_score_with_ten_warnings_has_zero_warning_score(self, check_mock, wrapper_mock):
+        check_mock.return_value = FakeCheckResult(1.0)
+        run_result = wrapper_mock.return_value.run_test.return_value
+        run_result.cmpinfo = "\n".join(f"main.cpp:{i}:1: warning: warning {i}" for i in range(10))
+        run_result.stderr = ""
+
+        score, _ = scoreCode('jobe:80', 'int main() { return 0; }', '', '-Wall', 1.0, language='cpp')
+
+        self.assertAlmostEqual(score, 0.5)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -41,6 +41,8 @@ function configPluginPython(dtoString) {
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         programmingLanguageId: `programmingLanguage_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
+        linterConfigLabelId: `linterConfigLabel_${pluginTag}`,
+        linterWeightLabelId: `linterWeightLabel_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
         cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
@@ -358,8 +360,8 @@ function configPluginPython(dtoString) {
                                 <div class="config-horizontal-row">
                                     <div class="linter-config-section">
                                         <div class="linter-head-row">
-                                            <label for="${ids.linterConfigId}">Linter configuration</label>
-                                            <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                            <label id="${ids.linterConfigLabelId}" for="${ids.linterConfigId}">Linter configuration</label>
+                                            <label id="${ids.linterWeightLabelId}" for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
                                             <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
                                         </div>
                                         <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
@@ -1071,13 +1073,17 @@ function configPluginPython(dtoString) {
         if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
         if (programmingLanguage) programmingLanguage.value = state.programmingLanguage;
         if (cpuTime) cpuTime.value = formatCpuTimeValue(state.cpuTime);
+        updateConfigLabels();
 
         [runAtTest, lintAtTest, linterConfig, linterWeight, programmingLanguage, cpuTime].forEach((el) => {
             if (!el) return;
             const onOptionChanged = (event) => {
                 syncOptionsStateFromInputs();
-                if (el === programmingLanguage && configPluginPython._setEditorLanguage) {
-                    configPluginPython._setEditorLanguage(state.programmingLanguage);
+                if (el === programmingLanguage) {
+                    updateConfigLabels();
+                    if (configPluginPython._setEditorLanguage) {
+                        configPluginPython._setEditorLanguage(state.programmingLanguage);
+                    }
                 }
                 saveConfig();
                 if (el === linterWeight && event && event.type === "change") {
@@ -1090,6 +1096,23 @@ function configPluginPython(dtoString) {
             el.addEventListener("change", onOptionChanged);
             el.addEventListener("input", onOptionChanged);
         });
+    }
+
+    function updateConfigLabels() {
+        const isPython = state.programmingLanguage === "python";
+        const configLabel = document.getElementById(ids.linterConfigLabelId);
+        const weightLabel = document.getElementById(ids.linterWeightLabelId);
+        const configInput = document.getElementById(ids.linterConfigId);
+        if (configLabel) configLabel.textContent = isPython ? "Linter configuration" : "Compiler configuration";
+        if (weightLabel) {
+            weightLabel.textContent = isPython ? "Weight" : "Warning weight";
+            weightLabel.title = isPython
+                ? "unit test scores is weighted with 1.0, choose linter weight"
+                : "unit test scores is weighted with 1.0; 0 warnings score 100%, 10 warnings score 0%";
+        }
+        if (configInput) {
+            configInput.placeholder = isPython ? "e.g. --disable=C0114,C0116" : "e.g. -Wall -std=c99";
+        }
     }
 
     function syncOptionsStateFromInputs() {

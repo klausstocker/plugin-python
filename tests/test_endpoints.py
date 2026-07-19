@@ -174,7 +174,7 @@ class TestEndpoints(unittest.TestCase):
             headers=headers,
             json={
                 "code": "int main() { return 0; }",
-                "questionConfigDto": {"programmingLanguage": "cpp", "cpuTime": 12},
+                "questionConfigDto": {"programmingLanguage": "cpp", "cpuTime": 12, "linterConfig": "-Wall"},
             },
         )
 
@@ -193,13 +193,14 @@ class TestEndpoints(unittest.TestCase):
             json={
                 "code": "int add() { return 3; }",
                 "testcode": 'TEST_CASE("add") {}',
-                "questionConfigDto": {"programmingLanguage": "cpp", "cpuTime": 12},
+                "questionConfigDto": {"programmingLanguage": "cpp", "cpuTime": 12, "linterConfig": "-Wall"},
             },
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(check_code_mock.call_args.kwargs["language"], "cpp")
         self.assertEqual(check_code_mock.call_args.kwargs["cputime"], 12)
+        self.assertEqual(check_code_mock.call_args.kwargs["compiler_config"], "-Wall")
 
     @patch("app.code_execution_endpoints.scoreCode")
     def test_score_plugin_accepts_comma_decimal_linter_weight(self, score_mock):
