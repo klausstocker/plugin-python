@@ -14,6 +14,7 @@ LABEL \
 
 ARG TZ=Pacific/Auckland
 ARG JOBE_VERSION=master
+ARG CATCH2_VERSION=v3.4.0
 ARG API_KEYS=""
 # Set up the (apache) environment variables
 ENV APACHE_RUN_USER=www-data
@@ -32,7 +33,7 @@ COPY jobe/000-jobe.conf /
 # Redirect apache logs to stdout
 # Configure apache
 # Configure php
-# Install packaged Catch2 v3 so generated runners can include the smaller
+# Build and install Catch2 v3 once so generated runners can include the smaller
 # test macro header and link against precompiled Catch2 libraries instead of
 # recompiling the Catch2 implementation for every submission.
 # Get jobe
@@ -46,7 +47,7 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     acl \
     apache2 \
     build-essential \
-    catch2 \
+    cmake \
     fp-compiler \
     git \
     libapache2-mod-php \
@@ -79,9 +80,15 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     mkdir -p /var/crash && \
     chmod 777 /var/crash && \
     echo '<!DOCTYPE html><html lang="en"><title>Jobe</title><h1>Jobe</h1></html>' > /var/www/html/index.html && \
-    test -f /usr/include/catch2/catch_test_macros.hpp && \
-    test -f /usr/lib/*/libCatch2Main.a && \
-    test -f /usr/lib/*/libCatch2.a && \
+    git clone --depth 1 --branch ${CATCH2_VERSION} https://github.com/catchorg/Catch2.git /tmp/catch2 && \
+    cmake -S /tmp/catch2 -B /tmp/catch2-build -DCATCH_BUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build /tmp/catch2-build --parallel "$(nproc)" && \
+    cmake --install /tmp/catch2-build && \
+    ldconfig && \
+    test -f /usr/local/include/catch2/catch_test_macros.hpp && \
+    test -f /usr/local/lib/libCatch2Main.a && \
+    test -f /usr/local/lib/libCatch2.a && \
+    rm -rf /tmp/catch2 /tmp/catch2-build && \
     git clone --single-branch --branch ${JOBE_VERSION} https://github.com/trampgeek/jobe.git /var/www/html/jobe && \
     apache2ctl start && \
     cd /var/www/html/jobe && \

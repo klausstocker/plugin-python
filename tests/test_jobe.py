@@ -233,7 +233,7 @@ print('finished cpu work')
         self.assertEqual(files[0][1:], ('answer.cpp', b'int add(int left, int right) { return left + right; }'))
         self.assertRegex(files[0][0], r'^[0-9a-f]+$')
         self.assertEqual(files[1], auxiliary_file)
-        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-lCatch2Main', '-lCatch2'])
+        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-L/usr/local/lib', '-lCatch2Main', '-lCatch2'])
 
     def test_run_catch2_tests_preserves_compileargs_and_links_catch2_libraries(self):
         jobe = JobeWrapper('jobe:80')
@@ -245,7 +245,7 @@ print('finished cpu work')
                 compileargs=['-Wall'],
             )
 
-        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-Wall', '-lCatch2Main', '-lCatch2'])
+        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-Wall', '-L/usr/local/lib', '-lCatch2Main', '-lCatch2'])
 
     def test_run_catch2_tests_rejects_unsupported_language(self):
         jobe = JobeWrapper('jobe:80')

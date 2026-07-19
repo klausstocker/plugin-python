@@ -23,7 +23,7 @@ CATCH2_SOLUTION_FILENAMES = {
     LANGUAGE_C: 'answer.c',
     LANGUAGE_CPP: 'answer.cpp',
 }
-CATCH2_LINK_ARGS = ['-lCatch2Main', '-lCatch2']
+CATCH2_LINK_ARGS = ['-L/usr/local/lib', '-lCatch2Main', '-lCatch2']
 
 PYTHON_CODE = """
 MESSAGE = 'Hello Jobe!'
