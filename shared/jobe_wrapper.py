@@ -23,6 +23,7 @@ CATCH2_SOLUTION_FILENAMES = {
     LANGUAGE_C: 'answer.c',
     LANGUAGE_CPP: 'answer.cpp',
 }
+CATCH2_LINK_ARGS = ['-lCatch2Main', '-lCatch2']
 
 PYTHON_CODE = """
 MESSAGE = 'Hello Jobe!'
@@ -198,8 +199,7 @@ class JobeWrapper():
             include_solution = f'extern "C" {{\n{include_solution}\n}}'
 
         return (
-            '#define CATCH_CONFIG_MAIN\n'
-            '#include <catch2/catch.hpp>\n\n'
+            '#include <catch2/catch_test_macros.hpp>\n\n'
             f'{include_solution}\n\n'
             f'{test_code.rstrip()}\n'
         )
@@ -224,7 +224,14 @@ class JobeWrapper():
         ]
         program = self.build_catch2_test_program(
             solution_language, solution_filename, test_code)
-        return self.run_cpp(program, [solution_file, *auxiliary_files], CATCH2_TEST_FILENAME, cputime=cputime, compileargs=compileargs)
+        catch2_compileargs = [*(compileargs or []), *CATCH2_LINK_ARGS]
+        return self.run_cpp(
+            program,
+            [solution_file, *auxiliary_files],
+            CATCH2_TEST_FILENAME,
+            cputime=cputime,
+            compileargs=catch2_compileargs,
+        )
 
 
     def do_http(self, method, resource, headers=None, data=None):

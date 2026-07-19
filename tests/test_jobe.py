@@ -210,8 +210,8 @@ print('finished cpu work')
         program = JobeWrapper.build_catch2_test_program(
             LANGUAGE_C, 'answer.c', 'TEST_CASE("sum") { CHECK(add(1, 2) == 3); }')
 
-        self.assertIn('#define CATCH_CONFIG_MAIN', program)
-        self.assertIn('#include <catch2/catch.hpp>', program)
+        self.assertNotIn('#define CATCH_CONFIG_MAIN', program)
+        self.assertIn('#include <catch2/catch_test_macros.hpp>', program)
         self.assertIn('extern "C" {\n#include "answer.c"\n}', program)
         self.assertIn('TEST_CASE("sum")', program)
 
@@ -233,7 +233,19 @@ print('finished cpu work')
         self.assertEqual(files[0][1:], ('answer.cpp', b'int add(int left, int right) { return left + right; }'))
         self.assertRegex(files[0][0], r'^[0-9a-f]+$')
         self.assertEqual(files[1], auxiliary_file)
-        self.assertIsNone(run_cpp.call_args.kwargs.get('compileargs'))
+        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-lCatch2Main', '-lCatch2'])
+
+    def test_run_catch2_tests_preserves_compileargs_and_links_catch2_libraries(self):
+        jobe = JobeWrapper('jobe:80')
+        with patch.object(jobe, 'run_cpp', return_value='result') as run_cpp:
+            jobe.run_catch2_tests(
+                LANGUAGE_CPP,
+                'int add(int left, int right) { return left + right; }',
+                'TEST_CASE("sum") { CHECK(add(1, 2) == 3); }',
+                compileargs=['-Wall'],
+            )
+
+        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-Wall', '-lCatch2Main', '-lCatch2'])
 
     def test_run_catch2_tests_rejects_unsupported_language(self):
         jobe = JobeWrapper('jobe:80')
