@@ -32,6 +32,6 @@ class TestCatch2CheckCode(unittest.TestCase):
             "jobe:80", LANGUAGE_CPP, "int add() { return 3; }", "TEST_CASE(\"add\") {}")
 
         wrapper_cls.return_value.run_catch2_tests.assert_called_once_with(
-            LANGUAGE_CPP, "int add() { return 3; }", "TEST_CASE(\"add\") {}", files=None)
+            LANGUAGE_CPP, "int add() { return 3; }", "TEST_CASE(\"add\") {}", files=None, cputime=None, compileargs=[])
         self.assertEqual(result.count, 1)
         self.assertTrue(result.wasSuccessful())

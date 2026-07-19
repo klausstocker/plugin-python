@@ -3,6 +3,7 @@ import json
 import http.client
 import base64
 import uuid
+import re
 
 RESOURCE_BASE = '/jobe/index.php/restapi'
 
@@ -22,6 +23,13 @@ CATCH2_SOLUTION_FILENAMES = {
     LANGUAGE_C: 'answer.c',
     LANGUAGE_CPP: 'answer.cpp',
 }
+CATCH2_LINK_ARGS = [
+    '-L/usr/local/lib',
+    '-Wl,--whole-archive',
+    '-lCatch2Main',
+    '-lCatch2',
+    '-Wl,--no-whole-archive',
+]
 
 PYTHON_CODE = """
 MESSAGE = 'Hello Jobe!'
@@ -92,6 +100,30 @@ class JobeWrapper():
         self.server = server
 
     @staticmethod
+    def _has_main_function(code: str) -> bool:
+        return bool(re.search(r"\b(?:int|auto|void)\s+main\s*\(", code or ""))
+
+    @staticmethod
+    def build_compile_probe_code(language, code):
+        """Return code that can be compiled by Jobe without requiring a user main()."""
+        if language not in (LANGUAGE_C, LANGUAGE_CPP) or JobeWrapper._has_main_function(code):
+            return code
+        return f"{code.rstrip()}\n\nint main(void) {{ return 0; }}\n"
+
+    def compile_c_or_cpp(self, language, code, compileargs=None, cputime=None):
+        """Compile C/C++ code with optional compiler arguments and return Jobe's result."""
+        if language not in (LANGUAGE_C, LANGUAGE_CPP):
+            raise ValueError(f'compile supports only {LANGUAGE_C!r} and {LANGUAGE_CPP!r}, not {language!r}')
+        parameters = {'compileargs': compileargs} if compileargs else None
+        return self.run_test(
+            language,
+            self.build_compile_probe_code(language, code),
+            SOURCE_FILENAMES[language],
+            cputime=cputime,
+            parameters=parameters,
+        )
+
+    @staticmethod
     def createFiles(files: dict):
         """Create Jobe file specs while preserving the in-sandbox filename.
 
@@ -115,7 +147,7 @@ class JobeWrapper():
         connect.request(method, resource, data, headers or {})
         return connect
 
-    def run_test(self, language, code, sourceFilename, files=None):
+    def run_test(self, language, code, sourceFilename, files=None, cputime=None, parameters=None):
         '''Execute the given code in the given language.
         Return the result object.'''
         runspec = {
@@ -124,6 +156,11 @@ class JobeWrapper():
             'sourcecode': code,
             'file_list': []
         }
+        run_parameters = dict(parameters or {})
+        if cputime is not None:
+            run_parameters['cputime'] = cputime
+        if run_parameters:
+            runspec['parameters'] = run_parameters
         
         for fileId, name, content in files or []:
             if self.put_file(fileId, content):
@@ -140,15 +177,15 @@ class JobeWrapper():
         result = self.do_http('POST', resource, headers, data)
         return RunResult(result)
 
-    def run_c(self, code, files=None, source_filename=None):
+    def run_c(self, code, files=None, source_filename=None, cputime=None, compileargs=None):
         """Compile and run a standard C program with Jobe."""
         return self.run_test(
-            LANGUAGE_C, code, source_filename or SOURCE_FILENAMES[LANGUAGE_C], files)
+            LANGUAGE_C, code, source_filename or SOURCE_FILENAMES[LANGUAGE_C], files, cputime=cputime, parameters={'compileargs': compileargs} if compileargs else None)
 
-    def run_cpp(self, code, files=None, source_filename=None):
+    def run_cpp(self, code, files=None, source_filename=None, cputime=None, compileargs=None):
         """Compile and run a C++ program with Jobe."""
         return self.run_test(
-            LANGUAGE_CPP, code, source_filename or SOURCE_FILENAMES[LANGUAGE_CPP], files)
+            LANGUAGE_CPP, code, source_filename or SOURCE_FILENAMES[LANGUAGE_CPP], files, cputime=cputime, parameters={'compileargs': compileargs} if compileargs else None)
 
     @staticmethod
     def build_catch2_test_program(solution_language, solution_filename, test_code):
@@ -168,13 +205,12 @@ class JobeWrapper():
             include_solution = f'extern "C" {{\n{include_solution}\n}}'
 
         return (
-            '#define CATCH_CONFIG_MAIN\n'
-            '#include <catch2/catch.hpp>\n\n'
+            '#include <catch2/catch_test_macros.hpp>\n\n'
             f'{include_solution}\n\n'
             f'{test_code.rstrip()}\n'
         )
 
-    def run_catch2_tests(self, solution_language, solution_code, test_code, files=None):
+    def run_catch2_tests(self, solution_language, solution_code, test_code, files=None, cputime=None, compileargs=None):
         """Run Catch2 tests against a C or C++ submission.
 
         The student submission is uploaded as ``answer.c`` or ``answer.cpp``.
@@ -194,7 +230,14 @@ class JobeWrapper():
         ]
         program = self.build_catch2_test_program(
             solution_language, solution_filename, test_code)
-        return self.run_cpp(program, [solution_file, *auxiliary_files], CATCH2_TEST_FILENAME)
+        catch2_compileargs = [*(compileargs or []), *CATCH2_LINK_ARGS]
+        return self.run_cpp(
+            program,
+            [solution_file, *auxiliary_files],
+            CATCH2_TEST_FILENAME,
+            cputime=cputime,
+            compileargs=catch2_compileargs,
+        )
 
 
     def do_http(self, method, resource, headers=None, data=None):

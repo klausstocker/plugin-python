@@ -1,3 +1,4 @@
+from shared.compiler import parse_compiler_config
 from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, JobeWrapper
 from shared.check_result import CheckResult
 import uuid
@@ -14,10 +15,14 @@ def _with_student_answer_file(code: str, files=None):
     return _student_answer_file(code) + auxiliary_files
 
 
-def checkCatch2Code(server, language, code, testCode, files=None):
+def checkCatch2Code(server, language, code, testCode, files=None, cputime=None, compiler_config=""):
     """Run teacher-supplied Catch2 tests against a C or C++ submission."""
     jobe = JobeWrapper(server)
-    result = jobe.run_catch2_tests(language, code, testCode, files=files)
+    compileargs = parse_compiler_config(compiler_config) if language == LANGUAGE_CPP else []
+    result = jobe.run_catch2_tests(
+        language, code, testCode, files=files, cputime=cputime,
+        compileargs=compileargs,
+    )
     parsed_result = CheckResult.from_catch2_output(result.stdout) if result.stdout else None
     if parsed_result and parsed_result.count:
         return parsed_result
@@ -33,9 +38,12 @@ def checkCatch2Code(server, language, code, testCode, files=None):
     return parsed_result or CheckResult.from_catch2_output(result.stdout)
 
 
-def checkCode(server, code, testCode, files=None, language='python'):
+def checkCode(server, code, testCode, files=None, language='python', cputime=None, compiler_config=''):
     if language in (LANGUAGE_C, LANGUAGE_CPP):
-        return checkCatch2Code(server, language, code, testCode, files=files)
+        return checkCatch2Code(
+            server, language, code, testCode, files=files, cputime=cputime,
+            compiler_config=compiler_config,
+        )
 
     code2run = testCode + """
 import sys
@@ -107,7 +115,7 @@ if __name__ == '__main__':
     print(f'{__magic_string__}{json.dumps(ret, separators=(',', ':'))}')
 """
     jobe = JobeWrapper(server)
-    result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files))
+    result = jobe.run_test('python3', code2run, 'test.py', _with_student_answer_file(code, files), cputime=cputime)
     if not result.success():
         return CheckResult({
             'count': 0,

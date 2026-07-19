@@ -2,10 +2,19 @@ from shared.check_result import CheckResult
 
 
 class ScoreResult:
-    def __init__(self, check_result: CheckResult, linter_score: float = 0.0, linter_weight: float = 0.0):
+    def __init__(
+        self,
+        check_result: CheckResult,
+        linter_score: float = 0.0,
+        linter_weight: float = 0.0,
+        score_label: str = "Linter",
+        weight_label: str = "Linter",
+    ):
         self.check_result = check_result
         self.linter_score = float(linter_score)
         self.linter_weight = float(linter_weight)
+        self.score_label = score_label
+        self.weight_label = weight_label
 
     def total_score(self) -> float:
         base_score = self.check_result.score()
@@ -18,7 +27,7 @@ class ScoreResult:
             return self.check_result.__repr__()
 
         ret = self.check_result.__repr__()
-        ret += f'Linter weight: {self.linter_weight:.4f}\n'
-        ret += f'Linter score: {(self.linter_score * 100.):.2f} %\n'
+        ret += f'{self.weight_label} weight: {self.linter_weight:.4f}\n'
+        ret += f'{self.score_label} score: {(self.linter_score * 100.):.2f} %\n'
         ret += f'Overall score: {(self.total_score() * 100.):.2f} %\n'
         return ret

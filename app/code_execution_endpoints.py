@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.dataset_helper import dataset_file_from_payload
 from shared.check import checkCode
+from shared.compiler import parse_compiler_config
 from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, LANGUAGE_PYTHON, JobeWrapper
 from shared.lint import lintCode
 from shared.score import scoreCode
@@ -193,6 +194,18 @@ def _to_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _to_positive_int(value: Any, default: int = 5) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _cputime_from_question_config(question_config: Any) -> int:
+    return _to_positive_int(question_config.get('cpuTime') if isinstance(question_config, dict) else None)
 
 
 def _safe_display_name(value: str) -> str:
@@ -396,11 +409,24 @@ async def run_code(request: Request):
                 len(content),
             )
         jobe = JobeWrapper('jobe:80')
-        result = jobe.run_test(jobe_language, code, source_filename, files)
+        result = jobe.run_test(jobe_language, code, source_filename, files, cputime=_cputime_from_question_config(body.get("questionConfigDto")))
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error running code via Jobe")
         return JSONResponse({'output': f'Error running code: {e}'})
+
+
+def _compile_output_from_result(result) -> str:
+    parts = []
+    if result.cmpinfo:
+        parts.append(result.cmpinfo.rstrip())
+    if result.stderr:
+        parts.append(f"stderr: {result.stderr.rstrip()}")
+    if parts:
+        return "\n".join(parts)
+    if result.success():
+        return "Compilation finished without compiler output."
+    return result.__repr__()
 
 
 @router.post(f"{SERVICEPATH}/lint")
@@ -430,6 +456,38 @@ async def lint_code(request: Request):
     return JSONResponse({'output': messagesText})
 
 
+@router.post(f"{SERVICEPATH}/compile")
+async def compile_code(request: Request):
+    auth_error = _authorize_or_response(request, "/compile")
+    if auth_error is not None:
+        return auth_error
+    try:
+        body = await request.json()
+        code = body['code']
+    except Exception as e:
+        logger.exception("Invalid /compile request")
+        return JSONResponse({'output': f'Invalid compile request: {e}'}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    question_config = body.get('questionConfigDto') or {}
+    language, _ = _run_language_spec(question_config)
+    if language not in (LANGUAGE_C, LANGUAGE_CPP):
+        return JSONResponse({'output': 'Compile is available only for C and C++ questions.'})
+
+    compiler_config = question_config.get('linterConfig', '') if isinstance(question_config, dict) else ''
+    try:
+        jobe = JobeWrapper('jobe:80')
+        result = jobe.compile_c_or_cpp(
+            language,
+            code,
+            compileargs=parse_compiler_config(compiler_config),
+            cputime=_cputime_from_question_config(question_config),
+        )
+        return JSONResponse({'output': _compile_output_from_result(result)})
+    except Exception as e:
+        logger.exception("Error compiling code via Jobe")
+        return JSONResponse({'output': f'Error compiling code: {e}'})
+
+
 @router.post(f"{SERVICEPATH}/check")
 async def check_code(request: Request):
     auth_error = _authorize_or_response(request, "/check")
@@ -446,7 +504,15 @@ async def check_code(request: Request):
     try:
         question_config = body.get('questionConfigDto') or {}
         language, _ = _run_language_spec(question_config)
-        result = checkCode('jobe:80', code, testcode, files=_jobe_files_from_body(body), language=language)
+        result = checkCode(
+            'jobe:80',
+            code,
+            testcode,
+            files=_jobe_files_from_body(body),
+            language=language,
+            cputime=_cputime_from_question_config(question_config),
+            compiler_config=question_config.get('linterConfig', '') if isinstance(question_config, dict) else '',
+        )
         return JSONResponse({'output': result.__repr__()})
     except Exception as e:
         logger.exception("Error checking code via Jobe")
@@ -474,7 +540,7 @@ async def score_plugin(request: Request):
     language, _ = _run_language_spec(question_config)
 
     try:
-        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body), language=language)
+        score, result = scoreCode('jobe:80', code, testcode, linter_config, linter_weight, files=_jobe_files_from_body(body), language=language, cputime=_cputime_from_question_config(question_config))
         return JSONResponse({'output': result.__repr__(), 'score': score})
     except Exception as e:
         logger.exception("Error scoring code via Jobe")

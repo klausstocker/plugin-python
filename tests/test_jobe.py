@@ -119,6 +119,35 @@ class Checker(unittest.TestCase):
             self.assertEqual(submitted_files[1:], files)
             self.assertTrue(result.wasSuccessful())
 
+    def test_run_test_reports_error_when_cpu_work_exceeds_configured_cputime(self):
+        code = """
+import time
+
+deadline = time.process_time() + 2
+while time.process_time() < deadline:
+    pass
+print('finished cpu work')
+"""
+        jobe = JobeWrapper('localhost:4000')
+
+        short_result = jobe.run_test('python3', code, 'test.py', cputime=1)
+        self.assertFalse(short_result.success())
+        self.assertEqual(short_result.outcome()[0], 13)
+        self.assertIn('Time limit exceeded', short_result.__repr__())
+
+        long_result = jobe.run_test('python3', code, 'test.py', cputime=5)
+        self.assertTrue(long_result.success())
+        self.assertEqual(long_result.stdout, 'finished cpu work\n')
+
+    def test_run_test_includes_configured_cputime_in_runspec(self):
+        jobe = JobeWrapper('jobe:80')
+
+        with patch.object(jobe, 'do_http', return_value={'outcome': 15}) as do_http:
+            jobe.run_test('python3', 'print(1)', 'test.py', cputime=12, parameters={'compileargs': ['-Wall']})
+
+        payload = do_http.call_args.args[3]
+        self.assertIn('"parameters":{"compileargs":["-Wall"],"cputime":12}', payload)
+
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
         fileId = 'B00WHrZtSjfile1gasdfaserscasdfaserasdfaserqwcasrweas'
@@ -137,6 +166,28 @@ class Checker(unittest.TestCase):
             self.assertNotIn(original_name, file_id)
             self.assertRegex(file_id, r"^[0-9a-f]+$")
 
+    def test_compile_c_or_cpp_adds_stub_main_when_submission_has_no_main(self):
+        jobe = JobeWrapper('jobe:80')
+        with patch.object(jobe, 'run_test', return_value='result') as run_test:
+            result = jobe.compile_c_or_cpp(LANGUAGE_C, 'int add(int a, int b) { return a + b; }', compileargs=['-Wall'])
+
+        self.assertEqual(result, 'result')
+        submitted_code = run_test.call_args.args[1]
+        self.assertIn('int add(int a, int b)', submitted_code)
+        self.assertIn('int main(void) { return 0; }', submitted_code)
+        run_test.assert_called_once_with(
+            LANGUAGE_C,
+            submitted_code,
+            'main.c',
+            cputime=None,
+            parameters={'compileargs': ['-Wall']},
+        )
+
+    def test_compile_c_or_cpp_keeps_existing_main(self):
+        code = 'int main(void) { return 0; }'
+
+        self.assertEqual(JobeWrapper.build_compile_probe_code(LANGUAGE_C, code), code)
+
     def test_run_c_uses_c_language_and_c_filename(self):
         jobe = JobeWrapper('jobe:80')
         with patch.object(jobe, 'run_test', return_value='result') as run_test:
@@ -144,7 +195,7 @@ class Checker(unittest.TestCase):
 
         self.assertEqual(result, 'result')
         run_test.assert_called_once_with(
-            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None)
+            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None, cputime=None, parameters=None)
 
     def test_run_cpp_uses_cpp_language_and_cpp_filename(self):
         jobe = JobeWrapper('jobe:80')
@@ -153,14 +204,14 @@ class Checker(unittest.TestCase):
 
         self.assertEqual(result, 'result')
         run_test.assert_called_once_with(
-            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None)
+            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None, cputime=None, parameters=None)
 
     def test_build_catch2_program_includes_c_solution_with_c_linkage(self):
         program = JobeWrapper.build_catch2_test_program(
             LANGUAGE_C, 'answer.c', 'TEST_CASE("sum") { CHECK(add(1, 2) == 3); }')
 
-        self.assertIn('#define CATCH_CONFIG_MAIN', program)
-        self.assertIn('#include <catch2/catch.hpp>', program)
+        self.assertNotIn('#define CATCH_CONFIG_MAIN', program)
+        self.assertIn('#include <catch2/catch_test_macros.hpp>', program)
         self.assertIn('extern "C" {\n#include "answer.c"\n}', program)
         self.assertIn('TEST_CASE("sum")', program)
 
@@ -182,6 +233,19 @@ class Checker(unittest.TestCase):
         self.assertEqual(files[0][1:], ('answer.cpp', b'int add(int left, int right) { return left + right; }'))
         self.assertRegex(files[0][0], r'^[0-9a-f]+$')
         self.assertEqual(files[1], auxiliary_file)
+        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-L/usr/local/lib', '-Wl,--whole-archive', '-lCatch2Main', '-lCatch2', '-Wl,--no-whole-archive'])
+
+    def test_run_catch2_tests_preserves_compileargs_and_links_catch2_libraries(self):
+        jobe = JobeWrapper('jobe:80')
+        with patch.object(jobe, 'run_cpp', return_value='result') as run_cpp:
+            jobe.run_catch2_tests(
+                LANGUAGE_CPP,
+                'int add(int left, int right) { return left + right; }',
+                'TEST_CASE("sum") { CHECK(add(1, 2) == 3); }',
+                compileargs=['-Wall'],
+            )
+
+        self.assertEqual(run_cpp.call_args.kwargs.get('compileargs'), ['-Wall', '-L/usr/local/lib', '-Wl,--whole-archive', '-lCatch2Main', '-lCatch2', '-Wl,--no-whole-archive'])
 
     def test_run_catch2_tests_rejects_unsupported_language(self):
         jobe = JobeWrapper('jobe:80')

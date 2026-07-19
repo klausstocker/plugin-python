@@ -1006,6 +1006,7 @@ class PluginPython:
         ze = answerDto.ze if answerDto else ""
         validation_code = _extract_validation_code(answerDto, config, pluginDto)
         linter_config, linter_weight = _extract_linter_settings(answerDto, config, pluginDto)
+        cputime = _extract_cputime(config, pluginDto)
         programming_language = _extract_programming_language(answerDto, config, pluginDto)
 
         # default result = wrong
@@ -1032,6 +1033,7 @@ class PluginPython:
                 linter_weight,
                 files=file_specs,
                 language=programming_language,
+                cputime=cputime,
             )
             result_text = result.__repr__()
             info.punkteIst = float(grade * total_score)
@@ -1827,6 +1829,41 @@ def _extract_linter_settings(answer_dto: Optional[PluginAnswerDto], plugin_confi
         return _extract_from_dict(config_obj)
 
     return "", 0.0
+
+
+def _extract_cputime(plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> int:
+    """Read the configured Jobe run_spec cputime, defaulting to Jobe's 5 seconds."""
+    def _parse_json_string(raw: str) -> Optional[dict]:
+        try:
+            obj = json.loads(raw) if raw else None
+            return obj if isinstance(obj, dict) else None
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    def _to_positive_int(value: Any, default: int = 5) -> int:
+        try:
+            parsed = int(str(value).strip())
+        except (TypeError, ValueError):
+            return default
+        return parsed if parsed > 0 else default
+
+    def _extract_from_dict(data: dict) -> int:
+        return _to_positive_int(data.get("cpuTime"))
+
+    if plugin_dto and plugin_dto.jsonData:
+        try:
+            payload = base64.b64decode(plugin_dto.jsonData).decode("utf-8")
+            data = _parse_json_string(payload)
+            if data:
+                return _extract_from_dict(data)
+        except (ValueError, UnicodeDecodeError, binascii.Error) as ex:
+            logger.warning("Could not decode CPU time setting from pluginDto.jsonData: %s", ex)
+
+    config_obj = _parse_json_string(plugin_config or "")
+    if config_obj:
+        return _extract_from_dict(config_obj)
+
+    return 5
 
 
 def _extract_programming_language(answer_dto: Optional[PluginAnswerDto], plugin_config: str = "", plugin_dto: Optional[PluginDto] = None) -> str:
