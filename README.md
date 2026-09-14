@@ -16,10 +16,28 @@ workflow runs:
 - `klausstocker/letto-plugin-python`
 - `klausstocker/letto-plugin-python-jobe`
 
-Configure these GitHub Actions repository secrets before running the workflow:
+Configure these **repository secrets** (not environment secrets) before running
+the workflow:
 
 - `DOCKERHUB_USERNAME`: Docker Hub username (`klausstocker`)
 - `DOCKERHUB_TOKEN`: a Docker Hub personal access token with read/write access
+
+In GitHub, open **Settings → Secrets and variables → Actions**, select the
+**Secrets** tab, scroll down past **Environment secrets** to **Repository
+secrets**, and click **New repository secret**. Create each secret separately:
+
+1. Set the name to `DOCKERHUB_USERNAME`, set its value to `klausstocker`, and
+   click **Add secret**.
+2. Click **New repository secret** again, set the name to `DOCKERHUB_TOKEN`,
+   paste a Docker Hub personal access token as its value, and click **Add
+   secret**.
+
+For this repository, the settings page is
+<https://github.com/klausstocker/plugin-python/settings/secrets/actions>. The
+workflow does not use the **Environment secrets** section shown above
+**Repository secrets** on that page. Never commit or paste a Docker Hub token
+into an issue, pull request, source file, or chat. Revoke and replace any token
+that has been exposed.
 
 Pull requests build both images for validation but do not log in or push them.
 
