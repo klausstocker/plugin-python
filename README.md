@@ -7,6 +7,22 @@
 docker build -t letto-plugin-python:latest -f Dockerfile .
 ```
 
+## Docker Hub images
+
+GitHub Actions builds the plugin and Jobe images for AMD64 and ARM64 and publishes
+them to Docker Hub after pushes to `main` or `master`, version tags, and manual
+workflow runs:
+
+- `klausstocker/letto-plugin-python`
+- `klausstocker/letto-plugin-python-jobe`
+
+Configure these GitHub Actions repository secrets before running the workflow:
+
+- `DOCKERHUB_USERNAME`: Docker Hub username (`klausstocker`)
+- `DOCKERHUB_TOKEN`: a Docker Hub personal access token with read/write access
+
+Pull requests build both images for validation but do not log in or push them.
+
 ## Installation am LeTTo-Server
 * Installation des Docker-Containers:
   * kopiere yml/docker-service-pluginpython.yml in /opt/letto/docker/compose/letto/ am LeTTo-Server 

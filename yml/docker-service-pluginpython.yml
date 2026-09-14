@@ -7,7 +7,7 @@ name: letto-plugin-python
 
 services:
   pluginpython:
-    image: lettohub/letto-plugin-python:latest
+    image: klausstocker/letto-plugin-python:latest
     restart: always
     networks:
       - nw-letto
@@ -51,10 +51,7 @@ services:
       PluginPythonLogLevel: ${PLUGIN_PYTHON_LOG_LEVEL:-INFO}
 
   jobe:
-    build:
-      context: ..
-      dockerfile: jobe/Dockerfile
-    image: trampgeek/jobeinabox:latest
+    image: klausstocker/letto-plugin-python-jobe:latest
     container_name: letto-jobe
     hostname: letto-jobe
     restart: always
