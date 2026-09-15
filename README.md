@@ -40,6 +40,12 @@ into an issue, pull request, source file, or chat. Revoke and replace any token
 that has been exposed.
 
 Pull requests build both images for validation but do not log in or push them.
+Therefore, a successful pull-request check does **not** mean an image was
+published. Merge the pull request into `main` or `master`, or open **Actions →
+Build and publish Docker images → Run workflow** to publish. A default-branch
+push or a manual run publishes both `latest` and `sha-<commit>` tags; a `v*` Git
+tag also publishes the corresponding version tag. The workflow run summary
+lists the exact tags or explains why publishing was skipped.
 
 ## Installation am LeTTo-Server
 * Installation des Docker-Containers:

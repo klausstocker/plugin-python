@@ -51,11 +51,12 @@ jobs:
         with:
           images: ${{ matrix.image }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
             type=ref,event=tag
             type=sha,prefix=sha-
 
       - name: Build and optionally publish image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -68,3 +69,30 @@ jobs:
             PLUGIN_BUILD_HASH=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Report publishing result
+        if: always()
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          IMAGE_NAME: ${{ matrix.image }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          if [ "$BUILD_OUTCOME" != "success" ]; then
+            echo "### $IMAGE_NAME was not published because the build failed" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            {
+              echo "### $IMAGE_NAME was built but not published"
+              echo
+              echo "Publishing is intentionally disabled for pull request runs because Docker Hub secrets are not exposed to pull requests."
+              echo "Merge the pull request into the default branch or start this workflow manually to publish the image."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### Published $IMAGE_NAME"
+              echo
+              echo '```text'
+              echo "$IMAGE_TAGS"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
