@@ -153,8 +153,7 @@ class Checker(unittest.TestCase): # do not rename
         self.assertAlmostEqual(answer.minimalDistance(points), correctImplementation(points))
 
 """,
-        linterConfig="--disable=C0114,C0115,C0116")
-    ,
+        linterConfig="--disable=C0114,C0115,C0116"),
     QuestionConfigDto(
         indication="""
 def rad2degree(angle_rad: float):
@@ -201,7 +200,33 @@ class Checker(unittest.TestCase): # do not rename
             self.assertEqual(answer.rad2degree(a), correct_implementation(a))
 
 """,
-        linterConfig="--disable=C0114,C0115,C0116")
+        linterConfig="--disable=C0114,C0115,C0116"),
+    QuestionConfigDto(
+        programmingLanguage="c",
+        indication="""#include <stdio.h>
+
+int add(int left, int right) {
+    return left + right;
+}
+""",
+        validation="""TEST_CASE(\"adds two integers\") {
+    CHECK(add(1, 2) == 3);
+    CHECK(add(-4, 4) == 0);
+}
+"""),
+    QuestionConfigDto(
+        programmingLanguage="cpp",
+        indication="""#include <string>
+
+std::string greet(const std::string& name) {
+    return \"Hello, \" + name + \"!\";
+}
+""",
+        validation="""TEST_CASE(\"greets a name\") {
+    CHECK(greet(\"Ada\") == \"Hello, Ada!\");
+    CHECK(greet(\"C++\") == \"Hello, C++!\");
+}
+""")
     ]
 
 

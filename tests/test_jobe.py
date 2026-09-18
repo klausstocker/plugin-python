@@ -2,7 +2,12 @@ import unittest
 import sys
 from unittest.mock import patch
 
-from shared.jobe_wrapper import JobeWrapper
+from shared.jobe_wrapper import (
+    CATCH2_TEST_FILENAME,
+    LANGUAGE_C,
+    LANGUAGE_CPP,
+    JobeWrapper,
+)
 from shared.check import checkCode
 from shared.check_result import CheckResult
 from shared.question_config import QuestionConfigDto
@@ -131,6 +136,58 @@ class Checker(unittest.TestCase):
         for file_id, original_name, _content in file_specs:
             self.assertNotIn(original_name, file_id)
             self.assertRegex(file_id, r"^[0-9a-f]+$")
+
+    def test_run_c_uses_c_language_and_c_filename(self):
+        jobe = JobeWrapper('jobe:80')
+        with patch.object(jobe, 'run_test', return_value='result') as run_test:
+            result = jobe.run_c('int main(void) { return 0; }')
+
+        self.assertEqual(result, 'result')
+        run_test.assert_called_once_with(
+            LANGUAGE_C, 'int main(void) { return 0; }', 'main.c', None)
+
+    def test_run_cpp_uses_cpp_language_and_cpp_filename(self):
+        jobe = JobeWrapper('jobe:80')
+        with patch.object(jobe, 'run_test', return_value='result') as run_test:
+            result = jobe.run_cpp('int main() { return 0; }')
+
+        self.assertEqual(result, 'result')
+        run_test.assert_called_once_with(
+            LANGUAGE_CPP, 'int main() { return 0; }', 'main.cpp', None)
+
+    def test_build_catch2_program_includes_c_solution_with_c_linkage(self):
+        program = JobeWrapper.build_catch2_test_program(
+            LANGUAGE_C, 'answer.c', 'TEST_CASE("sum") { CHECK(add(1, 2) == 3); }')
+
+        self.assertIn('#define CATCH_CONFIG_MAIN', program)
+        self.assertIn('#include <catch2/catch.hpp>', program)
+        self.assertIn('extern "C" {\n#include "answer.c"\n}', program)
+        self.assertIn('TEST_CASE("sum")', program)
+
+    def test_run_catch2_tests_uploads_solution_and_uses_cpp_runner(self):
+        jobe = JobeWrapper('jobe:80')
+        auxiliary_file = ('input-id', 'input.txt', b'1 2')
+        with patch.object(jobe, 'run_cpp', return_value='result') as run_cpp:
+            result = jobe.run_catch2_tests(
+                LANGUAGE_CPP,
+                'int add(int left, int right) { return left + right; }',
+                'TEST_CASE("sum") { CHECK(add(1, 2) == 3); }',
+                [auxiliary_file],
+            )
+
+        self.assertEqual(result, 'result')
+        program, files, filename = run_cpp.call_args.args
+        self.assertEqual(filename, CATCH2_TEST_FILENAME)
+        self.assertIn('#include "answer.cpp"', program)
+        self.assertEqual(files[0][1:], ('answer.cpp', b'int add(int left, int right) { return left + right; }'))
+        self.assertRegex(files[0][0], r'^[0-9a-f]+$')
+        self.assertEqual(files[1], auxiliary_file)
+
+    def test_run_catch2_tests_rejects_unsupported_language(self):
+        jobe = JobeWrapper('jobe:80')
+
+        with self.assertRaisesRegex(ValueError, "Catch2 supports only"):
+            jobe.run_catch2_tests('python3', 'print(1)', 'TEST_CASE("x") {}')
 
     def testWithFiles(self):
         files = {'file1': ('The first file\nLine 2').encode(),

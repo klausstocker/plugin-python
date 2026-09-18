@@ -9,6 +9,7 @@ class EvalConfigDto(BaseModel):
 
 
 class QuestionConfigDto(BaseModel):
+    programmingLanguage: str = "python"
     indication: str = ""
     validation: str = ""
     files: dict[str, Any] = Field(default_factory=dict)
