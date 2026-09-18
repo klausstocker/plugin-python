@@ -1444,14 +1444,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         return "" if not pi else pi.get_angabe()
 
-    @r.post("/generatedatasets", response_model=PluginDatasetListDto)
-    def generate_datasets(req: PluginRequestDto):
-        return PluginDatasetListDto(datasets=[])
-
-    @r.post("/maxima", response_class=PlainTextResponse)
-    def maxima(req: PluginRequestDto):
-        return ""
-
     @r.post("/image", response_model=ImageBase64Dto)
     def image(req: PluginRequestDto):
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
@@ -1469,15 +1461,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         logger.debug(f'imagetemplates: {req}')
         return [["Code-Editor", f'[PIG {req.name} ""]', "Code-Editor"]]
 
-    @r.post("/parserplugin", response_model=CalcErgebnisDto)
-    def parser_plugin(req: PluginParserRequestDto):
-        # Java returns null; keep null-ish
-        return CalcErgebnisDto(string=None, type="STRING")
-
-    @r.post("/parserplugineinheit", response_class=PlainTextResponse)
-    def parser_plugin_einheit(req: PluginEinheitRequestDto):
-        return ""
-
     @r.post("/score", response_model=PluginScoreInfoDto)
     def score(req: PluginScoreRequestDto):
         log_dataset_transfer("/open score request", vars_question=req.varsQuestion, plugin_dto=req.pluginDto)
@@ -1493,11 +1476,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             req.pluginDto,
             req.varsQuestion,
         )
-
-    @r.post("/getvars")
-    def get_vars(req: PluginRequestDto):
-        # PluginPython.getVars returns Vector<String> empty
-        return []
 
     @r.post("/modifyangabe", response_class=PlainTextResponse)
     def modify_angabe(req: PluginAngabeRequestDto):
