@@ -4,7 +4,7 @@
 
 ## Build des Docker-Containers (build.bat)
 ```bash
-docker build -t letto-plugin-python:latest -f Dockerfile .
+docker build -t klausstocker/letto-plugin-python:latest -f Dockerfile .
 ```
 
 ## Docker Hub images
