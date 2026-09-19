@@ -6,3 +6,5 @@
 /tmp/
 /out/
 /target/
+/.docker-test/
+/.env.docker-local
