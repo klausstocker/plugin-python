@@ -122,9 +122,88 @@ LeTTo-Container dieses Netzwerk verwenden. Die Datei `.env.docker-local`
 enthält nur Testwerte; echte Passwörter dürfen nicht eingecheckt werden.
 
 ## Installation am LeTTo-Server
-* Installation des Docker-Containers:
-  * kopiere yml/docker-service-pluginpython.yml in /opt/letto/docker/compose/letto/ am LeTTo-Server 
-  * starte den Container (docker compose -f /opt/letto/docker/compose/letto/ docker-service-pluginpython.yml up -d)
+
+Die folgenden Befehle werden auf dem Linux-Server ausgeführt. Bei Ausführung
+ohne `root` muss je nach Installation `sudo` vor die Docker- und
+Dateisystembefehle gesetzt werden.
+
+Zuerst die Compose-Datei aus dem ausgecheckten Repository installieren und die
+benötigten Verzeichnisse anlegen:
+
+```bash
+install -d /opt/letto/docker/compose/letto
+install -d /opt/letto/docker/storage/log/pluginpython
+install -d /opt/letto/docker/storage/images
+install -d /opt/letto/docker/storage/plugins
+cp yml/docker-service-pluginpython.yml /opt/letto/docker/compose/letto/
+cd /opt/letto/docker/compose/letto
+```
+
+Falls die Variablen nicht bereits zentral gesetzt werden, eine `.env`-Datei
+neben der Compose-Datei erstellen und die Beispielwerte anpassen:
+
+```bash
+cat > .env <<'EOF'
+LETTO_SCHULEN=meine-schule
+SERVER_NAME=letto.example.org
+SERVICE_USER_PASSWORD=BITTE_AENDERN
+SERVICE_GAST_PASSWORD=BITTE_AENDERN
+TIMEZONE=Europe/Berlin
+LOCALE=de_DE.UTF-8
+EOF
+chmod 600 .env
+```
+
+Das in der Compose-Datei als extern deklarierte Netzwerk muss bereits
+existieren. Anschließend die Konfiguration prüfen, beide Images herunterladen
+und beide Container starten:
+
+```bash
+docker network inspect nw-letto >/dev/null 2>&1 || docker network create nw-letto
+
+docker compose --env-file .env -f docker-service-pluginpython.yml config
+docker compose --env-file .env -f docker-service-pluginpython.yml config --images
+docker compose --env-file .env -f docker-service-pluginpython.yml pull
+docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build
+```
+
+Status, verwendete Images und Logs prüfen:
+
+```bash
+docker compose --env-file .env -f docker-service-pluginpython.yml ps
+docker inspect letto-pluginpython --format '{{.Config.Image}}'
+docker inspect letto-jobe --format '{{.Config.Image}}'
+docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
+```
+
+Die lokalen Endpunkte testen:
+
+```bash
+curl --fail http://localhost:8209/ping
+curl --fail http://localhost:4000/
+```
+
+Der erste Befehl muss `pong` liefern. Beim Aktualisieren auf neu veröffentlichte
+Images genügen folgende Befehle:
+
+```bash
+cd /opt/letto/docker/compose/letto
+docker compose --env-file .env -f docker-service-pluginpython.yml pull
+docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build
+docker image prune -f
+```
+
+Zum Stoppen und Entfernen der beiden Container, ohne die persistenten Daten zu
+löschen:
+
+```bash
+cd /opt/letto/docker/compose/letto
+docker compose --env-file .env -f docker-service-pluginpython.yml down
+```
+
+Sind die Docker-Hub-Repositories nicht öffentlich, muss vor `pull` einmal
+`docker login` ausgeführt werden.
+
 * Proxy Konfiguration:
   * kopiere proxy/pluginpython.conf in /opt/letto/docker/proxy/ am LeTTo-Server 
   * restarte den Proxy (docker restart letto-proxy)
