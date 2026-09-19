@@ -47,6 +47,80 @@ push or a manual run publishes both `latest` and `sha-<commit>` tags; a `v*` Git
 tag also publishes the corresponding version tag. The workflow run summary
 lists the exact tags or explains why publishing was skipped.
 
+### Lokaler Test unter Windows (PowerShell)
+
+Die folgenden Befehle sind für **PowerShell** und setzen Docker Desktop im
+Linux-Container-Modus voraus. Sie laden die veröffentlichten Images herunter,
+erstellen die für Compose benötigten lokalen Verzeichnisse und das externe
+Netzwerk und starten beide Container.
+
+```powershell
+cd C:\Pfad\zu\plugin-python
+
+docker version
+docker compose version
+
+docker pull klausstocker/letto-plugin-python:latest
+docker pull klausstocker/letto-plugin-python-jobe:latest
+
+New-Item -ItemType Directory -Force .docker-test\log | Out-Null
+New-Item -ItemType Directory -Force .docker-test\images | Out-Null
+New-Item -ItemType Directory -Force .docker-test\plugins | Out-Null
+
+@"
+LETTO_SCHULEN=test
+SERVER_NAME=localhost
+SERVICE_USER_PASSWORD=test-user-password
+SERVICE_GAST_PASSWORD=test-guest-password
+LETTO_SETUP_URI=http://localhost:8096
+LETTO_PLUGIN_URI_EXTERN=http://localhost:8209/pluginpython
+VOLUME_LOG=./.docker-test/log
+VOLUME_IMAGES=./.docker-test/images
+VOLUME_PLUGINS=./.docker-test/plugins
+"@ | Set-Content -Encoding ascii .env.docker-local
+
+docker network inspect nw-letto *> $null
+if ($LASTEXITCODE -ne 0) { docker network create nw-letto }
+
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml config
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml pull
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml up -d --no-build
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml ps
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml logs --tail 100
+
+curl.exe http://localhost:8209/ping
+curl.exe http://localhost:4000/
+
+docker inspect letto-pluginpython --format '{{.Config.Image}}'
+docker inspect letto-jobe --format '{{.Config.Image}}'
+```
+
+Der erste Aufruf sollte `pong` liefern. Die beiden `docker inspect`-Befehle
+sollten `klausstocker/letto-plugin-python:latest` beziehungsweise
+`klausstocker/letto-plugin-python-jobe:latest` ausgeben. Der Plugin-Healthcheck
+hat eine Startphase von 90 Sekunden; direkt nach dem Start kann der Status daher
+zunächst `starting` sein.
+
+Status und Logs können später erneut geprüft werden:
+
+```powershell
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml ps
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml logs --follow
+```
+
+Aufräumen nach dem Test:
+
+```powershell
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml down
+docker network rm nw-letto
+Remove-Item .env.docker-local -ErrorAction SilentlyContinue
+Remove-Item .docker-test -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+`docker network rm nw-letto` darf ausgelassen werden, wenn andere lokale
+LeTTo-Container dieses Netzwerk verwenden. Die Datei `.env.docker-local`
+enthält nur Testwerte; echte Passwörter dürfen nicht eingecheckt werden.
+
 ## Installation am LeTTo-Server
 * Installation des Docker-Containers:
   * kopiere yml/docker-service-pluginpython.yml in /opt/letto/docker/compose/letto/ am LeTTo-Server 
