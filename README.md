@@ -210,6 +210,47 @@ docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-bui
 docker image prune -f
 ```
 
+### Sauberer Neu-Download auf dem Produktionsserver
+
+Wenn die beiden Container zuerst gestoppt und **alle lokal vorhandenen Images
+dieser beiden Repositories** entfernt werden sollen, die folgenden Befehle
+verwenden. Die Befehle löschen keine Volumes und keine Daten unter
+`/opt/letto/docker/storage`:
+
+```bash
+cd /opt/letto/docker/compose/letto
+
+docker compose --env-file .env -f docker-service-pluginpython.yml down --remove-orphans
+
+for image_id in $(docker image ls \
+  --filter 'reference=klausstocker/letto-plugin-python*' \
+  --quiet | sort -u); do
+  docker image rm "$image_id"
+done
+
+docker image prune -f
+
+docker compose --env-file .env -f docker-service-pluginpython.yml pull
+docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build --force-recreate
+```
+
+Danach prüfen, ob beide Container die neu heruntergeladenen Images verwenden
+und erfolgreich antworten:
+
+```bash
+docker compose --env-file .env -f docker-service-pluginpython.yml ps
+docker inspect letto-pluginpython --format '{{.Config.Image}} {{.Image}}'
+docker inspect letto-jobe --format '{{.Config.Image}} {{.Image}}'
+docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
+curl --fail http://localhost:8209/ping
+curl --fail http://localhost:4000/
+```
+
+Auf einem Server mit weiteren Docker-Anwendungen nicht `docker system prune -a`
+oder `docker volume prune` verwenden: Diese Befehle können Images,
+Build-Caches oder Daten anderer Anwendungen löschen. Der oben verwendete
+Repository-Filter begrenzt das Löschen auf die beiden Plugin-Python-Images.
+
 Zum Stoppen und Entfernen der beiden Container, ohne die persistenten Daten zu
 löschen:
 
