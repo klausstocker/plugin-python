@@ -6,7 +6,7 @@ on:
       - main
       - master
     tags:
-      - "v*"
+      - "*"
   pull_request:
   workflow_dispatch:
 
@@ -32,6 +32,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Validate Git tag for Docker Hub
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "Invalid Docker image tag: $IMAGE_TAG" >&2
+            echo "Use 1-128 letters, digits, dots, underscores, or dashes; the first character must be a letter, digit, or underscore." >&2
+            exit 1
+          fi
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -52,7 +63,7 @@ jobs:
           images: ${{ matrix.image }}
           tags: |
             type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-            type=ref,event=tag
+            type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
             type=sha,prefix=sha-
 
       - name: Build and optionally publish image

@@ -43,9 +43,26 @@ Pull requests build both images for validation but do not log in or push them.
 Therefore, a successful pull-request check does **not** mean an image was
 published. Merge the pull request into `main` or `master`, or open **Actions →
 Build and publish Docker images → Run workflow** to publish. A default-branch
-push or a manual run publishes both `latest` and `sha-<commit>` tags; a `v*` Git
-tag also publishes the corresponding version tag. The workflow run summary
-lists the exact tags or explains why publishing was skipped.
+push or a manual run publishes both `latest` and `sha-<commit>` tags. Every Git
+tag that is also a valid Docker tag automatically starts the workflow and is
+published unchanged for both images. For example, Git tag `v1.2.3` publishes
+`klausstocker/letto-plugin-python:v1.2.3` and
+`klausstocker/letto-plugin-python-jobe:v1.2.3`. The workflow run summary lists
+the exact tags or explains why publishing was skipped.
+
+Create and push a release tag with:
+
+```bash
+git switch main
+git pull --ff-only
+git tag -a v1.2.3 -m "Release v1.2.3"
+git push origin v1.2.3
+```
+
+Docker tags may contain only letters, digits, dots, underscores, and dashes,
+must start with a letter, digit, or underscore, and may be at most 128
+characters long. The workflow rejects an incompatible Git tag rather than
+silently publishing it under a different name.
 
 ### Lokaler Test unter Windows (PowerShell)
 
