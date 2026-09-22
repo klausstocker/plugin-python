@@ -7,7 +7,7 @@ name: letto-plugin-python
 
 services:
   pluginpython:
-    image: klausstocker/letto-plugin-python:latest
+    image: klausstocker/letto-plugin-python:${PLUGIN_PYTHON_TAG:?Set PLUGIN_PYTHON_TAG}"
     restart: always
     networks:
       - nw-letto
@@ -51,7 +51,7 @@ services:
       PluginPythonLogLevel: ${PLUGIN_PYTHON_LOG_LEVEL:-INFO}
 
   jobe:
-    image: klausstocker/letto-plugin-python-jobe:latest
+    image: klausstocker/letto-plugin-python-jobe:${PLUGIN_PYTHON_TAG:?Set PLUGIN_PYTHON_TAG}"
     container_name: letto-jobe
     hostname: letto-jobe
     restart: always
