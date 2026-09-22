@@ -1,12 +1,7 @@
-name: Build and publish Docker images
+name: Validate Docker builds
 
+# Publishing is handled locally by build.bat / build.sh.
 on:
-  push:
-    branches:
-      - main
-      - master
-    tags:
-      - "*"
   pull_request:
   workflow_dispatch:
 
@@ -15,95 +10,20 @@ permissions:
 
 jobs:
   docker:
-    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: Python plugin
-            image: klausstocker/letto-plugin-python
-            dockerfile: Dockerfile
-          - name: Jobe
-            image: klausstocker/letto-plugin-python-jobe
-            dockerfile: jobe/Dockerfile
-
+        dockerfile: [Dockerfile, jobe/Dockerfile]
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Validate Git tag for Docker Hub
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          IMAGE_TAG: ${{ github.ref_name }}
-        run: |
-          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
-            echo "Invalid Docker image tag: $IMAGE_TAG" >&2
-            echo "Use 1-128 letters, digits, dots, underscores, or dashes; the first character must be a letter, digit, or underscore." >&2
-            exit 1
-          fi
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Generate image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ matrix.image }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-            type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
-            type=sha,prefix=sha-
-
-      - name: Build and optionally publish image
-        id: build
-        uses: docker/build-push-action@v6
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
           build-args: |
             PLUGIN_BUILD_HASH=${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
-
-      - name: Report publishing result
-        if: always()
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BUILD_OUTCOME: ${{ steps.build.outcome }}
-          IMAGE_NAME: ${{ matrix.image }}
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          if [ "$BUILD_OUTCOME" != "success" ]; then
-            echo "### $IMAGE_NAME was not published because the build failed" >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$EVENT_NAME" = "pull_request" ]; then
-            {
-              echo "### $IMAGE_NAME was built but not published"
-              echo
-              echo "Publishing is intentionally disabled for pull request runs because Docker Hub secrets are not exposed to pull requests."
-              echo "Merge the pull request into the default branch or start this workflow manually to publish the image."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo "### Published $IMAGE_NAME"
-              echo
-              echo '```text'
-              echo "$IMAGE_TAGS"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi

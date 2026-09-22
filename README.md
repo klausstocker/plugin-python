@@ -2,67 +2,52 @@
 
 
 
-## Build des Docker-Containers (build.bat)
-```bash
-docker build -t klausstocker/letto-plugin-python:latest -f Dockerfile .
+## Build and publish Docker images
+
+Run `build.bat` on Windows or `bash build.sh` on Linux (Bash 4+), from any
+working directory. Both scripts build these images for the local Docker platform:
+
+- `klausstocker/letto-plugin-python:latest`
+- `klausstocker/letto-plugin-python-jobe:latest`
+
+Docker must be running with Linux container support. Git supplies the plugin's
+build hash. A source archive without `.git` uses `unknown` and never publishes.
+The scripts only build and publish; use the installation instructions below to
+deploy containers. GitHub Actions only validates builds on pull requests or
+manual runs; it no longer logs in or uploads images.
+
+Without a Git tag directly on `HEAD`, images remain local. With one or more
+lightweight or annotated tags on `HEAD`, both images receive every exact Git
+tag and are uploaded to Docker Hub, together with `latest`, after both builds
+succeed. Older tags on ancestor commits do not trigger publishing. Publishing
+requires a clean checkout (including untracked files) and a prior `docker login`.
+Tags must match `[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}`; incompatible tags fail
+before building. Any build, tagging, or upload failure stops the script with a
+nonzero exit code. Docker Hub uploads are not atomic across images/tags; after
+an interrupted release, rerun from the same checkout.
+
+Build/test without uploading, even on a tagged commit:
+
+```powershell
+.\build.bat --no-push
 ```
 
-## Docker Hub images
+```bash
+bash build.sh --no-push
+```
 
-GitHub Actions builds the plugin and Jobe images for AMD64 and ARM64 and publishes
-them to Docker Hub after pushes to `main` or `master`, version tags, and manual
-workflow runs:
-
-- `klausstocker/letto-plugin-python`
-- `klausstocker/letto-plugin-python-jobe`
-
-Configure these **repository secrets** (not environment secrets) before running
-the workflow:
-
-- `DOCKERHUB_USERNAME`: Docker Hub username (`klausstocker`)
-- `DOCKERHUB_TOKEN`: a Docker Hub personal access token with read/write access
-
-In GitHub, open **Settings → Secrets and variables → Actions**, select the
-**Secrets** tab, scroll down past **Environment secrets** to **Repository
-secrets**, and click **New repository secret**. Create each secret separately:
-
-1. Set the name to `DOCKERHUB_USERNAME`, set its value to `klausstocker`, and
-   click **Add secret**.
-2. Click **New repository secret** again, set the name to `DOCKERHUB_TOKEN`,
-   paste a Docker Hub personal access token as its value, and click **Add
-   secret**.
-
-For this repository, the settings page is
-<https://github.com/klausstocker/plugin-python/settings/secrets/actions>. The
-workflow does not use the **Environment secrets** section shown above
-**Repository secrets** on that page. Never commit or paste a Docker Hub token
-into an issue, pull request, source file, or chat. Revoke and replace any token
-that has been exposed.
-
-Pull requests build both images for validation but do not log in or push them.
-Therefore, a successful pull-request check does **not** mean an image was
-published. Merge the pull request into `main` or `master`, or open **Actions →
-Build and publish Docker images → Run workflow** to publish. A default-branch
-push or a manual run publishes both `latest` and `sha-<commit>` tags. Every Git
-tag that is also a valid Docker tag automatically starts the workflow and is
-published unchanged for both images. For example, Git tag `v1.2.3` publishes
-`klausstocker/letto-plugin-python:v1.2.3` and
-`klausstocker/letto-plugin-python-jobe:v1.2.3`. The workflow run summary lists
-the exact tags or explains why publishing was skipped.
-
-Create and push a release tag with:
+Publish a release after committing the changes:
 
 ```bash
-git switch main
-git pull --ff-only
+docker login
 git tag -a v1.2.3 -m "Release v1.2.3"
-git push origin v1.2.3
+bash build.sh                  # Windows: .\build.bat
+git push origin v1.2.3         # Records the release tag on GitHub
 ```
 
-Docker tags may contain only letters, digits, dots, underscores, and dashes,
-must start with a letter, digit, or underscore, and may be at most 128
-characters long. The workflow rejects an incompatible Git tag rather than
-silently publishing it under a different name.
+This publishes `:v1.2.3` and `:latest` for both repositories. Local scripts build
+only the Docker engine's platform; the validation workflow checks AMD64 and
+ARM64 but does not publish multi-platform manifests.
 
 ### Lokaler Test unter Windows (PowerShell)
 
@@ -300,7 +285,7 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
 - Der JavaScript-Wert steht als String direkt in `resources/plugins/Python/PythonConfigScript.js` (`PYTHON_CONFIG_SCRIPT_COMMIT_HASH`) und wird nicht vom Python-Backend in die JavaScript-Parameter injiziert; der Backend-Endpunkt liest denselben Build-Wert aus `PLUGIN_BUILD_HASH`.
 - Automatische Aktualisierung:
   1. `build.bat` läuft relativ zu seinem eigenen Verzeichnis (`%~dp0`) und fragt Git nur ab, wenn dort `.git` existiert. Dadurch wird `fatal: Needed a single revision` vermieden, wenn das Skript außerhalb eines Git-Checkouts liegt.
-  2. Wenn Git verfügbar ist, verwendet `build.bat` `git -C "%~dp0." log -1 --format=%h`; andernfalls nutzt es `unknown`. Der Wert wird als Docker-Build-Argument `PLUGIN_BUILD_HASH` übergeben.
+  2. Wenn Git verfügbar ist, verwendet `build.bat` `git -C "%~dp0." rev-parse --short HEAD`; ohne `.git` nutzt es `unknown`. Der Wert wird als Docker-Build-Argument `PLUGIN_BUILD_HASH` übergeben.
   3. Das Dockerfile ersetzt beim Image-Build den String in der kopierten `PythonConfigScript.js`, sodass die ausgelieferte JavaScript-Datei den Build-Commit direkt enthält.
 - Für CI/CD sollte entsprechend `docker build --build-arg PLUGIN_BUILD_HASH=$(git log -1 --format=%h 2>/dev/null || echo unknown) ...` verwendet werden.
 
