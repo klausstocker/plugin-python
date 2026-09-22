@@ -50,6 +50,22 @@ This publishes `:v1.2.3` and `:latest` for both repositories. Local scripts buil
 only the Docker engine's platform; the validation workflow checks AMD64 and
 ARM64 but does not publish multi-platform manifests.
 
+## Free Docker disk space
+
+Run `docker-cleanup.bat` on Windows or `bash docker-cleanup.sh` on Linux.
+Type `DELETE` at the prompt, or pass `--yes` for unattended execution.
+
+These scripts affect **all projects on the Docker engine targeted by your Docker
+settings**: they stop and remove all containers, prune all unused images, and
+clear the selected builder's cache. Removing containers is necessary to free
+their images and also deletes container logs and writable container data.
+Volumes and bind-mounted files are preserved. Other Buildx builders may retain
+their own caches. Avoid concurrent builds or container creation during cleanup.
+
+The scripts stop on errors and print `docker system df` after completion.
+Recreate services using Compose afterwards. On Docker Desktop, freed space
+inside its virtual disk may not immediately reduce the disk file's host size.
+
 ### Lokaler Test unter Windows (PowerShell)
 
 Die folgenden Befehle sind für **PowerShell** und setzen Docker Desktop im
