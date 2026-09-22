@@ -46,7 +46,7 @@ for tag in "${tags[@]}"; do
         docker tag "$image:latest" "$image:$tag"
     done
 done
-if (( ${#tags[@]} )) && [[ "$no_push" == false ]]; then
+if [[ "$no_push" == false ]]; then
     for image in "${images[@]}"; do
         docker push "$image:latest"
         for tag in "${tags[@]}"; do
@@ -54,5 +54,5 @@ if (( ${#tags[@]} )) && [[ "$no_push" == false ]]; then
         done
     done
 else
-    echo 'Images built locally; publishing skipped (no Git tag at HEAD or --no-push set).'
+    echo 'Images built locally; publishing skipped (--no-push set).'
 fi

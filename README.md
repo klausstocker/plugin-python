@@ -11,16 +11,17 @@ working directory. Both scripts build these images for the local Docker platform
 - `klausstocker/letto-plugin-python-jobe:latest`
 
 Docker must be running with Linux container support. Git supplies the plugin's
-build hash. A source archive without `.git` uses `unknown` and never publishes.
+build hash. A source archive without `.git` uses `unknown` as the build hash.
 The scripts only build and publish; use the installation instructions below to
 deploy containers. GitHub Actions only validates builds on pull requests or
 manual runs; it no longer logs in or uploads images.
 
-Without a Git tag directly on `HEAD`, images remain local. With one or more
+Without a Git tag directly on `HEAD`, both images are uploaded as `latest`. With one or more
 lightweight or annotated tags on `HEAD`, both images receive every exact Git
 tag and are uploaded to Docker Hub, together with `latest`, after both builds
-succeed. Older tags on ancestor commits do not trigger publishing. Publishing
-requires a clean checkout (including untracked files) and a prior `docker login`.
+succeed. Older tags on ancestor commits are ignored. Publishing requires a prior
+`docker login`. Publishing a tagged release also requires a clean checkout
+(including untracked files). Use `--no-push` to build without uploading.
 Tags must match `[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}`; incompatible tags fail
 before building. Any build, tagging, or upload failure stops the script with a
 nonzero exit code. Docker Hub uploads are not atomic across images/tags; after

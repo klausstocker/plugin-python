@@ -24,6 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir /scripts -p
 COPY app ./app
 COPY shared ./shared
+COPY examples ./examples
 # resources folder exists, but JS libs can be copied in later (see README)
 COPY resources       ./resources
 RUN python -c "from pathlib import Path; import re; h='${PLUGIN_BUILD_HASH}'; replacements={'resources/plugins/Python/PythonConfigScript.js':'PYTHON_CONFIG_SCRIPT_COMMIT_HASH','resources/plugins/Python/PythonScript.js':'PYTHON_SCRIPT_COMMIT_HASH'}; [Path(path).write_text(re.sub(r'const ' + const + r' = \"[^\"]*\";', 'const ' + const + ' = \"' + h + '\";', Path(path).read_text())) for path, const in replacements.items()]"

@@ -42,7 +42,6 @@ for %%t in (!TAGS!) do for %%i in (!PLUGIN_IMAGE! !JOBE_IMAGE!) do (
     docker tag "%%i:latest" "%%i:%%t"
     if errorlevel 1 goto failed
 )
-if not defined TAGS goto local_only
 if defined NO_PUSH goto local_only
 for %%i in (!PLUGIN_IMAGE! !JOBE_IMAGE!) do (
     docker push "%%i:latest"
