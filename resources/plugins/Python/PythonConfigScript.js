@@ -359,10 +359,10 @@ function configPluginPython(dtoString) {
                         <div class="shared-actions">
                             <div class="shared-head-row">
                                 <div class="btn-row">
-                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn">run</button>
-                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn">lint</button>
-                                    <button type="button" id="${ids.btnCheckId}" class="cfg-btn">check</button>
-                                    <button type="button" id="${ids.btnScoreId}" class="cfg-btn">score</button>
+                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Code des aktuell geöffneten Editors aus.">run</button>
+                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn" title="Prüft den Stil des Codes im aktuell geöffneten Editor.">lint</button>
+                                    <button type="button" id="${ids.btnCheckId}" class="cfg-btn" title="Führt die UnitTests mit dem Preview-Code aus.">check</button>
+                                    <button type="button" id="${ids.btnScoreId}" class="cfg-btn" title="Berechnet die Punkte aus UnitTests und Linter-Ergebnis.">score</button>
                                 </div>
                                 <button type="button" id="${ids.outputToggleId}" class="icon-btn" title="Hide output">▾</button>
                             </div>
@@ -1351,8 +1351,21 @@ function configPluginPython(dtoString) {
                 <li><strong>UnitTest:</strong> Hier stehen die Tests, mit denen die Lösung geprüft wird.</li>
                 <li><strong>Preview:</strong> Dieser Python-Code dient als Vorschau beziehungsweise Musterlösung.</li>
                 <li><strong>Files:</strong> Zusätzliche Dateien können hochgeladen, heruntergeladen und gelöscht werden.</li>
-                <li><strong>Configuration:</strong> Legen Sie fest, ob Tests und Linter ausgeführt werden, und passen Sie die Linter-Gewichtung an.</li>
-                <li><strong>run / lint / check / score:</strong> Führen den aktiven Code aus, prüfen den Stil, testen die Lösung oder berechnen die Punkte.</li>
+            </ul>
+            <h4>Configuration</h4>
+            <ul>
+                <li><strong>run at test:</strong> Führt beim Testen die UnitTests gegen die abgegebene Lösung aus.</li>
+                <li><strong>lint at test:</strong> Prüft beim Testen zusätzlich die Codequalität mit dem Linter.</li>
+                <li><strong>Linter configuration:</strong> Übergibt zusätzliche Optionen an den Linter, zum Beispiel deaktivierte Prüfregeln.</li>
+                <li><strong>Weight:</strong> Bestimmt, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis in die Punkte eingeht.</li>
+                <li><strong>Dataset variables:</strong> Zeigt die für die Aufgabe verfügbaren Variablen mit Wert und Einheit. Im UnitTest können sie aus <code>dataset</code> importiert werden.</li>
+            </ul>
+            <h4>Buttons</h4>
+            <ul>
+                <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
+                <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
+                <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
+                <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten Linter-Ergebnis.</li>
             </ul>
             <p><strong>Beispiele:</strong> Wählen Sie ein Beispiel und klicken Sie auf <em>Apply</em>. Vorhandener eigener Code wird erst nach einer Bestätigung überschrieben.</p>
         `;

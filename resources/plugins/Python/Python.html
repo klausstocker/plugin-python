@@ -32,8 +32,27 @@
     <li><strong>UnitTest:</strong> Enthält die Tests, mit denen die eingereichte Lösung geprüft wird.</li>
     <li><strong>Preview:</strong> Enthält den Python-Code für die Vorschau beziehungsweise Musterlösung.</li>
     <li><strong>Files:</strong> Hier lassen sich zusätzliche Dateien hochladen, herunterladen und löschen.</li>
-    <li><strong>Configuration:</strong> Hier werden Test- und Linter-Ausführung sowie die Gewichtung des Linters festgelegt.</li>
-    <li><strong>run / lint / check / score:</strong> Führt Code aus, prüft den Stil, testet die Lösung oder berechnet die Punkte.</li>
+  </ul>
+
+  <h2>Configuration</h2>
+  <ul>
+    <li><strong>run at test:</strong> Führt beim Testen die UnitTests gegen die abgegebene Lösung aus.</li>
+    <li><strong>lint at test:</strong> Prüft beim Testen zusätzlich die Codequalität mit dem Linter.</li>
+    <li><strong>Linter configuration:</strong> Hier können zusätzliche Linter-Optionen angegeben werden, beispielsweise
+      Regeln, die nicht geprüft werden sollen.</li>
+    <li><strong>Weight:</strong> Legt fest, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis in die
+      Gesamtpunkte eingeht.</li>
+    <li><strong>Dataset variables:</strong> Zeigt die verfügbaren Aufgabenvariablen mit Wert und Einheit. Im UnitTest
+      können sie aus <code>dataset</code> importiert werden.</li>
+  </ul>
+
+  <h2>Buttons</h2>
+  <ul>
+    <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
+    <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
+    <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
+    <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten
+      Linter-Ergebnis.</li>
   </ul>
 
   <h2>Beispiele verwenden</h2>
