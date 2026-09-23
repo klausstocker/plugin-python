@@ -1,4 +1,4 @@
-from shared.jobe_wrapper import JobeWrapper
+from shared.jobe_wrapper import LANGUAGE_C, LANGUAGE_CPP, JobeWrapper
 from shared.check_result import CheckResult
 import uuid
 
@@ -14,7 +14,29 @@ def _with_student_answer_file(code: str, files=None):
     return _student_answer_file(code) + auxiliary_files
 
 
-def checkCode(server, code, testCode, files=None):
+def checkCatch2Code(server, language, code, testCode, files=None):
+    """Run teacher-supplied Catch2 tests against a C or C++ submission."""
+    jobe = JobeWrapper(server)
+    result = jobe.run_catch2_tests(language, code, testCode, files=files)
+    parsed_result = CheckResult.from_catch2_output(result.stdout) if result.stdout else None
+    if parsed_result and parsed_result.count:
+        return parsed_result
+    if not result.success():
+        return CheckResult({
+            'count': 0,
+            'errors': [
+                'Error running Jobe Catch2 unit tests. '
+                f'{result.__repr__().strip()} '
+                'Please check the validation tests, uploaded files, and the submitted C/C++ syntax.'
+            ],
+        })
+    return parsed_result or CheckResult.from_catch2_output(result.stdout)
+
+
+def checkCode(server, code, testCode, files=None, language='python'):
+    if language in (LANGUAGE_C, LANGUAGE_CPP):
+        return checkCatch2Code(server, language, code, testCode, files=files)
+
     code2run = testCode + """
 import sys
 from io import StringIO

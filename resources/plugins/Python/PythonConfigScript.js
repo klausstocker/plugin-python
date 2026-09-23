@@ -39,6 +39,7 @@ function configPluginPython(dtoString) {
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
+        programmingLanguageId: `programmingLanguage_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
@@ -209,6 +210,7 @@ function configPluginPython(dtoString) {
 
     function parseConfig(rawValue, fallbackData) {
         const defaults = {
+            programmingLanguage: normalizeProgrammingLanguage(fallbackData && fallbackData.programmingLanguage),
             indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
             validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
             files: (fallbackData && fallbackData.files) || extractFilesFromConfigValue(rawValue) || {},
@@ -225,6 +227,7 @@ function configPluginPython(dtoString) {
         try {
             const parsed = JSON.parse(rawValue);
             return {
+                programmingLanguage: normalizeProgrammingLanguage(parsed.programmingLanguage || defaults.programmingLanguage),
                 indication: parsed.indication || defaults.indication,
                 validation: parsed.validation || defaults.validation,
                 files: parsed.files || defaults.files,
@@ -237,6 +240,7 @@ function configPluginPython(dtoString) {
             };
         } catch (e) {
             return {
+                programmingLanguage: defaults.programmingLanguage,
                 indication: rawValue,
                 validation: defaults.validation,
                 files: defaults.files,
@@ -245,6 +249,14 @@ function configPluginPython(dtoString) {
                 linterWeight: defaults.linterWeight
             };
         }
+    }
+
+    function normalizeProgrammingLanguage(language) {
+        return ["python", "c", "cpp"].includes(language) ? language : "python";
+    }
+
+    function aceModeForLanguage(language) {
+        return language === "python" ? "ace/mode/python" : "ace/mode/c_cpp";
     }
 
 
@@ -331,6 +343,12 @@ function configPluginPython(dtoString) {
                                     <span>Server build: <span data-build-role="server">loading...</span></span>
                                 </div>
                                 <div class="flags-row">
+                                    <label for="${ids.programmingLanguageId}">Programming language</label>
+                                    <select id="${ids.programmingLanguageId}" class="text-input">
+                                        <option value="python">Python</option>
+                                        <option value="c">Standard C</option>
+                                        <option value="cpp">C++</option>
+                                    </select>
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
                                 </div>
@@ -862,12 +880,12 @@ function configPluginPython(dtoString) {
         if (aceAvailable && window.ace) {
             const unitEditor = ace.edit(ids.unitEditorId);
             unitEditor.setTheme("ace/theme/monokai");
-            unitEditor.session.setMode("ace/mode/python");
+            unitEditor.session.setMode(aceModeForLanguage(state.programmingLanguage));
             unitEditor.session.setValue(initialUnit || "");
 
             const previewEditor = ace.edit(ids.previewEditorId);
             previewEditor.setTheme("ace/theme/monokai");
-            previewEditor.session.setMode("ace/mode/python");
+            previewEditor.session.setMode(aceModeForLanguage(state.programmingLanguage));
             previewEditor.session.setValue(initialPreview || "");
 
             unitEditor.session.on("change", saveConfig);
@@ -877,6 +895,11 @@ function configPluginPython(dtoString) {
             configPluginPython._getPreviewCode = () => previewEditor.getValue();
             configPluginPython._setUnitCode = (value) => unitEditor.session.setValue(value || "");
             configPluginPython._setPreviewCode = (value) => previewEditor.session.setValue(value || "");
+            configPluginPython._setEditorLanguage = (language) => {
+                const mode = aceModeForLanguage(language);
+                unitEditor.session.setMode(mode);
+                previewEditor.session.setMode(mode);
+            };
         } else {
             fallbackTextArea(ids.unitEditorId, initialUnit, "_getUnitCode");
             fallbackTextArea(ids.previewEditorId, initialPreview, "_getPreviewCode");
@@ -1087,16 +1110,21 @@ function configPluginPython(dtoString) {
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
+        const programmingLanguage = document.getElementById(ids.programmingLanguageId);
 
         if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
         if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
         if (linterConfig) linterConfig.value = state.linterConfig || "";
         if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
+        if (programmingLanguage) programmingLanguage.value = state.programmingLanguage;
 
-        [runAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
+        [runAtTest, lintAtTest, linterConfig, linterWeight, programmingLanguage].forEach((el) => {
             if (!el) return;
             const onOptionChanged = (event) => {
                 syncOptionsStateFromInputs();
+                if (el === programmingLanguage && configPluginPython._setEditorLanguage) {
+                    configPluginPython._setEditorLanguage(state.programmingLanguage);
+                }
                 saveConfig();
                 if (el === linterWeight && event && event.type === "change") {
                     linterWeight.value = formatWeightValue(state.linterWeight);
@@ -1112,10 +1140,12 @@ function configPluginPython(dtoString) {
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
+        const programmingLanguage = document.getElementById(ids.programmingLanguageId);
 
         state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
         state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
         state.linterConfig = linterConfig ? linterConfig.value : "";
+        state.programmingLanguage = normalizeProgrammingLanguage(programmingLanguage ? programmingLanguage.value : state.programmingLanguage);
 
         const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
@@ -1243,9 +1273,13 @@ function configPluginPython(dtoString) {
         if (!example) return;
         state.files = example.files || {};
         state.evalConfig = example.evalConfig || { runAtTest: true, lintAtTest: true };
+        state.programmingLanguage = normalizeProgrammingLanguage(example.programmingLanguage);
 
         if (configPluginPython._setUnitCode) configPluginPython._setUnitCode(example.validation || "");
         if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
+        if (configPluginPython._setEditorLanguage) {
+            configPluginPython._setEditorLanguage(state.programmingLanguage);
+        }
 
         setupFileTab();
         setupOptionsTab();
@@ -1294,6 +1328,7 @@ function configPluginPython(dtoString) {
         syncOptionsStateFromInputs();
         const includeDataset = !options || options.includeDataset !== false;
         const payload = {
+            programmingLanguage: state.programmingLanguage,
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
             files: currentStoredFiles()
@@ -1309,6 +1344,7 @@ function configPluginPython(dtoString) {
         syncOptionsStateFromInputs();
 
         const pluginConfig = {
+            programmingLanguage: state.programmingLanguage,
             indication: getPreviewCode(),
             validation: getUnitCode(),
             files: currentStoredFiles(),
@@ -1319,6 +1355,7 @@ function configPluginPython(dtoString) {
         };
 
         questionConfigDto.validation = pluginConfig.validation;
+        questionConfigDto.programmingLanguage = pluginConfig.programmingLanguage;
         questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.files = pluginConfig.files;
         questionConfigDto.evalConfig = pluginConfig.evalConfig;

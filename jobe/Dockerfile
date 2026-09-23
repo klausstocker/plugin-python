@@ -14,6 +14,7 @@ LABEL \
 
 ARG TZ=Pacific/Auckland
 ARG JOBE_VERSION=master
+ARG CATCH2_VERSION=v2.13.10
 ARG API_KEYS=""
 # Set up the (apache) environment variables
 ENV APACHE_RUN_USER=www-data
@@ -32,6 +33,9 @@ COPY jobe/000-jobe.conf /
 # Redirect apache logs to stdout
 # Configure apache
 # Configure php
+# Install a header-only Catch2 v2 release because generated runners include
+# <catch2/catch.hpp>; Catch2 v3 removed that header and requires linker flags.
+# Install it below /usr/include, which is visible inside Jobe's compilation sandbox.
 # Get jobe
 # Handle jobe API keys
 # Install jobe
@@ -75,6 +79,14 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     mkdir -p /var/crash && \
     chmod 777 /var/crash && \
     echo '<!DOCTYPE html><html lang="en"><title>Jobe</title><h1>Jobe</h1></html>' > /var/www/html/index.html && \
+    git clone --depth 1 --branch ${CATCH2_VERSION} https://github.com/catchorg/Catch2.git /tmp/catch2 && \
+    mkdir -p /usr/include/catch2 /usr/local/include && \
+    cp /tmp/catch2/single_include/catch2/catch.hpp /usr/include/catch2/catch.hpp && \
+    chmod 0644 /usr/include/catch2/catch.hpp && \
+    ln -sfn /usr/include/catch2 /usr/local/include/catch2 && \
+    test -f /usr/include/catch2/catch.hpp && \
+    test -f /usr/local/include/catch2/catch.hpp && \
+    rm -rf /tmp/catch2 && \
     git clone --single-branch --branch ${JOBE_VERSION} https://github.com/trampgeek/jobe.git /var/www/html/jobe && \
     apache2ctl start && \
     cd /var/www/html/jobe && \

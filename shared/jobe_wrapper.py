@@ -6,6 +6,23 @@ import uuid
 
 RESOURCE_BASE = '/jobe/index.php/restapi'
 
+# Language ids are the ids exposed by Jobe's REST API.  Keep this mapping here
+# rather than scattering ids and file extensions throughout the endpoints that
+# call Jobe.
+LANGUAGE_PYTHON = 'python3'
+LANGUAGE_C = 'c'
+LANGUAGE_CPP = 'cpp'
+SOURCE_FILENAMES = {
+    LANGUAGE_PYTHON: 'main.py',
+    LANGUAGE_C: 'main.c',
+    LANGUAGE_CPP: 'main.cpp',
+}
+CATCH2_TEST_FILENAME = 'catch2_tests.cpp'
+CATCH2_SOLUTION_FILENAMES = {
+    LANGUAGE_C: 'answer.c',
+    LANGUAGE_CPP: 'answer.cpp',
+}
+
 PYTHON_CODE = """
 MESSAGE = 'Hello Jobe!'
 
@@ -90,15 +107,15 @@ class JobeWrapper():
             filesWithId.append((fileId, name, content))
         return filesWithId
 
-    def http_request(self, method, resource, data, headers):
+    def http_request(self, method, resource, data=None, headers=None):
         '''Send a request to Jobe with given HTTP method to given resource on
         the currently configured Jobe server and given data and headers.
         Return the connection object. '''
         connect = http.client.HTTPConnection(self.server)
-        connect.request(method, resource, data, headers)
+        connect.request(method, resource, data, headers or {})
         return connect
 
-    def run_test(self, language, code, sourceFilename, files=[]):
+    def run_test(self, language, code, sourceFilename, files=None):
         '''Execute the given code in the given language.
         Return the result object.'''
         runspec = {
@@ -108,7 +125,7 @@ class JobeWrapper():
             'file_list': []
         }
         
-        for fileId, name, content in files:
+        for fileId, name, content in files or []:
             if self.put_file(fileId, content):
                 return RunResult({'outcome': 99, 'stderr': f'could not upload file {name}'})
             exists = self.check_file(fileId)
@@ -123,12 +140,70 @@ class JobeWrapper():
         result = self.do_http('POST', resource, headers, data)
         return RunResult(result)
 
+    def run_c(self, code, files=None, source_filename=None):
+        """Compile and run a standard C program with Jobe."""
+        return self.run_test(
+            LANGUAGE_C, code, source_filename or SOURCE_FILENAMES[LANGUAGE_C], files)
 
-    def do_http(self, method, resource, headers, data=None):
+    def run_cpp(self, code, files=None, source_filename=None):
+        """Compile and run a C++ program with Jobe."""
+        return self.run_test(
+            LANGUAGE_CPP, code, source_filename or SOURCE_FILENAMES[LANGUAGE_CPP], files)
+
+    @staticmethod
+    def build_catch2_test_program(solution_language, solution_filename, test_code):
+        """Return the C++ test runner used to execute Catch2 tests.
+
+        Catch2 is a C++ framework, so both C and C++ submissions are compiled
+        by Jobe as C++.  A C submission is included in an ``extern \"C\"`` block
+        to preserve C linkage for functions declared by the submission.
+        """
+        if solution_language not in CATCH2_SOLUTION_FILENAMES:
+            raise ValueError(
+                f'Catch2 supports only {LANGUAGE_C!r} and {LANGUAGE_CPP!r}, '
+                f'not {solution_language!r}')
+
+        include_solution = f'#include "{solution_filename}"'
+        if solution_language == LANGUAGE_C:
+            include_solution = f'extern "C" {{\n{include_solution}\n}}'
+
+        return (
+            '#define CATCH_CONFIG_MAIN\n'
+            '#include <catch2/catch.hpp>\n\n'
+            f'{include_solution}\n\n'
+            f'{test_code.rstrip()}\n'
+        )
+
+    def run_catch2_tests(self, solution_language, solution_code, test_code, files=None):
+        """Run Catch2 tests against a C or C++ submission.
+
+        The student submission is uploaded as ``answer.c`` or ``answer.cpp``.
+        The generated C++ source includes it together with the teacher's Catch2
+        test cases, allowing Jobe to compile one self-contained test executable.
+        """
+        if solution_language not in CATCH2_SOLUTION_FILENAMES:
+            raise ValueError(
+                f'Catch2 supports only {LANGUAGE_C!r} and {LANGUAGE_CPP!r}, '
+                f'not {solution_language!r}')
+
+        solution_filename = CATCH2_SOLUTION_FILENAMES[solution_language]
+        solution_file = (uuid.uuid4().hex, solution_filename, solution_code.encode('utf-8'))
+        auxiliary_files = [
+            file_spec for file_spec in (files or [])
+            if file_spec[1] != solution_filename
+        ]
+        program = self.build_catch2_test_program(
+            solution_language, solution_filename, test_code)
+        return self.run_cpp(program, [solution_file, *auxiliary_files], CATCH2_TEST_FILENAME)
+
+
+    def do_http(self, method, resource, headers=None, data=None):
         """Send the given HTTP request to Jobe, return json-decoded result as
         a dictionary (or the empty dictionary if a 204 response is given).
         """
         result = {}
+        response = None
+        content = None
 
         try:
             connect = self.http_request(method, resource, data, headers)

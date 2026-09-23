@@ -1,4 +1,5 @@
 import json
+import re
 
 class CheckResult():
     __magic_string__ = '__magic_string__'
@@ -25,6 +26,37 @@ class CheckResult():
             })
         resultJson = text[magic_index+len(cls.__magic_string__):]
         return cls(json.loads(resultJson))
+
+    @classmethod
+    def from_catch2_output(cls, text):
+        """Convert Catch2's console summary into the common check result."""
+        output = (text or "").strip()
+        summary = re.search(
+            r"test cases:\s*(\d+)(?:\s*\|\s*(\d+) passed)?(?:\s*\|\s*(\d+) failed)?",
+            output,
+            re.IGNORECASE,
+        )
+        if summary and (summary.group(2) is not None or summary.group(3) is not None):
+            count = int(summary.group(1))
+            failed = int(summary.group(3) or 0)
+            return cls({
+                "count": count,
+                "failures": [output] if failed else [],
+                "failure_count": failed,
+            })
+
+        all_passed = re.search(
+            r"All tests passed \([^)]*? in (\d+) test cases?\)", output, re.IGNORECASE)
+        if all_passed:
+            return cls({"count": int(all_passed.group(1))})
+
+        return cls({
+            "count": 0,
+            "errors": [
+                "Could not read the Catch2 unit test result from Jobe output. "
+                "Please check the validation code and the submitted C/C++ code."
+            ],
+        })
 
     def wasSuccessful(self):
         return self.negCount() == 0
