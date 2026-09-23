@@ -8,6 +8,14 @@
 
 <body>
   <style>
+    body {
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      font-family: sans-serif;
+      line-height: 1.5;
+    }
+
     table.doc,
     table.doc th,
     table.doc td {
@@ -17,7 +25,21 @@
   </style>
   <h1>Python - Plugin</h1>
 
-  Plugin zum Üben von Python und Testen von Coding-Kenntnissen.
+  <p>Mit diesem Plugin können Python-Aufgaben erstellt, ausprobiert und automatisch bewertet werden.</p>
+
+  <h2>Kurz erklärt</h2>
+  <ul>
+    <li><strong>UnitTest:</strong> Enthält die Tests, mit denen die eingereichte Lösung geprüft wird.</li>
+    <li><strong>Preview:</strong> Enthält den Python-Code für die Vorschau beziehungsweise Musterlösung.</li>
+    <li><strong>Files:</strong> Hier lassen sich zusätzliche Dateien hochladen, herunterladen und löschen.</li>
+    <li><strong>Configuration:</strong> Hier werden Test- und Linter-Ausführung sowie die Gewichtung des Linters festgelegt.</li>
+    <li><strong>run / lint / check / score:</strong> Führt Code aus, prüft den Stil, testet die Lösung oder berechnet die Punkte.</li>
+  </ul>
+
+  <h2>Beispiele verwenden</h2>
+  <p>Wählen Sie im Bereich <strong>UnitTest</strong> ein Beispiel aus und klicken Sie auf <strong>Apply</strong>.
+    Würde dabei eigener Code ersetzt, erscheint vorher eine Warnung. Mit <strong>Ja, überschreiben</strong> übernehmen
+    Sie das Beispiel; mit <strong>Nein</strong> bleibt Ihr Code unverändert.</p>
 
 </body>
 

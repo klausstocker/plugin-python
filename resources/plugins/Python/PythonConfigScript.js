@@ -44,6 +44,9 @@ function configPluginPython(dtoString) {
         buildInfoId: `buildInfo_${pluginTag}`,
         datasetVariablesId: `datasetVariables_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
+        exampleConfirmId: `exampleConfirm_${pluginTag}`,
+        exampleConfirmYesId: `exampleConfirmYes_${pluginTag}`,
+        exampleConfirmNoId: `exampleConfirmNo_${pluginTag}`,
         outputToggleId: `outputToggle_${pluginTag}`,
         mainSplitId: `mainSplit_${pluginTag}`,
         splitHandleId: `splitHandle_${pluginTag}`
@@ -377,6 +380,17 @@ function configPluginPython(dtoString) {
                     <div id="configPluginHelp"></div>
                     <div id="configPluginWiki"></div>
                 </div>
+
+                <div id="${ids.exampleConfirmId}" class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="${ids.exampleConfirmId}_title" hidden>
+                    <div class="confirm-dialog">
+                        <h3 id="${ids.exampleConfirmId}_title">Eigenen Code überschreiben?</h3>
+                        <p>Das ausgewählte Beispiel ersetzt Ihren vorhandenen Code. Möchten Sie ihn wirklich überschreiben?</p>
+                        <div class="btn-row confirm-actions">
+                            <button type="button" id="${ids.exampleConfirmNoId}" class="cfg-btn">Nein</button>
+                            <button type="button" id="${ids.exampleConfirmYesId}" class="cfg-btn confirm-overwrite">Ja, überschreiben</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         `);
     }
@@ -408,6 +422,48 @@ function configPluginPython(dtoString) {
                 padding: 8px;
                 overflow: auto;
                 min-width: 0;
+            }
+            .pluginConfigForm .config-help h4 {
+                margin: 14px 0 4px;
+            }
+            .pluginConfigForm .config-help p,
+            .pluginConfigForm .config-help ul {
+                margin: 4px 0 8px;
+            }
+            .pluginConfigForm .config-help ul {
+                padding-left: 20px;
+            }
+            .pluginConfigForm .confirm-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+                background: rgba(0, 0, 0, 0.45);
+            }
+            .pluginConfigForm .confirm-overlay[hidden] {
+                display: none;
+            }
+            .pluginConfigForm .confirm-dialog {
+                width: min(440px, 100%);
+                padding: 20px;
+                border-radius: 6px;
+                background: #fff;
+                box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+            }
+            .pluginConfigForm .confirm-dialog h3 {
+                margin: 0 0 8px;
+            }
+            .pluginConfigForm .confirm-actions {
+                justify-content: flex-end;
+                margin-top: 16px;
+            }
+            .pluginConfigForm .confirm-overwrite {
+                border-color: #a12622;
+                background: #a12622;
+                color: #fff;
             }
             .pluginConfigForm .tab-buttons {
                 display: flex;
@@ -1114,8 +1170,59 @@ function configPluginPython(dtoString) {
             const index = Number(select.value);
             const exampleData = await requestExample(index);
             if (exampleData && exampleData.output) {
+                if (hasUserCodeToOverwrite(exampleData.output) && !(await confirmExampleOverwrite())) return;
                 applyExample(exampleData.output);
             }
+        });
+    }
+
+    function hasUserCodeToOverwrite(example) {
+        const placeholderUnitCode = "# Unit test code";
+        const placeholderPreviewCode = "# Preview code";
+        const currentUnitCode = getUnitCode().trim();
+        const currentPreviewCode = getPreviewCode().trim();
+        const exampleUnitCode = String((example && example.validation) || "").trim();
+        const examplePreviewCode = String((example && example.indication) || "").trim();
+
+        const unitWouldBeOverwritten = currentUnitCode
+            && currentUnitCode !== placeholderUnitCode
+            && currentUnitCode !== exampleUnitCode;
+        const previewWouldBeOverwritten = currentPreviewCode
+            && currentPreviewCode !== placeholderPreviewCode
+            && currentPreviewCode !== examplePreviewCode;
+        return !!(unitWouldBeOverwritten || previewWouldBeOverwritten);
+    }
+
+    function confirmExampleOverwrite() {
+        const dialog = document.getElementById(ids.exampleConfirmId);
+        const yesButton = document.getElementById(ids.exampleConfirmYesId);
+        const noButton = document.getElementById(ids.exampleConfirmNoId);
+        if (!dialog || !yesButton || !noButton) return Promise.resolve(false);
+
+        return new Promise((resolve) => {
+            const close = (overwrite) => {
+                dialog.hidden = true;
+                yesButton.removeEventListener("click", onYes);
+                noButton.removeEventListener("click", onNo);
+                dialog.removeEventListener("click", onBackdropClick);
+                document.removeEventListener("keydown", onKeyDown);
+                resolve(overwrite);
+            };
+            const onYes = () => close(true);
+            const onNo = () => close(false);
+            const onBackdropClick = (event) => {
+                if (event.target === dialog) close(false);
+            };
+            const onKeyDown = (event) => {
+                if (event.key === "Escape") close(false);
+            };
+
+            yesButton.addEventListener("click", onYes);
+            noButton.addEventListener("click", onNo);
+            dialog.addEventListener("click", onBackdropClick);
+            document.addEventListener("keydown", onKeyDown);
+            dialog.hidden = false;
+            noButton.focus();
         });
     }
 
@@ -1224,15 +1331,31 @@ function configPluginPython(dtoString) {
     }
 
     function renderHelp() {
-        if (dtoParams.help != null) {
-            const helpElement = document.getElementById("configPluginHelp");
-            helpElement.innerHTML = dtoParams.help;
+        const helpElement = document.getElementById("configPluginHelp");
+        if (helpElement) helpElement.innerHTML = defaultHelpHtml();
+
+        if (helpElement && dtoParams.help != null) {
+            helpElement.innerHTML += dtoParams.help;
         }
 
         if (dtoParams.wikiurl != null) {
             const wikiElement = document.getElementById("configPluginWiki");
             wikiElement.innerHTML = '<iframe src="' + dtoParams.wikiurl + '"></iframe>';
         }
+    }
+
+    function defaultHelpHtml() {
+        return `
+            <h4>Kurz erklärt</h4>
+            <ul>
+                <li><strong>UnitTest:</strong> Hier stehen die Tests, mit denen die Lösung geprüft wird.</li>
+                <li><strong>Preview:</strong> Dieser Python-Code dient als Vorschau beziehungsweise Musterlösung.</li>
+                <li><strong>Files:</strong> Zusätzliche Dateien können hochgeladen, heruntergeladen und gelöscht werden.</li>
+                <li><strong>Configuration:</strong> Legen Sie fest, ob Tests und Linter ausgeführt werden, und passen Sie die Linter-Gewichtung an.</li>
+                <li><strong>run / lint / check / score:</strong> Führen den aktiven Code aus, prüfen den Stil, testen die Lösung oder berechnen die Punkte.</li>
+            </ul>
+            <p><strong>Beispiele:</strong> Wählen Sie ein Beispiel und klicken Sie auf <em>Apply</em>. Vorhandener eigener Code wird erst nach einer Bestätigung überschrieben.</p>
+        `;
     }
 
     function renderDatasetVariableList(variables) {
