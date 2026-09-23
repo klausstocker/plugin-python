@@ -8,6 +8,14 @@
 
 <body>
   <style>
+    body {
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      font-family: sans-serif;
+      line-height: 1.5;
+    }
+
     table.doc,
     table.doc th,
     table.doc td {
@@ -17,7 +25,36 @@
   </style>
   <h1>Python - Plugin</h1>
 
-  Plugin zum Üben von Python und Testen von Coding-Kenntnissen.
+  <p>Mit diesem Plugin können Python-Aufgaben erstellt, ausprobiert und automatisch bewertet werden.</p>
+
+  <h2>Kurz erklärt</h2>
+  <ul>
+    <li><strong>UnitTest:</strong> Enthält die UnitTests, mit denen die eingereichte Lösung geprüft wird.</li>
+    <li><strong>Preview:</strong> Enthält den Python-Code für die Angabe bzw. Musterlösung.</li>
+    <li><strong>Files:</strong> Hier lassen sich zusätzliche Dateien verwalten.</li>
+  </ul>
+
+  <h2>Configuration</h2>
+  <ul>
+    <li><strong>run at test:</strong> Lässt "run" im Rahmen eines Tests zu.</li>
+    <li><strong>lint at test:</strong> Lässt "lint" im Rahmen eines Tests zu.</li>
+    <li><strong>Linter configuration:</strong> Hier können zusätzliche Linter-Optionen angegeben werden, beispielsweise
+      Regeln, die nicht geprüft werden sollen.</li>
+    <li><strong>Weight:</strong> Legt fest, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis (1.0) in die
+      Gesamtpunkte eingeht.</li>
+    <li><strong>Dataset variables:</strong> Zeigt die verfügbaren Aufgabenvariablen mit Wert und Einheit. Im UnitTest
+      können sie aus <code>dataset</code> importiert werden.</li>
+  </ul>
+
+  <h2>Buttons</h2>
+  <ul>
+    <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
+    <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
+    <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
+    <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten
+      Linter-Ergebnis.</li>
+  </ul>
+
 
 </body>
 

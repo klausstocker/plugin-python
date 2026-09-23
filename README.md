@@ -5,10 +5,15 @@
 ## Build and publish Docker images
 
 Run `build.bat` on Windows or `bash build.sh` on Linux (Bash 4+), from any
-working directory. Both scripts build these images for the local Docker platform:
+working directory. By default, both scripts build these images for the local Docker platform:
 
 - `klausstocker/letto-plugin-python:latest`
 - `klausstocker/letto-plugin-python-jobe:latest`
+
+Pass `plugin` or `jobe` to build and push only that image, for example
+`build.bat plugin` or `bash build.sh jobe`. The optional `--no-push` flag can
+appear before or after the image argument, for example `bash build.sh jobe --no-push`.
+Omit the image argument to build both images.
 
 Docker must be running with Linux container support. Git supplies the plugin's
 build hash. A source archive without `.git` uses `unknown` as the build hash.
@@ -16,9 +21,9 @@ The scripts only build and publish; use the installation instructions below to
 deploy containers. GitHub Actions only validates builds on pull requests or
 manual runs; it no longer logs in or uploads images.
 
-Without a Git tag directly on `HEAD`, both images are uploaded as `latest`. With one or more
-lightweight or annotated tags on `HEAD`, both images receive every exact Git
-tag and are uploaded to Docker Hub, together with `latest`, after both builds
+Without a Git tag directly on `HEAD`, selected images are uploaded as `latest`. With one or more
+lightweight or annotated tags on `HEAD`, selected images receive every exact Git
+tag and are uploaded to Docker Hub, together with `latest`, after all selected builds
 succeed. Older tags on ancestor commits are ignored. Publishing requires a prior
 `docker login`. Publishing a tagged release also requires a clean checkout
 (including untracked files). Use `--no-push` to build without uploading.
@@ -49,6 +54,35 @@ git push origin v1.2.3         # Records the release tag on GitHub
 This publishes `:v1.2.3` and `:latest` for both repositories. Local scripts build
 only the Docker engine's platform; the validation workflow checks AMD64 and
 ARM64 but does not publish multi-platform manifests.
+
+## Start or update production services (Linux)
+
+Install `yml/docker-service-pluginpython.yml` in
+`/opt/letto/docker/compose/letto/` and configure the server's `.env` there
+as described in the installation section below. Include the image tag:
+
+```dotenv
+PLUGIN_PYTHON_TAG=v1.2.3
+```
+
+Use your published release tag or `latest`. Run the startup script from the
+repository, or copy it to the server and run it from any directory:
+
+```bash
+bash start.sh
+# Optional alternative deployment directory:
+bash start.sh /path/to/compose-directory
+```
+
+The script validates configuration, pulls both images, ensures `nw-letto`
+exists, stops the previous plugin and Jobe containers, and recreates them.
+It waits up to 180 seconds for healthy containers. A failed pull leaves the
+running services untouched; startup failures return a nonzero exit code without
+automatic rollback. Persistent volumes and bind mounts are retained. Other
+services are not stopped. Docker Compose with `--wait` support is required.
+Run with an account that can access Docker; for private repositories, first
+run `docker login` as that account. An exported `PLUGIN_PYTHON_TAG` overrides
+the value in `.env`.
 
 ## Free Docker disk space
 
@@ -88,6 +122,7 @@ New-Item -ItemType Directory -Force .docker-test\plugins | Out-Null
 
 @"
 LETTO_SCHULEN=test
+PLUGIN_PYTHON_TAG=latest
 SERVER_NAME=localhost
 SERVICE_USER_PASSWORD=test-user-password
 SERVICE_GAST_PASSWORD=test-guest-password
@@ -164,6 +199,7 @@ neben der Compose-Datei erstellen und die Beispielwerte anpassen:
 ```bash
 cat > .env <<'EOF'
 LETTO_SCHULEN=meine-schule
+PLUGIN_PYTHON_TAG=latest
 SERVER_NAME=letto.example.org
 SERVICE_USER_PASSWORD=BITTE_AENDERN
 SERVICE_GAST_PASSWORD=BITTE_AENDERN
