@@ -50,6 +50,35 @@ This publishes `:v1.2.3` and `:latest` for both repositories. Local scripts buil
 only the Docker engine's platform; the validation workflow checks AMD64 and
 ARM64 but does not publish multi-platform manifests.
 
+## Start or update production services (Linux)
+
+Install `yml/docker-service-pluginpython.yml` in
+`/opt/letto/docker/compose/letto/` and configure the server's `.env` there
+as described in the installation section below. Include the image tag:
+
+```dotenv
+PLUGIN_PYTHON_TAG=v1.2.3
+```
+
+Use your published release tag or `latest`. Run the startup script from the
+repository, or copy it to the server and run it from any directory:
+
+```bash
+bash start.sh
+# Optional alternative deployment directory:
+bash start.sh /path/to/compose-directory
+```
+
+The script validates configuration, pulls both images, ensures `nw-letto`
+exists, stops the previous plugin and Jobe containers, and recreates them.
+It waits up to 180 seconds for healthy containers. A failed pull leaves the
+running services untouched; startup failures return a nonzero exit code without
+automatic rollback. Persistent volumes and bind mounts are retained. Other
+services are not stopped. Docker Compose with `--wait` support is required.
+Run with an account that can access Docker; for private repositories, first
+run `docker login` as that account. An exported `PLUGIN_PYTHON_TAG` overrides
+the value in `.env`.
+
 ## Free Docker disk space
 
 Run `docker-cleanup.bat` on Windows or `bash docker-cleanup.sh` on Linux.
@@ -88,6 +117,7 @@ New-Item -ItemType Directory -Force .docker-test\plugins | Out-Null
 
 @"
 LETTO_SCHULEN=test
+PLUGIN_PYTHON_TAG=latest
 SERVER_NAME=localhost
 SERVICE_USER_PASSWORD=test-user-password
 SERVICE_GAST_PASSWORD=test-guest-password
@@ -164,6 +194,7 @@ neben der Compose-Datei erstellen und die Beispielwerte anpassen:
 ```bash
 cat > .env <<'EOF'
 LETTO_SCHULEN=meine-schule
+PLUGIN_PYTHON_TAG=latest
 SERVER_NAME=letto.example.org
 SERVICE_USER_PASSWORD=BITTE_AENDERN
 SERVICE_GAST_PASSWORD=BITTE_AENDERN
