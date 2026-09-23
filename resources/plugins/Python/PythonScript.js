@@ -59,7 +59,7 @@ function initPluginPython(dtoString, active) {
     const files = dtoData.files || {};
 
     // Let LeTTo score the initially rendered question by submitting the visible starter code.
-    if (answerField && !answerField.value) {
+    if (plugin.active && answerField && !answerField.value) {
         answerField.value = defaultMain;
     }
 
@@ -281,8 +281,9 @@ Server build: loading...">?</span>
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
+        editor.setReadOnly(!plugin.active);
 
-        if (answerField) {
+        if (plugin.active && answerField) {
             editor.session.on("change", function () {
                 // Persist only after an editor change, not while rendering fallback/indication text.
                 answerField.value = editor.getValue();
@@ -297,7 +298,8 @@ Server build: loading...">?</span>
         mainEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialMainCode)}</textarea>`;
 
         const mainTextArea = mainEl.querySelector("textarea");
-        if (answerField) {
+        mainTextArea.readOnly = !plugin.active;
+        if (plugin.active && answerField) {
             mainTextArea.addEventListener("input", () => {
                 // Persist only after student input in the fallback textarea.
                 answerField.value = mainTextArea.value;
