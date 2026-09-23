@@ -5,10 +5,15 @@
 ## Build and publish Docker images
 
 Run `build.bat` on Windows or `bash build.sh` on Linux (Bash 4+), from any
-working directory. Both scripts build these images for the local Docker platform:
+working directory. By default, both scripts build these images for the local Docker platform:
 
 - `klausstocker/letto-plugin-python:latest`
 - `klausstocker/letto-plugin-python-jobe:latest`
+
+Pass `plugin` or `jobe` to build and push only that image, for example
+`build.bat plugin` or `bash build.sh jobe`. The optional `--no-push` flag can
+appear before or after the image argument, for example `bash build.sh jobe --no-push`.
+Omit the image argument to build both images.
 
 Docker must be running with Linux container support. Git supplies the plugin's
 build hash. A source archive without `.git` uses `unknown` as the build hash.
@@ -16,9 +21,9 @@ The scripts only build and publish; use the installation instructions below to
 deploy containers. GitHub Actions only validates builds on pull requests or
 manual runs; it no longer logs in or uploads images.
 
-Without a Git tag directly on `HEAD`, both images are uploaded as `latest`. With one or more
-lightweight or annotated tags on `HEAD`, both images receive every exact Git
-tag and are uploaded to Docker Hub, together with `latest`, after both builds
+Without a Git tag directly on `HEAD`, selected images are uploaded as `latest`. With one or more
+lightweight or annotated tags on `HEAD`, selected images receive every exact Git
+tag and are uploaded to Docker Hub, together with `latest`, after all selected builds
 succeed. Older tags on ancestor commits are ignored. Publishing requires a prior
 `docker login`. Publishing a tagged release also requires a clean checkout
 (including untracked files). Use `--no-push` to build without uploading.

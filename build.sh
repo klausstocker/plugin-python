@@ -2,14 +2,19 @@
 set -euo pipefail
 
 no_push=false
-case "${1:-}" in
-    --no-push) no_push=true; shift ;;
-    --help|-h) echo 'Usage: bash build.sh [--no-push]'; exit 0 ;;
-esac
-if (( $# )); then
-    echo 'Usage: bash build.sh [--no-push]' >&2
-    exit 1
-fi
+target=
+usage() { echo 'Usage: bash build.sh [jobe|plugin] [--no-push]'; }
+for arg in "$@"; do
+    case "$arg" in
+        --no-push) no_push=true ;;
+        --help|-h) usage; exit 0 ;;
+        jobe|plugin)
+            if [[ -n "$target" ]]; then usage >&2; exit 1; fi
+            target="$arg"
+            ;;
+        *) usage >&2; exit 1 ;;
+    esac
+done
 
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 hash=unknown
@@ -37,6 +42,10 @@ fi
 
 images=(klausstocker/letto-plugin-python klausstocker/letto-plugin-python-jobe)
 files=(Dockerfile jobe/Dockerfile)
+case "$target" in
+    plugin) images=("${images[0]}"); files=("${files[0]}") ;;
+    jobe) images=("${images[1]}"); files=("${files[1]}") ;;
+esac
 for i in "${!images[@]}"; do
     echo "Building ${images[$i]}:latest (commit $hash)"
     docker build --build-arg "PLUGIN_BUILD_HASH=$hash" -t "${images[$i]}:latest" -f "$root/${files[$i]}" "$root"
