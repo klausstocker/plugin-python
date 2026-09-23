@@ -463,7 +463,6 @@ function configPluginPython(dtoString) {
             .pluginConfigForm .confirm-overwrite {
                 border-color: #a12622;
                 background: #a12622;
-                color: #fff;
             }
             .pluginConfigForm .tab-buttons {
                 display: flex;
@@ -1332,10 +1331,9 @@ function configPluginPython(dtoString) {
 
     function renderHelp() {
         const helpElement = document.getElementById("configPluginHelp");
-        if (helpElement) helpElement.innerHTML = defaultHelpHtml();
-
-        if (helpElement && dtoParams.help != null) {
-            helpElement.innerHTML += dtoParams.help;
+        if (helpElement) {
+            const suppliedHelp = typeof dtoParams.help === "string" ? dtoParams.help.trim() : "";
+            helpElement.innerHTML = suppliedHelp || defaultHelpHtml();
         }
 
         if (dtoParams.wikiurl != null) {
@@ -1367,7 +1365,6 @@ function configPluginPython(dtoString) {
                 <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
                 <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten Linter-Ergebnis.</li>
             </ul>
-            <p><strong>Beispiele:</strong> Wählen Sie ein Beispiel und klicken Sie auf <em>Apply</em>. Vorhandener eigener Code wird erst nach einer Bestätigung überschrieben.</p>
         `;
     }
 
