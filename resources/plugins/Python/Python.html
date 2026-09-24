@@ -46,6 +46,18 @@
       können sie aus <code>dataset</code> importiert werden.</li>
   </ul>
 
+  <h2>Hilfsmodul helpers.py</h2>
+  <p>Das Modul <code>helpers.py</code> stellt Hilfsklassen für UnitTests bereit:
+    <a href="/images/plugins/Python/helpers.py" target="_blank" rel="noopener">helpers.py ansehen</a>
+    oder <a href="/images/plugins/Python/helpers.py" download="helpers.py">herunterladen</a>.</p>
+  <ul>
+    <li><strong><code>RedirectedStdout</code>:</strong> Fängt innerhalb eines
+      <code>with</code>-Blocks die Standardausgabe (z. B. <code>print</code>) auf.
+      <code>str(ausgabe)</code> liefert den aufgefangenen Text. Beim Verlassen des
+      Blocks wird die ursprüngliche Standardausgabe wiederhergestellt, auch bei Fehlern.</li>
+  </ul>
+  <p>Zum lokalen Testen die Datei neben <code>test_answer.py</code> speichern.</p>
+
   <h2>Buttons</h2>
   <ul>
     <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>

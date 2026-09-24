@@ -83,6 +83,7 @@ class Checker(unittest.TestCase): # do not rename
 
     def test_check_uploads_files_to_jobe(self):
         files = [("stored-id", "input.txt", b"content")]
+        create_files = JobeWrapper.createFiles
 
         class FakeRunResult:
             stdout = '__magic_string__{"count":1,"errors":[],"failures":[],"exceptions":[]}'
@@ -91,6 +92,7 @@ class Checker(unittest.TestCase): # do not rename
                 return True
 
         with patch("shared.check.JobeWrapper") as wrapper_cls:
+            wrapper_cls.createFiles.side_effect = create_files
             wrapper = wrapper_cls.return_value
             wrapper.run_test.return_value = FakeRunResult()
 
@@ -111,7 +113,9 @@ class Checker(unittest.TestCase):
             self.assertNotIn("print(open('input.txt').read())", submitted_code)
             self.assertEqual(submitted_files[0][1], "answer.py")
             self.assertEqual(submitted_files[0][2], b"print(open('input.txt').read())\n")
-            self.assertEqual(submitted_files[1:], files)
+            self.assertEqual(submitted_files[1:-1], files)
+            self.assertEqual(submitted_files[-1][1], "helpers.py")
+            self.assertIn(b"class RedirectedStdout:", submitted_files[-1][2])
             self.assertTrue(result.wasSuccessful())
 
     def testUpload(self):
@@ -147,5 +151,8 @@ print(open('file2').read())
 
     def testExamples(self):
         for example in QuestionConfigDtoExamplesWorkingIndication():
-            result = checkCode('localhost:4000', example.indication, example.validation)
+            files = JobeWrapper.createFiles({
+                name: content.encode("utf-8") for name, content in example.files.items()
+            })
+            result = checkCode('localhost:4000', example.indication, example.validation, files=files)
             self.assertTrue(result.wasSuccessful())

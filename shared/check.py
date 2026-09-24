@@ -1,6 +1,7 @@
 from shared.jobe_wrapper import JobeWrapper
 from shared.check_result import CheckResult
 import uuid
+from pathlib import Path
 
 ANSWER_FILENAME = "answer.py"
 
@@ -10,8 +11,15 @@ def _student_answer_file(code: str):
 
 def _with_student_answer_file(code: str, files=None):
     auxiliary_files = list(files or [])
-    auxiliary_files = [file_spec for file_spec in auxiliary_files if file_spec[1] != ANSWER_FILENAME]
-    return _student_answer_file(code) + auxiliary_files
+    auxiliary_files = [
+        file_spec for file_spec in auxiliary_files
+        if file_spec[1] not in {ANSWER_FILENAME, "helpers.py"}
+    ]
+    # Runner support files are provided independently of question-specific files.
+    helper_files = JobeWrapper.createFiles({
+        "helpers.py": Path(__file__).with_name("helpers.py").read_bytes(),
+    })
+    return _student_answer_file(code) + auxiliary_files + helper_files
 
 
 def checkCode(server, code, testCode, files=None):
@@ -20,21 +28,9 @@ import sys
 from io import StringIO
 import json
 
-class RedirectedStdout:
-    def __init__(self):
-        self._stdout = None
-        self._string_io = None
-
-    def __enter__(self):
-        self._stdout = sys.stdout
-        sys.stdout = self._string_io = StringIO()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        sys.stdout = self._stdout
-
-    def __str__(self):
-        return self._string_io.getvalue()
+# Keep legacy tests working without replacing an explicitly imported helper.
+if 'RedirectedStdout' not in globals():
+    from helpers import RedirectedStdout
 
 def main():
     unittestOutput = StringIO()

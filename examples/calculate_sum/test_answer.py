@@ -9,28 +9,16 @@ Or run from the repository root with:
 
 import sys
 import unittest
-from io import StringIO
+from pathlib import Path
+
+# In the repository, use the shared source; on Jobe helpers.py is uploaded
+# alongside the tests. Downloaded copies can also sit beside this file.
+_shared_dir = Path(__file__).resolve().parent.parent.parent / "shared"
+if (_shared_dir / "helpers.py").is_file():
+    sys.path.insert(0, str(_shared_dir))
 
 import answer
-
-
-class RedirectedStdout:
-    """Capture stdout so examples can test printed output with unittest."""
-
-    def __init__(self):
-        self._stdout = None
-        self._string_io = None
-
-    def __enter__(self):
-        self._stdout = sys.stdout
-        sys.stdout = self._string_io = StringIO()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        sys.stdout = self._stdout
-
-    def __str__(self):
-        return self._string_io.getvalue()
+from helpers import RedirectedStdout
 
 
 def correct_implementation(arg1, arg2):
