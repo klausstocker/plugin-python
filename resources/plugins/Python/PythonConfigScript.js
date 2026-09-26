@@ -331,8 +331,8 @@ function configPluginPython(dtoString) {
                                     <span>Server build: <span data-build-role="server">loading...</span></span>
                                 </div>
                                 <div class="flags-row">
-                                    <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> run at test</label>
-                                    <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> lint at test</label>
+                                    <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> enable run</label>
+                                    <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> enable lint</label>
                                 </div>
                                 <div class="config-horizontal-row">
                                     <div class="linter-config-section">
@@ -1352,8 +1352,8 @@ function configPluginPython(dtoString) {
             </ul>
             <h4>Configuration</h4>
             <ul>
-                <li><strong>run at test:</strong> Führt beim Testen die UnitTests gegen die abgegebene Lösung aus.</li>
-                <li><strong>lint at test:</strong> Prüft beim Testen zusätzlich die Codequalität mit dem Linter.</li>
+                <li><strong>enable run:</strong> Zeigt den Button "Run Code" in der Aufgabe an.</li>
+                <li><strong>enable lint:</strong> Zeigt den Button "Lint Code" in der Aufgabe an.</li>
                 <li><strong>Linter configuration:</strong> Übergibt zusätzliche Optionen an den Linter, zum Beispiel deaktivierte Prüfregeln.</li>
                 <li><strong>Weight:</strong> Bestimmt, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis in die Punkte eingeht.</li>
                 <li><strong>Dataset variables:</strong> Zeigt die für die Aufgabe verfügbaren Variablen mit Wert und Einheit. Im UnitTest können sie aus <code>dataset</code> importiert werden.</li>

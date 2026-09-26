@@ -57,6 +57,9 @@ function initPluginPython(dtoString, active) {
     const linterConfig = dtoData.linterConfig || "";
     const linterWeight = Number(dtoData.linterWeight || 0.0);
     const files = dtoData.files || {};
+    const evalConfig = dtoData.evalConfig || {};
+    const enableRun = evalConfig.runAtTest !== false;
+    const enableLint = evalConfig.lintAtTest !== false;
 
     // Let LeTTo score the initially rendered question by submitting the visible starter code.
     if (plugin.active && answerField && !answerField.value) {
@@ -97,8 +100,8 @@ Server build: loading...">?</span>
                 </div>
 
                 <div class="btn-container">
-                    <button class="black-button" id="${runButtonId}" ${plugin.active ? "" : "disabled"}>Run Code</button>
-                    <button class="black-button" id="${lintButtonId}" ${plugin.active ? "" : "disabled"}>Lint Code</button>
+                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}">Run Code</button>` : ""}
+                    ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}">Lint Code</button>` : ""}
                 </div>
             </div>
         `);
@@ -309,6 +312,18 @@ Server build: loading...">?</span>
     }
 
     function bindActions() {
+        const editorContainer = document.getElementById(mainEditorId);
+        const stopEnterPropagation = (event) => {
+            if (event.key === "Enter" || event.keyCode === 13) {
+                // Keep Enter inside Ace/the fallback textarea without cancelling newlines.
+                event.stopPropagation();
+            }
+        };
+        // Bubble phase lets the editor handle the key before blocking LeTTo's handlers.
+        for (const eventType of ["keydown", "keypress", "keyup"]) {
+            editorContainer.addEventListener(eventType, stopEnterPropagation);
+        }
+
         setupLayoutControls();
         const out = document.getElementById(outputId);
 
