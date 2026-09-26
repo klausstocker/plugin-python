@@ -23,11 +23,14 @@ goto parse_args
 :args_done
 set "SCRIPT_DIR=%~dp0"
 set "PLUGIN_BUILD_HASH=unknown"
+set "REVISION=unknown"
+set "REVISION_TAG="
 set "TAGS="
 if not exist "%SCRIPT_DIR%.git" goto metadata_done
 git -C "%SCRIPT_DIR%." rev-parse --verify HEAD >nul 2>&1
 if errorlevel 1 goto failed
 for /f "delims=" %%i in ('git -C "%SCRIPT_DIR%." rev-parse --short HEAD') do set "PLUGIN_BUILD_HASH=%%i"
+for /f "delims=" %%i in ('git -C "%SCRIPT_DIR%." rev-parse HEAD') do set "REVISION=%%i"
 rem CRLF output is required by FINDSTR /x. Validate before delayed expansion.
 git -C "%SCRIPT_DIR%." tag --points-at HEAD --format="%%(refname:short)%%0d" | %SystemRoot%\System32\findstr.exe /r /v /x "[A-Za-z0-9_][A-Za-z0-9_.-]*" >nul
 if not errorlevel 1 goto invalid_tag
@@ -35,6 +38,7 @@ for /f "delims=" %%i in ('git -C "%SCRIPT_DIR%." tag --points-at HEAD') do (
     set "IMAGE_TAG=%%i"
     if not "!IMAGE_TAG:~128!"=="" goto invalid_tag
     set "TAGS=!TAGS! %%i"
+    if not defined REVISION_TAG set "REVISION_TAG=%%i"
 )
 :metadata_done
 if defined TAGS if not defined NO_PUSH (
@@ -45,6 +49,11 @@ if defined TAGS if not defined NO_PUSH (
         exit /b 1
     )
 )
+if defined REVISION_TAG set "REVISION=!REVISION_TAG!"
+rem Clear the tag lookup status before checking the file write.
+ver >nul
+>"%SCRIPT_DIR%revision.txt" echo !REVISION!
+if errorlevel 1 goto failed
 set "PLUGIN_IMAGE=klausstocker/letto-plugin-python"
 set "JOBE_IMAGE=klausstocker/letto-plugin-python-jobe"
 set "IMAGES=!PLUGIN_IMAGE! !JOBE_IMAGE!"
