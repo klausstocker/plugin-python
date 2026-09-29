@@ -2,7 +2,7 @@ import unittest
 import tempfile
 from pathlib import Path
 
-import answer
+import answer  # pylint: disable=import-error
 
 
 class Checker(unittest.TestCase):  # Keep this name; test methods start with test_.

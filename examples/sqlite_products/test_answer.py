@@ -1,7 +1,7 @@
 import unittest
 import sqlite3
 
-import answer
+import answer  # pylint: disable=import-error
 
 
 class Checker(unittest.TestCase):  # Keep this name; test methods start with test_.

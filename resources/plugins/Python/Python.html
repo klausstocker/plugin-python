@@ -46,6 +46,13 @@
       können sie aus <code>dataset</code> importiert werden.</li>
   </ul>
 
+  <p>Die Module <code>answer</code>, <code>dataset</code> und <code>helpers</code> werden erst bei
+    <strong>check</strong>/<strong>score</strong> bereitgestellt. Beim Linten der UnitTests die
+    Import-Fehlermeldung gezielt an der jeweiligen Importzeile deaktivieren:</p>
+  <pre><code>import answer  # pylint: disable=import-error
+from dataset import DATASET_VARIABLES  # pylint: disable=import-error
+from helpers import RedirectedStdout  # pylint: disable=import-error</code></pre>
+
   <h2>Beispiele</h2>
   <p><a href="/images/plugins/Python/examples.html" target="_blank" rel="noopener">Python-Beispiele: von print bis SQLite</a>
     mit Funktionen des Plugins, Aufgaben und möglichen Lösungen.</p>

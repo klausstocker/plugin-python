@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-import answer
+import answer  # pylint: disable=import-error
 
 
 class Checker(unittest.TestCase):  # Keep this name; test methods start with test_.

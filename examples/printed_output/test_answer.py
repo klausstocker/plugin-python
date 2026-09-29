@@ -1,7 +1,7 @@
 import unittest
-from helpers import RedirectedStdout
+from helpers import RedirectedStdout  # pylint: disable=import-error
 
-import answer
+import answer  # pylint: disable=import-error
 
 
 class Checker(unittest.TestCase):  # Keep this name; test methods start with test_.

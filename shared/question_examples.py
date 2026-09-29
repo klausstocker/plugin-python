@@ -30,6 +30,7 @@ def _examples(indication_filename: str) -> list[QuestionConfigDto]:
             validation=_example_file(name, "test_answer.py"),
             files={"names.txt": _example_file(name, "names.txt")} if name == "read_text" else {},
             linterConfig="--disable=C0114,C0115,C0116",
+            linterWeight=0.5,
         )
         for name in EXAMPLE_NAMES
     ]

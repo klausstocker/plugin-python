@@ -361,8 +361,8 @@ function configPluginPython(dtoString) {
                         <div class="shared-actions">
                             <div class="shared-head-row">
                                 <div class="btn-row">
-                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Code des aktuell geöffneten Editors aus.">run</button>
-                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn" title="Prüft den Stil des Codes im aktuell geöffneten Editor.">lint</button>
+                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Preview-Code aus. Nur im Preview-Tab verfügbar; UnitTests mit check ausführen." disabled>run</button>
+                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn" title="Prüft den Stil des UnitTest-Codes im UnitTest-Tab, sonst den Preview-Code.">lint</button>
                                     <button type="button" id="${ids.btnCheckId}" class="cfg-btn" title="Führt die UnitTests mit dem Preview-Code aus.">check</button>
                                     <button type="button" id="${ids.btnScoreId}" class="cfg-btn" title="Berechnet die Punkte aus UnitTests und Linter-Ergebnis.">score</button>
                                 </div>
@@ -843,8 +843,19 @@ function configPluginPython(dtoString) {
                 // Ace must recalculate and redraw after its hidden tab becomes visible.
                 if (target === "tab-unittest" && unitEditor) unitEditor.resize(true);
                 if (target === "tab-preview" && previewEditor) previewEditor.resize(true);
+                updateRunButtonState();
             });
         });
+        updateRunButtonState();
+    }
+
+    function updateRunButtonState() {
+        const button = document.getElementById(ids.btnRunId);
+        const previewPanel = document.getElementById("tab-preview");
+        if (button) {
+            button.disabled = button.dataset.requestPending === "true"
+                || !previewPanel || !previewPanel.classList.contains("active");
+        }
     }
 
     function ensureAceLoaded() {
@@ -1142,7 +1153,7 @@ function configPluginPython(dtoString) {
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
@@ -1253,6 +1264,9 @@ function configPluginPython(dtoString) {
         if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
 
         setupFileTab();
+        // Editor changes save the current form options, so load these afterwards.
+        state.linterConfig = example.linterConfig || "";
+        state.linterWeight = parseWeightValue(example.linterWeight);
         setupOptionsTab();
         saveConfig();
     }
@@ -1270,8 +1284,10 @@ function configPluginPython(dtoString) {
 
         btn.addEventListener("click", async (event) => {
             event.preventDefault();
+            if (btn.disabled) return;
             saveConfig();
             const oldText = btn.textContent;
+            btn.dataset.requestPending = "true";
             btn.disabled = true;
             btn.textContent = "working...";
             outputEl.textContent = "";
@@ -1289,7 +1305,9 @@ function configPluginPython(dtoString) {
             } catch (error) {
                 outputEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
             } finally {
+                delete btn.dataset.requestPending;
                 btn.disabled = false;
+                if (buttonId === ids.btnRunId) updateRunButtonState();
                 btn.textContent = oldText;
             }
         });
@@ -1364,6 +1382,10 @@ function configPluginPython(dtoString) {
                 <li><strong>Weight:</strong> Bestimmt, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis in die Punkte eingeht.</li>
                 <li><strong>Dataset variables:</strong> Zeigt die für die Aufgabe verfügbaren Variablen mit Wert und Einheit. Im UnitTest können sie aus <code>dataset</code> importiert werden.</li>
             </ul>
+            <p>Die Module <code>answer</code>, <code>dataset</code> und <code>helpers</code> werden erst bei <strong>check</strong>/<strong>score</strong> bereitgestellt. Beim Linten der UnitTests die Import-Fehlermeldung gezielt an der jeweiligen Importzeile deaktivieren:</p>
+            <pre><code>import answer  # pylint: disable=import-error
+from dataset import DATASET_VARIABLES  # pylint: disable=import-error
+from helpers import RedirectedStdout  # pylint: disable=import-error</code></pre>
             <h4>Buttons</h4>
             <ul>
                 <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
