@@ -1,4 +1,4 @@
-"""Small examples, ordered from printed output to SQLite."""
+"""Small examples, from printed output to LeTTo dataset variables."""
 
 from pathlib import Path
 
@@ -16,14 +16,16 @@ EXAMPLE_NAMES = (
     "write_text",
     "numpy_means",
     "sqlite_products",
+    "dataset_double",
 )
+REFERENCE_EXAMPLE_NAMES = tuple(name for name in EXAMPLE_NAMES if name != "dataset_double")
 
 
 def _example_file(example_name: str, filename: str) -> str:
     return (_EXAMPLES_DIR / example_name / filename).read_text(encoding="utf-8")
 
 
-def _examples(indication_filename: str) -> list[QuestionConfigDto]:
+def _examples(indication_filename: str, names: tuple[str, ...] = EXAMPLE_NAMES) -> list[QuestionConfigDto]:
     return [
         QuestionConfigDto(
             indication=_example_file(name, indication_filename),
@@ -32,7 +34,7 @@ def _examples(indication_filename: str) -> list[QuestionConfigDto]:
             linterConfig="--disable=C0114,C0115,C0116",
             linterWeight=0.5,
         )
-        for name in EXAMPLE_NAMES
+        for name in names
     ]
 
 
@@ -42,5 +44,5 @@ def QuestionConfigDtoExamples() -> list[QuestionConfigDto]:
 
 
 def QuestionConfigDtoExamplesWorkingIndication() -> list[QuestionConfigDto]:
-    """The same examples with reference solutions for integration checks."""
-    return _examples("answer.py")
+    """Examples with standalone reference solutions for integration checks."""
+    return _examples("answer.py", REFERENCE_EXAMPLE_NAMES)

@@ -79,3 +79,16 @@
 **Task:** Return product names with price strictly below max_price, ordered by name. Use the supplied connection and products(name TEXT, price REAL) table.
 
 [Possible solution](sqlite_products/answer.py)
+
+## 11. LeTTo dataset variable
+
+**Feature:** Use the current LeTTo dataset as input to the unit tests.
+
+**Required setup:** A numeric LeTTo dataset variable named `number` must exist
+in the question, without a unit (for example, value `7`). Create it in LeTTo
+before using **check** or **score**. Applying the example does not create it.
+It must appear under **Available dataset variables** in the configuration.
+
+**Task:** Implement `double(value)` to return twice the supplied value.
+The unit tests read `DATASET_VARIABLES["number"].value` from the runtime-provided
+`dataset` module and pass it to the student function.

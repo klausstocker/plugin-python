@@ -9,12 +9,12 @@ import markdown
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from shared.question_examples import EXAMPLE_NAMES
+from shared.question_examples import REFERENCE_EXAMPLE_NAMES
 
 
 def build(output: Path) -> None:
     guide = (ROOT / "examples" / "README.md").read_text(encoding="utf-8")
-    for name in EXAMPLE_NAMES:
+    for name in REFERENCE_EXAMPLE_NAMES:
         solution = (ROOT / "examples" / name / "answer.py").read_text(encoding="utf-8")
         guide = guide.replace(
             f"[Possible solution]({name}/answer.py)",

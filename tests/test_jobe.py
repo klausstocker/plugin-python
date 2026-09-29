@@ -2,6 +2,7 @@ import unittest
 import sys
 from unittest.mock import patch
 
+from app.dataset_helper import DatasetVariable, dataset_file_from_variables
 from shared.jobe_wrapper import JobeWrapper
 from shared.check import checkCode
 from shared.check_result import CheckResult
@@ -151,8 +152,12 @@ print(open('file2').read())
 
     def testExamples(self):
         for example in QuestionConfigDtoExamplesWorkingIndication():
-            files = JobeWrapper.createFiles({
+            file_data = {
                 name: content.encode("utf-8") for name, content in example.files.items()
-            })
+            }
+            file_data.update(dataset_file_from_variables([
+                DatasetVariable(name="number", value=7),
+            ]))
+            files = JobeWrapper.createFiles(file_data)
             result = checkCode('localhost:4000', example.indication, example.validation, files=files)
             self.assertTrue(result.wasSuccessful())
