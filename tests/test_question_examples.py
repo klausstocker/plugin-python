@@ -66,19 +66,23 @@ class TestExampleSubmissions(unittest.TestCase):
                 self.assertGreaterEqual(result.count, 2, repr(result))
                 self.assertFalse(result.wasSuccessful(), repr(result))
 
-    def test_html_guide_contains_sources_and_matches_help_link(self):
+    def test_html_guide_contains_solutions_and_matches_help_link(self):
+        from html import unescape
         from scripts.build_examples_docs import build
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "examples.html"
             build(output)
             html = output.read_text(encoding="utf-8")
+        root = Path(__file__).resolve().parents[1]
         for name in EXAMPLE_NAMES:
-            self.assertIn(f'id="source-{name}"', html)
+            solution = (root / "examples" / name / "answer.py").read_text(encoding="utf-8")
+            self.assertIn(solution.rstrip(), unescape(html))
         self.assertIn("def greet(name: str) -&gt; None:", html)
         self.assertIn("SELECT name FROM products WHERE price &lt; ?", html)
-        self.assertIn("Renée", html)
-        root = Path(__file__).resolve().parents[1]
+        self.assertNotIn("Build the HTML guide", html)
+        self.assertNotIn("Run locally", html)
+        self.assertNotIn("Teacher checker", html)
         for filename in ("Python.html", "PythonConfigScript.js"):
             help_text = (root / "resources/plugins/Python" / filename).read_text(encoding="utf-8")
             self.assertIn('/images/plugins/Python/examples.html', help_text)

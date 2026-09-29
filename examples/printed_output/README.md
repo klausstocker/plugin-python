@@ -8,6 +8,20 @@ RedirectedStdout captures print output. Compare the exact text, including spaces
 - `answer.py`: working reference solution.
 - `test_answer.py`: teacher validation.
 
-From this directory, run `python -m unittest test_answer.py`.
+The online plugin supplies `helpers.py` automatically.
 
-See [the examples guide](../README.md) for setup and all examples.
+For local testing, add the shared helper directory to Python's import path.
+From this directory in PowerShell:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path ../../shared).Path
+python -m unittest test_answer.py
+```
+
+Or in Bash:
+
+```bash
+PYTHONPATH=../../shared python -m unittest test_answer.py
+```
+
+See [the examples guide](../README.md) for all examples.

@@ -1,12 +1,4 @@
 import unittest
-import sys
-from pathlib import Path
-
-# The plugin supplies helpers.py; this fallback supports repository-local tests.
-_shared_dir = Path(__file__).resolve().parents[2] / "shared"
-if (_shared_dir / "helpers.py").is_file():
-    sys.path.insert(0, str(_shared_dir))
-
 from helpers import RedirectedStdout
 
 import answer

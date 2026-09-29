@@ -1,7 +1,6 @@
-"""Render the examples guide and current source files into one resource page."""
+"""Render the short examples guide with inline solutions."""
 
 import argparse
-from html import escape
 from pathlib import Path
 import sys
 
@@ -15,28 +14,13 @@ from shared.question_examples import EXAMPLE_NAMES
 
 def build(output: Path) -> None:
     guide = (ROOT / "examples" / "README.md").read_text(encoding="utf-8")
-    body = markdown.markdown(guide, extensions=["fenced_code", "tables", "toc"])
-    sources = ["<h2>Templates, checkers, and reference solutions</h2>"]
-    for index, name in enumerate(EXAMPLE_NAMES, 1):
-        directory = ROOT / "examples" / name
-        sources.append(f'<section id="source-{name}"><h3>{index}. {escape(name)}</h3>')
-        for filename, label in [
-            ("template.py", "Student template (indication)"),
-            ("test_answer.py", "Teacher checker (validation)"),
-            ("names.txt", "Supplied text fixture"),
-            ("answer.py", "Reference solution"),
-        ]:
-            path = directory / filename
-            if not path.exists():
-                if filename == "names.txt":
-                    continue
-                raise FileNotFoundError(path)
-            code = escape(path.read_text(encoding="utf-8"))
-            sources.append(
-                f"<details><summary>{label}: {filename}</summary>"
-                f"<pre><code>{code}</code></pre></details>"
-            )
-        sources.append("</section>")
+    for name in EXAMPLE_NAMES:
+        solution = (ROOT / "examples" / name / "answer.py").read_text(encoding="utf-8")
+        guide = guide.replace(
+            f"[Possible solution]({name}/answer.py)",
+            "**Possible solution**\n\n```python\n" + solution.rstrip() + "\n```",
+        )
+    body = markdown.markdown(guide, extensions=["fenced_code"])
     page = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,15 +32,14 @@ body { max-width: 960px; margin: 2rem auto; padding: 0 1rem;
        font-family: system-ui, sans-serif; line-height: 1.6; color: #202124; }
 pre { padding: 1rem; background: #f3f5f7; overflow-x: auto; line-height: 1.4; }
 code { font-family: ui-monospace, monospace; }
-summary { cursor: pointer; padding: .5rem 0; font-weight: 600; }
-section { margin: 2rem 0; border-top: 1px solid #ddd; }
+h2 { margin-top: 2rem; border-top: 1px solid #ddd; padding-top: 1rem; }
 a { color: #1455a0; }
 </style>
 </head>
 <body>
 """
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(page + body + "\n" + "\n".join(sources) + "\n</body>\n</html>\n",
+    output.write_text(page + body + "\n</body>\n</html>\n",
                       encoding="utf-8")
 
 
