@@ -1,10 +1,17 @@
 # Printed output
 
-Implement `greet(name)` so it prints `Hello, <name>!` followed by a newline.
+Print `hello world` followed by a newline with a single top-level statement:
 
-RedirectedStdout captures print output. Compare the exact text, including spaces and the trailing newline.
+```python
+print("hello world")
+```
 
-- `template.py`: typed student starter used as the indication.
+Import `answer` inside the `RedirectedStdout` block to capture the output produced
+when the module executes. Compare the exact text, including the space and trailing
+newline. Do not import `answer` beforehand: Python caches imports, so importing it
+again would not execute the print statement.
+
+- `template.py`: student instructions used as the indication.
 - `answer.py`: working reference solution.
 - `test_answer.py`: teacher validation.
 

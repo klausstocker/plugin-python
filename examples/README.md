@@ -2,9 +2,9 @@
 
 ## 1. Printed output
 
-**Feature:** Check printed output with `RedirectedStdout`.
+**Feature:** Check top-level printed output by importing `answer` inside `RedirectedStdout`.
 
-**Task:** Implement `greet(name)` so it prints `Hello, <name>!` followed by a newline.
+**Task:** Print `hello world` followed by a newline. 
 
 [Possible solution](printed_output/answer.py)
 

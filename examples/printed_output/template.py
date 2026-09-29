@@ -1,3 +1,1 @@
-def greet(name: str) -> None:
-    """Implement greet(name) so it prints Hello, <name>! followed by a newline."""
-    raise NotImplementedError
+# Print hello world followed by a newline. No function is needed.

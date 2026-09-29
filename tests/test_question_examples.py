@@ -28,8 +28,21 @@ class TestExampleSubmissions(unittest.TestCase):
         self.assertIs(RedirectedStdout, helpers.RedirectedStdout)
 '''
         result = self.run_example(example, example.indication)
-        self.assertEqual(result.count, 3, repr(result))
+        self.assertEqual(result.count, 2, repr(result))
         self.assertTrue(result.wasSuccessful(), repr(result))
+
+    def test_printed_output_requires_exact_top_level_output(self):
+        example = QuestionConfigDtoExamples()[EXAMPLE_NAMES.index("printed_output")]
+        for code in (
+            'print("Hello world")',
+            'print("hello world", end="")',
+            'print("hello world"); print("extra")',
+            'def greet(): print("hello world")',
+        ):
+            with self.subTest(code=code):
+                result = self.run_example(example, code)
+                self.assertEqual(result.count, 1, repr(result))
+                self.assertFalse(result.wasSuccessful(), repr(result))
 
     def run_example(self, example, code, dataset_value=7):
         def run_submission(language, source, filename, submitted_files):
@@ -79,14 +92,14 @@ class TestExampleSubmissions(unittest.TestCase):
         for name, example in zip(REFERENCE_EXAMPLE_NAMES, examples):
             with self.subTest(example=name):
                 result = self.run_example(example, example.indication)
-                self.assertGreaterEqual(result.count, 2, repr(result))
+                self.assertGreaterEqual(result.count, 1 if name == "printed_output" else 2, repr(result))
                 self.assertTrue(result.wasSuccessful(), repr(result))
 
     def test_student_templates_need_implementation(self):
         for name, example in zip(EXAMPLE_NAMES, QuestionConfigDtoExamples()):
             with self.subTest(example=name):
                 result = self.run_example(example, example.indication)
-                self.assertGreaterEqual(result.count, 2, repr(result))
+                self.assertGreaterEqual(result.count, 1 if name == "printed_output" else 2, repr(result))
                 self.assertFalse(result.wasSuccessful(), repr(result))
 
     def test_html_guide_contains_solutions_and_matches_help_link(self):
@@ -101,7 +114,7 @@ class TestExampleSubmissions(unittest.TestCase):
         for name in REFERENCE_EXAMPLE_NAMES:
             solution = (root / "examples" / name / "answer.py").read_text(encoding="utf-8")
             self.assertIn(solution.rstrip(), unescape(html))
-        self.assertIn("def greet(name: str) -&gt; None:", html)
+        self.assertIn('print("hello world")', unescape(html))
         self.assertIn("SELECT name FROM products WHERE price &lt; ?", html)
         self.assertIn("LeTTo dataset variable named <code>number</code> must exist", html)
         self.assertNotIn("dataset_double/answer.py", html)

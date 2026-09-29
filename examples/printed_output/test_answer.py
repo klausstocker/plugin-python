@@ -1,16 +1,9 @@
 import unittest
 from helpers import RedirectedStdout  # pylint: disable=import-error
 
-import answer  # pylint: disable=import-error
-
 
 class Checker(unittest.TestCase):  # Keep this name; test methods start with test_.
-    def test_greeting(self):
+    def test_printed_output(self):
         with RedirectedStdout() as output:
-            answer.greet("Ada")
-        self.assertEqual(str(output), "Hello, Ada!\n", "Include the greeting and a newline.")
-
-    def test_another_name(self):
-        with RedirectedStdout() as output:
-            answer.greet("Lin")
-        self.assertEqual(str(output), "Hello, Lin!\n")
+            import answer  # pylint: disable=import-error,import-outside-toplevel,unused-import
+        self.assertEqual(str(output), "hello world\n", "Print hello world followed by a newline.")
