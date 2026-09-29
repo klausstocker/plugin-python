@@ -9,3 +9,4 @@
 /.docker-test/
 /.env.docker-local
 /revision.txt
+/resources/plugins/Python/examples.html

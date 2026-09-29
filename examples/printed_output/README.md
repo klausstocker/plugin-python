@@ -1,8 +1,8 @@
-# Return value
+# Printed output
 
-Return the sum of two integers.
+Implement `greet(name)` so it prints `Hello, <name>!` followed by a newline.
 
-Call the student function through answer and compare its return value with assertEqual.
+RedirectedStdout captures print output. Compare the exact text, including spaces and the trailing newline.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.

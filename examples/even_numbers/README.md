@@ -1,8 +1,8 @@
-# Return value
+# Lists
 
-Return the sum of two integers.
+Return all even numbers, preserving their order and duplicates.
 
-Call the student function through answer and compare its return value with assertEqual.
+Compare lists directly. Cover empty input, duplicates, negative numbers, and ordering.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.

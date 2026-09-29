@@ -1,8 +1,8 @@
-# Return value
+# Read a text file
 
-Return the sum of two integers.
+Read a UTF-8 text file and return its lines without line endings.
 
-Call the student function through answer and compare its return value with assertEqual.
+names.txt is supplied through QuestionConfigDto.files. An additional temporary fixture checks an empty file. All file access uses text mode and UTF-8.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.

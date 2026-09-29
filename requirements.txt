@@ -9,3 +9,4 @@ MarkupSafe==3.0.2
 itsdangerous==2.2.0
 pylint
 numpy
+Markdown

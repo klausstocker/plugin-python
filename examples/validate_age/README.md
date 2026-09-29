@@ -1,8 +1,8 @@
-# Return value
+# Exceptions
 
-Return the sum of two integers.
+Return the age unchanged; raise ValueError if it is negative.
 
-Call the student function through answer and compare its return value with assertEqual.
+Use assertRaises as a context manager to check the exception type without requiring a particular message.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.

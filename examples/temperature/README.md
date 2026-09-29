@@ -1,8 +1,8 @@
-# Return value
+# Floating-point result
 
-Return the sum of two integers.
+Convert Celsius to Fahrenheit using celsius * 9 / 5 + 32.
 
-Call the student function through answer and compare its return value with assertEqual.
+Use assertAlmostEqual for floating-point calculations to allow small rounding differences.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.

@@ -9,28 +9,33 @@ from unittest.mock import patch
 
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper, RunResult
-from shared.question_examples import QuestionConfigDtoExamples
+from shared.question_examples import (
+    EXAMPLE_NAMES,
+    QuestionConfigDtoExamples,
+    QuestionConfigDtoExamplesWorkingIndication,
+)
 
 
-class TestCalculateSumSubmission(unittest.TestCase):
+class TestExampleSubmissions(unittest.TestCase):
     def test_helper_is_available_in_isolated_submission(self):
-        example = QuestionConfigDtoExamples()[0]
+        example = QuestionConfigDtoExamplesWorkingIndication()[0]
         self.assertNotIn("helpers.py", example.files)
-        validation = example.validation + '''
+        example.validation += '''
     def test_imported_helper_is_preserved(self):
         import helpers
         self.assertIs(RedirectedStdout, helpers.RedirectedStdout)
 '''
-        files = JobeWrapper.createFiles({
-            name: content.encode("utf-8") for name, content in example.files.items()
-        })
+        result = self.run_example(example, example.indication)
+        self.assertEqual(result.count, 3, repr(result))
+        self.assertTrue(result.wasSuccessful(), repr(result))
 
-        def run_submission(language, code, filename, submitted_files):
+    def run_example(self, example, code):
+        def run_submission(language, source, filename, submitted_files):
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 for _file_id, name, content in submitted_files:
                     (root / name).write_bytes(content)
-                (root / filename).write_text(code, encoding="utf-8")
+                (root / filename).write_text(source, encoding="utf-8")
                 completed = subprocess.run(
                     [sys.executable, "-E", filename], cwd=root,
                     capture_output=True, text=True, timeout=15,
@@ -41,9 +46,39 @@ class TestCalculateSumSubmission(unittest.TestCase):
                     "stderr": completed.stderr,
                 })
 
+        files = JobeWrapper.createFiles({
+            name: content.encode("utf-8") for name, content in example.files.items()
+        })
         with patch.object(JobeWrapper, "run_test", side_effect=run_submission):
-            result = checkCode(
-                "unused", example.indication, validation, files=files,
-            )
-        self.assertEqual(result.count, 3, repr(result))
-        self.assertTrue(result.wasSuccessful(), repr(result))
+            return checkCode("unused", code, example.validation, files=files)
+
+    def test_all_reference_solutions_pass(self):
+        for name, example in zip(EXAMPLE_NAMES, QuestionConfigDtoExamplesWorkingIndication()):
+            with self.subTest(example=name):
+                result = self.run_example(example, example.indication)
+                self.assertGreaterEqual(result.count, 2, repr(result))
+                self.assertTrue(result.wasSuccessful(), repr(result))
+
+    def test_student_templates_need_implementation(self):
+        for name, example in zip(EXAMPLE_NAMES, QuestionConfigDtoExamples()):
+            with self.subTest(example=name):
+                result = self.run_example(example, example.indication)
+                self.assertGreaterEqual(result.count, 2, repr(result))
+                self.assertFalse(result.wasSuccessful(), repr(result))
+
+    def test_html_guide_contains_sources_and_matches_help_link(self):
+        from scripts.build_examples_docs import build
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "examples.html"
+            build(output)
+            html = output.read_text(encoding="utf-8")
+        for name in EXAMPLE_NAMES:
+            self.assertIn(f'id="source-{name}"', html)
+        self.assertIn("def greet(name: str) -&gt; None:", html)
+        self.assertIn("SELECT name FROM products WHERE price &lt; ?", html)
+        self.assertIn("Renée", html)
+        root = Path(__file__).resolve().parents[1]
+        for filename in ("Python.html", "PythonConfigScript.js"):
+            help_text = (root / "resources/plugins/Python" / filename).read_text(encoding="utf-8")
+            self.assertIn('/images/plugins/Python/examples.html', help_text)

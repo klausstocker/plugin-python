@@ -1,5 +1,12 @@
 # plugin-python 
 
+## Teaching examples
+
+See [the examples guide](examples/README.md) for ten small examples, from printed
+output to SQLite, with typed student templates and working reference solutions.
+The Docker build generates an HTML version in the plugin resources and the help
+links to it.
+
 
 
 ## Build and publish Docker images

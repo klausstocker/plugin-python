@@ -1344,6 +1344,7 @@ function configPluginPython(dtoString) {
 
     function defaultHelpHtml() {
         return `
+            <p><a href="/images/plugins/Python/examples.html" target="_blank" rel="noopener">Python-Beispiele: von print bis SQLite</a></p>
             <h4>Kurz erklärt</h4>
             <ul>
                 <li><strong>UnitTest:</strong> Hier stehen die Tests, mit denen die Lösung geprüft wird.</li>

@@ -1,8 +1,8 @@
-# Return value
+# Student class
 
-Return the sum of two integers.
+Implement Counter: start at zero, increment by one, and return the current value.
 
-Call the student function through answer and compare its return value with assertEqual.
+The indication supplies the class and method signatures. Tests construct objects, call methods, and check that instances have independent state.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.

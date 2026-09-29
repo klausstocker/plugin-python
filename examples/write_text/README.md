@@ -1,8 +1,8 @@
-# Return value
+# Write a text file
 
-Return the sum of two integers.
+Write each name followed by a newline to a UTF-8 file; replace any existing content.
 
-Call the student function through answer and compare its return value with assertEqual.
+Give the student function a temporary output path and inspect its contents. TemporaryDirectory cleans up after each test, including failures.
 
 - `template.py`: typed student starter used as the indication.
 - `answer.py`: working reference solution.
