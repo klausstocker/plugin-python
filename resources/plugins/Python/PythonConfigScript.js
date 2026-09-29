@@ -56,6 +56,8 @@ function configPluginPython(dtoString) {
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
     const datasetVariables = extractDatasetVariablesForQuestionConfig(dto, jsonData, questionConfigDto);
     questionConfigDto.datasetVariables = datasetVariables;
+    let unitEditor = null;
+    let previewEditor = null;
 
     drawForm();
     ensureStyles();
@@ -838,6 +840,9 @@ function configPluginPython(dtoString) {
                 btn.classList.add("active");
                 const panel = document.getElementById(target);
                 if (panel) panel.classList.add("active");
+                // Ace must recalculate and redraw after its hidden tab becomes visible.
+                if (target === "tab-unittest" && unitEditor) unitEditor.resize(true);
+                if (target === "tab-preview" && previewEditor) previewEditor.resize(true);
             });
         });
     }
@@ -860,12 +865,12 @@ function configPluginPython(dtoString) {
         const aceAvailable = await ensureAceLoaded();
 
         if (aceAvailable && window.ace) {
-            const unitEditor = ace.edit(ids.unitEditorId);
+            unitEditor = ace.edit(ids.unitEditorId);
             unitEditor.setTheme("ace/theme/monokai");
             unitEditor.session.setMode("ace/mode/python");
             unitEditor.session.setValue(initialUnit || "");
 
-            const previewEditor = ace.edit(ids.previewEditorId);
+            previewEditor = ace.edit(ids.previewEditorId);
             previewEditor.setTheme("ace/theme/monokai");
             previewEditor.session.setMode("ace/mode/python");
             previewEditor.session.setValue(initialPreview || "");
