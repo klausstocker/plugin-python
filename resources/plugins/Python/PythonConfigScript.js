@@ -1358,7 +1358,14 @@ function configPluginPython(dtoString) {
         const helpElement = document.getElementById("configPluginHelp");
         if (helpElement) {
             const suppliedHelp = typeof dtoParams.help === "string" ? dtoParams.help.trim() : "";
-            helpElement.innerHTML = suppliedHelp || defaultHelpHtml();
+            if (suppliedHelp) {
+                const helpDocument = new DOMParser().parseFromString(suppliedHelp, "text/html");
+                // Help is a complete HTML document; its body styles must not affect LeTTo.
+                helpDocument.querySelectorAll("style, link[rel='stylesheet'], script").forEach((element) => element.remove());
+                helpElement.replaceChildren(...Array.from(helpDocument.body.childNodes));
+            } else {
+                helpElement.innerHTML = defaultHelpHtml();
+            }
         }
 
         if (dtoParams.wikiurl != null) {
