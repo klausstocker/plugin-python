@@ -56,6 +56,8 @@ function configPluginPython(dtoString) {
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
     const datasetVariables = extractDatasetVariablesForQuestionConfig(dto, jsonData, questionConfigDto);
     questionConfigDto.datasetVariables = datasetVariables;
+    // Keep editor callbacks local so reopening the dialog cannot read stale editors.
+    const editorAccess = {};
     let unitEditor = null;
     let previewEditor = null;
 
@@ -211,8 +213,8 @@ function configPluginPython(dtoString) {
 
     function parseConfig(rawValue, fallbackData) {
         const defaults = {
-            indication: (fallbackData && fallbackData.indication) || "# Preview code\n",
-            validation: (fallbackData && fallbackData.validation) || "# Unit test code\n",
+            indication: fallbackData && typeof fallbackData.indication === "string" ? fallbackData.indication : "# Preview code\n",
+            validation: fallbackData && typeof fallbackData.validation === "string" ? fallbackData.validation : "# Unit test code\n",
             files: (fallbackData && fallbackData.files) || extractFilesFromConfigValue(rawValue) || {},
             evalConfig: {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
@@ -227,8 +229,8 @@ function configPluginPython(dtoString) {
         try {
             const parsed = JSON.parse(rawValue);
             return {
-                indication: parsed.indication || defaults.indication,
-                validation: parsed.validation || defaults.validation,
+                indication: typeof parsed.indication === "string" ? parsed.indication : defaults.indication,
+                validation: typeof parsed.validation === "string" ? parsed.validation : defaults.validation,
                 files: parsed.files || defaults.files,
                 evalConfig: {
                     runAtTest: parsed.evalConfig && typeof parsed.evalConfig.runAtTest === "boolean" ? parsed.evalConfig.runAtTest : defaults.evalConfig.runAtTest,
@@ -889,10 +891,10 @@ function configPluginPython(dtoString) {
             unitEditor.session.on("change", saveConfig);
             previewEditor.session.on("change", saveConfig);
 
-            configPluginPython._getUnitCode = () => unitEditor.getValue();
-            configPluginPython._getPreviewCode = () => previewEditor.getValue();
-            configPluginPython._setUnitCode = (value) => unitEditor.session.setValue(value || "");
-            configPluginPython._setPreviewCode = (value) => previewEditor.session.setValue(value || "");
+            editorAccess._getUnitCode = () => unitEditor.getValue();
+            editorAccess._getPreviewCode = () => previewEditor.getValue();
+            editorAccess._setUnitCode = (value) => unitEditor.session.setValue(value || "");
+            editorAccess._setPreviewCode = (value) => previewEditor.session.setValue(value || "");
         } else {
             fallbackTextArea(ids.unitEditorId, initialUnit, "_getUnitCode");
             fallbackTextArea(ids.previewEditorId, initialPreview, "_getPreviewCode");
@@ -906,11 +908,11 @@ function configPluginPython(dtoString) {
         target.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;font-family:monospace;">${escapeHtml(value || "")}</textarea>`;
         const ta = target.querySelector("textarea");
         ta.addEventListener("input", saveConfig);
-        configPluginPython[key] = () => ta.value;
+        editorAccess[key] = () => ta.value;
     }
 
     function fallbackTextAreaSetter(targetId, key) {
-        configPluginPython[key] = (value) => {
+        editorAccess[key] = (value) => {
             const target = document.getElementById(targetId);
             const ta = target ? target.querySelector("textarea") : null;
             if (ta) ta.value = value || "";
@@ -918,11 +920,11 @@ function configPluginPython(dtoString) {
     }
 
     function getUnitCode() {
-        return configPluginPython._getUnitCode ? configPluginPython._getUnitCode() : "";
+        return editorAccess._getUnitCode ? editorAccess._getUnitCode() : state.validation;
     }
 
     function getPreviewCode() {
-        return configPluginPython._getPreviewCode ? configPluginPython._getPreviewCode() : "";
+        return editorAccess._getPreviewCode ? editorAccess._getPreviewCode() : state.indication;
     }
 
     function setupFileTab() {
@@ -1260,8 +1262,8 @@ function configPluginPython(dtoString) {
         state.files = example.files || {};
         state.evalConfig = example.evalConfig || { runAtTest: true, lintAtTest: true };
 
-        if (configPluginPython._setUnitCode) configPluginPython._setUnitCode(example.validation || "");
-        if (configPluginPython._setPreviewCode) configPluginPython._setPreviewCode(example.indication || "");
+        if (editorAccess._setUnitCode) editorAccess._setUnitCode(example.validation || "");
+        if (editorAccess._setPreviewCode) editorAccess._setPreviewCode(example.indication || "");
 
         setupFileTab();
         // Editor changes save the current form options, so load these afterwards.
