@@ -9,7 +9,7 @@ from typing import Any, Optional
 class DatasetVariable:
     name: str
     value: Any = None
-    unit: Optional[str] = None
+    unit: str = ""
 
 
 def extract_dataset_variables(var_hash: Any) -> list[DatasetVariable]:
@@ -46,7 +46,7 @@ def dataset_variables_to_python_source(variables: list[DatasetVariable]) -> str:
         "@dataclass(frozen=True)",
         "class DatasetVariable:",
         "    value: object = None",
-        "    unit: object = None",
+        '    unit: str = ""',
         "",
         f"_DATASET_VARIABLE_VALUES = {_python_literal(variable_dicts)}",
         "DATASET_VARIABLES = {}",
@@ -109,7 +109,7 @@ def _vars_mapping(var_hash: Any) -> dict[str, Any]:
     return candidate if isinstance(candidate, dict) else {}
 
 
-def _extract_variable_value_and_unit(variable_dto: Any) -> tuple[Any, Optional[str]]:
+def _extract_variable_value_and_unit(variable_dto: Any) -> tuple[Any, str]:
     calc_result = _read_field(variable_dto, "calcErgebnisDto")
     calc_json = (
         _read_field(calc_result, "json_value")
@@ -123,8 +123,9 @@ def _extract_variable_value_and_unit(variable_dto: Any) -> tuple[Any, Optional[s
         parsed_json.get("originalEinheitString")
         or parsed_json.get("grundEinheitString")
         or _extract_unit_from_string(calc_string)
-        or _read_field(variable_dto, "ze")
     )
+    if unit is None:
+        unit = _unit_from_ze(_read_field(variable_dto, "ze"))
 
     return value, unit
 
@@ -192,6 +193,14 @@ def _clean_unit(unit: Any) -> Optional[str]:
     return unit_text or None
 
 
+def _unit_from_ze(ze: Any) -> str:
+    unit = _clean_unit(ze) or ""
+    # A bare numeric ze value is metadata, not a physical unit.
+    if re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?", unit):
+        return ""
+    return unit
+
+
 def _read_field(value: Any, name: str) -> Any:
     if value is None:
         return None
@@ -233,5 +242,5 @@ def _dataset_variable_from_item(value: Any) -> Optional[DatasetVariable]:
     return DatasetVariable(
         name=name,
         value=value.get("value"),
-        unit=value.get("unit"),
+        unit=value.get("unit", ""),
     )

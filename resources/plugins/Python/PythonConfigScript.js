@@ -107,7 +107,7 @@ function configPluginPython(dtoString) {
     function normalizeDatasetVariableList(value) {
         return value
             .filter((item) => item && typeof item === "object" && typeof item.name === "string" && item.name)
-            .map((item) => ({ name: item.name, value: item.value, unit: item.unit == null ? null : item.unit }));
+            .map((item) => ({ name: item.name, value: item.value, unit: item.unit }));
     }
 
     function extractDatasetVariablesFromVarHash(varHash) {
@@ -125,9 +125,10 @@ function configPluginPython(dtoString) {
         const calcResult = variableDto && typeof variableDto === "object" ? variableDto.calcErgebnisDto : null;
         const parsedJson = parseMaybeJson(calcResult && calcResult.json) || {};
         const calcString = calcResult && typeof calcResult.string === "string" ? calcResult.string : "";
+        const explicitUnit = parsedJson.originalEinheitString || parsedJson.grundEinheitString || extractDatasetUnitFromString(calcString);
         return {
             value: extractDatasetValue(parsedJson, calcString),
-            unit: cleanDatasetUnit(parsedJson.originalEinheitString || parsedJson.grundEinheitString || extractDatasetUnitFromString(calcString) || (variableDto && variableDto.ze))
+            unit: explicitUnit ? cleanDatasetUnit(explicitUnit) : unitFromZe(variableDto && variableDto.ze)
         };
     }
 
@@ -154,11 +155,17 @@ function configPluginPython(dtoString) {
     }
 
     function cleanDatasetUnit(unit) {
-        if (unit == null) return null;
+        if (unit == null) return "";
         let unitText = String(unit).trim();
         if (unitText.indexOf(",") >= 0) unitText = unitText.split(",", 1)[0];
         unitText = unitText.replace(/^['"]+|['"]+$/g, "").trim();
-        return unitText || null;
+        return unitText;
+    }
+
+    function unitFromZe(ze) {
+        const unit = cleanDatasetUnit(ze);
+        // Numeric-only metadata is not a physical unit.
+        return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(unit) ? "" : unit;
     }
 
     function parseMaybeJson(value) {

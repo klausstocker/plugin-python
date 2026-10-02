@@ -50,6 +50,33 @@ class TestDatasetVariableExtraction(unittest.TestCase):
             [DatasetVariable(name="myVar", value=42.0, unit="m1s-1")],
         )
 
+    def test_numeric_ze_is_not_a_unit(self):
+        var_hash = {
+            "i": {
+                "calcErgebnisDto": {"json": '{"d":1}', "string": "1"},
+                "ze": "10",
+            }
+        }
+        self.assertEqual(
+            extract_dataset_variables(var_hash),
+            [DatasetVariable(name="i", value=1, unit="")],
+        )
+        namespace = {}
+        exec(dataset_variables_to_python_source(extract_dataset_variables(var_hash)), namespace)
+        self.assertEqual(namespace["i"].unit, "")
+        var_hash["i"]["ze"] = "m/s,10"
+        self.assertEqual(
+            extract_dataset_variables(var_hash),
+            [DatasetVariable(name="i", value=1, unit="m/s")],
+        )
+
+    def test_existing_unit_string_is_passed_through(self):
+        for unit in ("", "10", "m/s"):
+            self.assertEqual(
+                dataset_variables_from_payload([{"name": "i", "value": 1, "unit": unit}]),
+                [DatasetVariable(name="i", value=1, unit=unit)],
+            )
+
     def test_extracts_from_question_primary_vars_only(self):
         question = {
             "vars": {
