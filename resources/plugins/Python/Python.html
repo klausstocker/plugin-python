@@ -8,7 +8,7 @@
 
 <body>
   <style>
-    body {
+    .python-plugin-help {
       max-width: 760px;
       margin: 2rem auto;
       padding: 0 1rem;
@@ -16,13 +16,14 @@
       line-height: 1.5;
     }
 
-    table.doc,
-    table.doc th,
-    table.doc td {
+    .python-plugin-help table.doc,
+    .python-plugin-help table.doc th,
+    .python-plugin-help table.doc td {
       border: 1px solid black;
       border-collapse: collapse;
     }
   </style>
+  <div class="python-plugin-help">
   <h1>Python - Plugin</h1>
 
   <p>Mit diesem Plugin können Python-Aufgaben erstellt, ausprobiert und automatisch bewertet werden.</p>
@@ -59,8 +60,7 @@ from helpers import RedirectedStdout  # pylint: disable=import-error</code></pre
 
   <h2>Hilfsmodul helpers.py</h2>
   <p>Das Modul <code>helpers.py</code> stellt Hilfsklassen für UnitTests bereit:
-    <a href="/images/plugins/Python/helpers.py" target="_blank" rel="noopener">helpers.py ansehen</a>
-    oder <a href="/images/plugins/Python/helpers.py" download="helpers.py">herunterladen</a>.</p>
+    <a href="/images/plugins/Python/helpers.py" download="helpers.py">herunterladen</a>.</p>
   <ul>
     <li><strong><code>RedirectedStdout</code>:</strong> Fängt innerhalb eines
       <code>with</code>-Blocks die Standardausgabe (z. B. <code>print</code>) auf.
@@ -77,7 +77,7 @@ from helpers import RedirectedStdout  # pylint: disable=import-error</code></pre
     <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten
       Linter-Ergebnis.</li>
   </ul>
-
+  </div>
 
 </body>
 

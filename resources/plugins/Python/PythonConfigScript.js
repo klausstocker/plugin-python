@@ -24,7 +24,7 @@ function configPluginPython(dtoString) {
     const pluginTokenPromise = requestExecutionToken();
 
     const ids = {
-        rootClass: "pluginConfigForm",
+        rootClass: "pluginPythonConfigForm",
         tabsWrapId: `tabsWrap_${pluginTag}`,
         unitEditorId: `unitEditor_${pluginTag}`,
         previewEditorId: `previewEditor_${pluginTag}`,
@@ -271,9 +271,7 @@ function configPluginPython(dtoString) {
 
     function drawForm() {
         const selector = "." + ids.rootClass;
-        if ($(selector).length > 0) {
-            $(selector).remove();
-        }
+        $(config_form_div).find(selector).remove();
 
         $(config_form_div).append(`
             <div class="${ids.rootClass}">
@@ -406,38 +404,38 @@ function configPluginPython(dtoString) {
         const style = document.createElement("style");
         style.id = styleId;
         style.textContent = `
-            .pluginConfigForm {
+            .pluginPythonConfigForm {
                 display: flex;
                 width: 100%;
                 height: 75vh;
                 box-sizing: border-box;
                 gap: 8px;
             }
-            .pluginConfigForm .config-main {
+            .pluginPythonConfigForm .config-main {
                 flex: 2;
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
                 min-width: 0;
             }
-            .pluginConfigForm .config-help {
+            .pluginPythonConfigForm .config-help {
                 flex: 1;
                 border: 1px solid #ccc;
                 padding: 8px;
                 overflow: auto;
                 min-width: 0;
             }
-            .pluginConfigForm .config-help h4 {
+            .pluginPythonConfigForm .config-help h4 {
                 margin: 14px 0 4px;
             }
-            .pluginConfigForm .config-help p,
-            .pluginConfigForm .config-help ul {
+            .pluginPythonConfigForm .config-help p,
+            .pluginPythonConfigForm .config-help ul {
                 margin: 4px 0 8px;
             }
-            .pluginConfigForm .config-help ul {
+            .pluginPythonConfigForm .config-help ul {
                 padding-left: 20px;
             }
-            .pluginConfigForm .confirm-overlay {
+            .pluginPythonConfigForm .confirm-overlay {
                 position: fixed;
                 inset: 0;
                 z-index: 10000;
@@ -447,128 +445,128 @@ function configPluginPython(dtoString) {
                 padding: 16px;
                 background: rgba(0, 0, 0, 0.45);
             }
-            .pluginConfigForm .confirm-overlay[hidden] {
+            .pluginPythonConfigForm .confirm-overlay[hidden] {
                 display: none;
             }
-            .pluginConfigForm .confirm-dialog {
+            .pluginPythonConfigForm .confirm-dialog {
                 width: min(440px, 100%);
                 padding: 20px;
                 border-radius: 6px;
                 background: #fff;
                 box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
             }
-            .pluginConfigForm .confirm-dialog h3 {
+            .pluginPythonConfigForm .confirm-dialog h3 {
                 margin: 0 0 8px;
             }
-            .pluginConfigForm .confirm-actions {
+            .pluginPythonConfigForm .confirm-actions {
                 justify-content: flex-end;
                 margin-top: 16px;
             }
-            .pluginConfigForm .confirm-overwrite {
+            .pluginPythonConfigForm .confirm-overwrite {
                 border-color: #a12622;
                 background: #a12622;
             }
-            .pluginConfigForm .tab-buttons {
+            .pluginPythonConfigForm .tab-buttons {
                 display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
             }
-            .pluginConfigForm .tab-head-row,
-            .pluginConfigForm .shared-head-row,
-            .pluginConfigForm .help-head-row {
+            .pluginPythonConfigForm .tab-head-row,
+            .pluginPythonConfigForm .shared-head-row,
+            .pluginPythonConfigForm .help-head-row {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
             }
-            .pluginConfigForm .help-head-row h3 {
+            .pluginPythonConfigForm .help-head-row h3 {
                 margin: 0;
             }
-            .pluginConfigForm .tab-btn,
-            .pluginConfigForm .cfg-btn {
+            .pluginPythonConfigForm .tab-btn,
+            .pluginPythonConfigForm .cfg-btn {
                 border: 1px solid #b8b8b8;
                 background: #f0f0f0;
                 padding: 6px 14px;
                 border-radius: 4px;
                 cursor: pointer;
             }
-            .pluginConfigForm .tab-btn.active {
+            .pluginPythonConfigForm .tab-btn.active {
                 background: #dce9ff;
             }
-            .pluginConfigForm .main-split {
+            .pluginPythonConfigForm .main-split {
                 flex: 1;
                 min-height: 0;
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
             }
-            .pluginConfigForm .tab-panels {
+            .pluginPythonConfigForm .tab-panels {
                 min-height: 0;
                 border: 1px solid #ccc;
                 padding: 8px;
             }
-            .pluginConfigForm .main-split[data-output-hidden="false"] .tab-panels {
+            .pluginPythonConfigForm .main-split[data-output-hidden="false"] .tab-panels {
                 flex: 0 0 65%;
             }
-            .pluginConfigForm .main-split[data-output-hidden="false"] .shared-actions {
+            .pluginPythonConfigForm .main-split[data-output-hidden="false"] .shared-actions {
                 flex: 1 1 auto;
             }
-            .pluginConfigForm .main-split[data-output-hidden="true"] .split-handle {
+            .pluginPythonConfigForm .main-split[data-output-hidden="true"] .split-handle {
                 display: none;
             }
-            .pluginConfigForm .main-split[data-output-hidden="true"] .tab-panels {
+            .pluginPythonConfigForm .main-split[data-output-hidden="true"] .tab-panels {
                 flex: 1 1 auto;
             }
-            .pluginConfigForm .main-split[data-output-hidden="true"] .shared-actions {
+            .pluginPythonConfigForm .main-split[data-output-hidden="true"] .shared-actions {
                 flex: 0 0 auto;
                 min-height: auto;
             }
-            .pluginConfigForm .main-split[data-output-hidden="true"] .output-box {
+            .pluginPythonConfigForm .main-split[data-output-hidden="true"] .output-box {
                 display: none;
             }
-            .pluginConfigForm .tab-panel {
+            .pluginPythonConfigForm .tab-panel {
                 display: none;
                 height: 100%;
                 min-height: 0;
                 flex-direction: column;
                 gap: 8px;
             }
-            .pluginConfigForm .tab-panel.active {
+            .pluginPythonConfigForm .tab-panel.active {
                 display: flex;
             }
-            .pluginConfigForm .tab-title-row {
+            .pluginPythonConfigForm .tab-title-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 gap: 8px;
             }
-            .pluginConfigForm .tab-title-row h3 {
+            .pluginPythonConfigForm .tab-title-row h3 {
                 margin: 0;
             }
-            .pluginConfigForm .unit-example-controls {
+            .pluginPythonConfigForm .unit-example-controls {
                 margin-left: auto;
                 display: flex;
                 align-items: center;
                 gap: 8px;
             }
-            .pluginConfigForm .unit-example-select {
+            .pluginPythonConfigForm .unit-example-select {
                 width: auto;
                 min-width: 120px;
                 margin: 0;
             }
-            .pluginConfigForm .editor-box {
+            .pluginPythonConfigForm .editor-box {
                 flex: 1;
                 min-height: 0;
                 border: 1px solid #d0d0d0;
             }
-            .pluginConfigForm .split-handle {
+            .pluginPythonConfigForm .split-handle {
                 height: 8px;
                 border: 1px solid #ccc;
                 background: #f3f3f3;
                 cursor: row-resize;
                 border-radius: 4px;
             }
-            .pluginConfigForm .icon-btn {
+            .pluginPythonConfigForm .icon-btn {
                 border: 1px solid #b8b8b8;
                 background: #fafafa;
                 width: 24px;
@@ -580,7 +578,7 @@ function configPluginPython(dtoString) {
                 padding: 0;
                 font-size: 14px;
             }
-            .pluginConfigForm .shared-actions {
+            .pluginPythonConfigForm .shared-actions {
                 border: 1px solid #ccc;
                 padding: 8px;
                 display: flex;
@@ -588,7 +586,7 @@ function configPluginPython(dtoString) {
                 gap: 8px;
                 min-height: 180px;
             }
-            .pluginConfigForm .output-box {
+            .pluginPythonConfigForm .output-box {
                 margin: 0;
                 flex: 1;
                 min-height: 120px;
@@ -601,20 +599,20 @@ function configPluginPython(dtoString) {
                 font-family: monospace;
                 font-size: 13px;
             }
-            .pluginConfigForm .files-grid {
+            .pluginPythonConfigForm .files-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 8px;
                 min-height: 0;
                 height: 100%;
             }
-            .pluginConfigForm .text-input {
+            .pluginPythonConfigForm .text-input {
                 width: 100%;
                 box-sizing: border-box;
                 margin: 4px 0 8px;
                 font-family: monospace;
             }
-            .pluginConfigForm .file-list {
+            .pluginPythonConfigForm .file-list {
                 border: 1px solid #d0d0d0;
                 min-height: 220px;
                 max-height: 100%;
@@ -622,7 +620,7 @@ function configPluginPython(dtoString) {
                 padding: 6px;
                 font-family: monospace;
             }
-            .pluginConfigForm .file-item {
+            .pluginPythonConfigForm .file-item {
                 padding: 4px;
                 cursor: pointer;
                 border-bottom: 1px solid #eee;
@@ -630,35 +628,35 @@ function configPluginPython(dtoString) {
                 justify-content: space-between;
                 gap: 8px;
             }
-            .pluginConfigForm .file-size {
+            .pluginPythonConfigForm .file-size {
                 color: #666;
                 font-size: 12px;
             }
-            .pluginConfigForm .file-item:hover {
+            .pluginPythonConfigForm .file-item:hover {
                 background: #f5f5f5;
             }
-            .pluginConfigForm .file-item.selected {
+            .pluginPythonConfigForm .file-item.selected {
                 background: #e8f1ff;
                 outline: 1px solid #7aa7e9;
             }
-            .pluginConfigForm .file-help {
+            .pluginPythonConfigForm .file-help {
                 margin: 8px 0 0;
                 color: #666;
                 font-size: 12px;
             }
-            .pluginConfigForm .checkbox-row {
+            .pluginPythonConfigForm .checkbox-row {
                 display: inline-flex;
                 align-items: center;
                 gap: 4px;
                 margin: 0;
             }
-            .pluginConfigForm .flags-row {
+            .pluginPythonConfigForm .flags-row {
                 display: flex;
                 align-items: center;
                 gap: 8px;
                 flex-wrap: wrap;
             }
-            .pluginConfigForm .build-info {
+            .pluginPythonConfigForm .build-info {
                 display: inline-block;
                 margin: 0 0 8px;
                 padding: 4px 6px;
@@ -669,22 +667,22 @@ function configPluginPython(dtoString) {
                 font-family: monospace;
                 font-size: 12px;
             }
-            .pluginConfigForm .build-info.build-mismatch {
+            .pluginPythonConfigForm .build-info.build-mismatch {
                 border-color: #d00;
                 background: #fff0f0;
             }
-            .pluginConfigForm .build-info .build-mismatch-text {
+            .pluginPythonConfigForm .build-info .build-mismatch-text {
                 color: #d00;
                 font-weight: 700;
             }
-            .pluginConfigForm .config-horizontal-row {
+            .pluginPythonConfigForm .config-horizontal-row {
                 display: flex;
                 gap: 8px;
                 align-items: stretch;
                 min-height: 0;
             }
-            .pluginConfigForm .linter-config-section,
-            .pluginConfigForm .dataset-variable-section {
+            .pluginPythonConfigForm .linter-config-section,
+            .pluginPythonConfigForm .dataset-variable-section {
                 flex: 1 1 0;
                 min-width: 0;
                 border: 1px solid #d0d0d0;
@@ -692,39 +690,39 @@ function configPluginPython(dtoString) {
                 padding: 8px;
                 background: #fafafa;
             }
-            .pluginConfigForm .linter-config-section {
+            .pluginPythonConfigForm .linter-config-section {
                 display: flex;
                 flex-direction: column;
             }
-            .pluginConfigForm .linter-head-row {
+            .pluginPythonConfigForm .linter-head-row {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
             }
-            .pluginConfigForm .linter-weight-input {
+            .pluginPythonConfigForm .linter-weight-input {
                 width: 90px;
                 margin: 0;
             }
-            .pluginConfigForm .linter-config-section textarea {
+            .pluginPythonConfigForm .linter-config-section textarea {
                 flex: 1;
                 min-height: 120px;
                 margin-bottom: 0;
             }
-            .pluginConfigForm .dataset-variable-section {
+            .pluginPythonConfigForm .dataset-variable-section {
                 display: flex;
                 flex-direction: column;
             }
-            .pluginConfigForm .dataset-variable-head-row {
+            .pluginPythonConfigForm .dataset-variable-head-row {
                 display: flex;
                 align-items: center;
                 gap: 6px;
                 margin-bottom: 6px;
             }
-            .pluginConfigForm .dataset-variable-head-row h4 {
+            .pluginPythonConfigForm .dataset-variable-head-row h4 {
                 margin: 0;
             }
-            .pluginConfigForm .dataset-variable-help {
+            .pluginPythonConfigForm .dataset-variable-help {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
@@ -737,35 +735,35 @@ function configPluginPython(dtoString) {
                 font-weight: 700;
                 cursor: help;
             }
-            .pluginConfigForm .dataset-variable-list {
+            .pluginPythonConfigForm .dataset-variable-list {
                 max-height: 160px;
                 overflow: auto;
             }
-            .pluginConfigForm .dataset-variable-table {
+            .pluginPythonConfigForm .dataset-variable-table {
                 width: 100%;
                 border-collapse: collapse;
                 font-family: monospace;
                 font-size: 12px;
             }
-            .pluginConfigForm .dataset-variable-table th,
-            .pluginConfigForm .dataset-variable-table td {
+            .pluginPythonConfigForm .dataset-variable-table th,
+            .pluginPythonConfigForm .dataset-variable-table td {
                 border: 1px solid #ddd;
                 padding: 4px 6px;
                 text-align: left;
                 vertical-align: top;
             }
-            .pluginConfigForm .dataset-variable-table th {
+            .pluginPythonConfigForm .dataset-variable-table th {
                 background: #f0f0f0;
             }
-            .pluginConfigForm .dataset-variable-empty {
+            .pluginPythonConfigForm .dataset-variable-empty {
                 margin: 0;
                 color: #666;
                 font-size: 12px;
             }
-            .pluginConfigForm .small-gap {
+            .pluginPythonConfigForm .small-gap {
                 gap: 8px;
             }
-            .pluginConfigForm iframe {
+            .pluginPythonConfigForm iframe {
                 width: 100%;
                 height: 60vh;
                 border: none;
@@ -1274,7 +1272,7 @@ function configPluginPython(dtoString) {
     }
 
     function getActiveEditorCode() {
-        const activeTab = document.querySelector(".pluginConfigForm .tab-panel.active");
+        const activeTab = document.querySelector(".pluginPythonConfigForm .tab-panel.active");
         if (!activeTab) return getPreviewCode();
         if (activeTab.id === "tab-unittest") return getUnitCode();
         return getPreviewCode();
