@@ -16,6 +16,24 @@ BASE_PATH = "/pluginpython"
 
 
 class TestEndpoints(unittest.TestCase):
+    def test_cpu_time_survives_question_config_serialization(self):
+        import base64
+        import json
+        from app.main import encode_question_config_base64, _extract_cputime, PluginDto
+
+        encoded = encode_question_config_base64('{"cpuTime": 12}')
+        self.assertEqual(json.loads(base64.b64decode(encoded))["cpuTime"], 12)
+        self.assertEqual(_extract_cputime(plugin_dto=PluginDto(jsonData=encoded)), 12)
+
+    def test_cpu_time_defaults_and_invalid_values(self):
+        from app.main import _extract_cputime
+
+        for value in (None, "", "invalid", 0, -1):
+            with self.subTest(value=value):
+                self.assertEqual(code_execution_endpoints._cputime_from_question_config({"cpuTime": value}), 5)
+        self.assertEqual(_extract_cputime('{"cpuTime": "9"}'), 9)
+        self.assertEqual(_extract_cputime(''), 5)
+
     @classmethod
     def setUpClass(cls):
         cls.client = TestClient(app)
@@ -186,7 +204,7 @@ class TestEndpoints(unittest.TestCase):
     @patch("app.code_execution_endpoints.checkCode")
     def test_check_uses_configured_cputime(self, check_code_mock):
         headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
-        check_code_mock.return_value.__repr__.return_value = "check result"
+        check_code_mock.return_value = "check result"
 
         response = self.client.post(
             f"{BASE_PATH}/check",

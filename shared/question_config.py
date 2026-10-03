@@ -15,4 +15,5 @@ class QuestionConfigDto(BaseModel):
     evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterConfig: str = ""
     linterWeight: float = 0.0
+    cpuTime: int = 5
     datasetVariables: list[dict[str, Any]] = Field(default_factory=list)
