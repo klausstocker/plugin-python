@@ -119,6 +119,35 @@ class Checker(unittest.TestCase):
             self.assertIn(b"class RedirectedStdout:", submitted_files[-1][2])
             self.assertTrue(result.wasSuccessful())
 
+    def test_run_test_reports_error_when_cpu_work_exceeds_configured_cputime(self):
+        code = """
+import time
+
+deadline = time.process_time() + 2
+while time.process_time() < deadline:
+    pass
+print('finished cpu work')
+"""
+        jobe = JobeWrapper('localhost:4000')
+
+        short_result = jobe.run_test('python3', code, 'test.py', cputime=1)
+        self.assertFalse(short_result.success())
+        self.assertEqual(short_result.outcome()[0], 13)
+        self.assertIn('Time limit exceeded', short_result.__repr__())
+
+        long_result = jobe.run_test('python3', code, 'test.py', cputime=5)
+        self.assertTrue(long_result.success())
+        self.assertEqual(long_result.stdout, 'finished cpu work\n')
+
+    def test_run_test_includes_configured_cputime_in_runspec(self):
+        jobe = JobeWrapper('jobe:80')
+
+        with patch.object(jobe, 'do_http', return_value={'outcome': 15}) as do_http:
+            jobe.run_test('python3', 'print(1)', 'test.py', cputime=12)
+
+        payload = do_http.call_args.args[3]
+        self.assertIn('"parameters":{"cputime":12}', payload)
+
     def testUpload(self):
         jobe = JobeWrapper('localhost:4000')
         fileId = 'B00WHrZtSjfile1gasdfaserscasdfaserasdfaserqwcasrweas'

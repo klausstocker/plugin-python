@@ -41,6 +41,7 @@ function configPluginPython(dtoString) {
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
+        cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
         datasetVariablesId: `datasetVariables_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
@@ -228,7 +229,8 @@ function configPluginPython(dtoString) {
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
             },
             linterConfig: (fallbackData && fallbackData.linterConfig) || "",
-            linterWeight: parseWeightValue(fallbackData && fallbackData.linterWeight)
+            linterWeight: parseWeightValue(fallbackData && fallbackData.linterWeight),
+            cpuTime: parseCpuTimeValue(fallbackData && fallbackData.cpuTime)
         };
 
         if (!rawValue) return defaults;
@@ -244,7 +246,8 @@ function configPluginPython(dtoString) {
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
                 },
                 linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
-                linterWeight: parseWeightValue(parsed.linterWeight != null ? parsed.linterWeight : defaults.linterWeight)
+                linterWeight: parseWeightValue(parsed.linterWeight != null ? parsed.linterWeight : defaults.linterWeight),
+                cpuTime: parseCpuTimeValue(parsed.cpuTime != null ? parsed.cpuTime : defaults.cpuTime)
             };
         } catch (e) {
             return {
@@ -253,7 +256,8 @@ function configPluginPython(dtoString) {
                 files: defaults.files,
                 evalConfig: defaults.evalConfig,
                 linterConfig: defaults.linterConfig,
-                linterWeight: defaults.linterWeight
+                linterWeight: defaults.linterWeight,
+                cpuTime: defaults.cpuTime
             };
         }
     }
@@ -340,6 +344,8 @@ function configPluginPython(dtoString) {
                                     <span>Server build: <span data-build-role="server">loading...</span></span>
                                 </div>
                                 <div class="flags-row">
+                                    <label for="${ids.cpuTimeId}" title="Maximum processor time in seconds (default: 5). Waiting and sleep do not consume CPU time. Elapsed request time can be longer; Jobe also enforces a wall-clock watchdog at twice the CPU limit.">CPU time limit (seconds)</label>
+                                    <input id="${ids.cpuTimeId}" title="CPU seconds, not elapsed seconds. A 5-second CPU limit can take about 10 seconds plus request overhead." type="number" min="1" step="1" class="text-input cpu-time-input" placeholder="5" />
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> enable run</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> enable lint</label>
                                 </div>
@@ -606,6 +612,30 @@ function configPluginPython(dtoString) {
                 font-family: monospace;
                 font-size: 13px;
             }
+            .pluginPythonConfigForm .request-progress {
+                display: block;
+                width: 120px;
+                height: 4px;
+                margin-top: 10px;
+                overflow: hidden;
+                background: #303830;
+                border-radius: 2px;
+            }
+            .pluginPythonConfigForm .request-progress::after {
+                content: "";
+                display: block;
+                width: 40%;
+                height: 100%;
+                background: #8df58d;
+                animation: python-request-progress 1.2s linear infinite;
+            }
+            @keyframes python-request-progress {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(250%); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .pluginPythonConfigForm .request-progress::after { animation: none; }
+            }
             .pluginPythonConfigForm .files-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -707,7 +737,8 @@ function configPluginPython(dtoString) {
                 justify-content: space-between;
                 gap: 8px;
             }
-            .pluginPythonConfigForm .linter-weight-input {
+            .pluginPythonConfigForm .linter-weight-input,
+            .pluginPythonConfigForm .cpu-time-input {
                 width: 90px;
                 margin: 0;
             }
@@ -1110,19 +1141,24 @@ function configPluginPython(dtoString) {
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
+        const cpuTime = document.getElementById(ids.cpuTimeId);
 
         if (runAtTest) runAtTest.checked = !!state.evalConfig.runAtTest;
         if (lintAtTest) lintAtTest.checked = !!state.evalConfig.lintAtTest;
         if (linterConfig) linterConfig.value = state.linterConfig || "";
         if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
+        if (cpuTime) cpuTime.value = formatCpuTimeValue(state.cpuTime);
 
-        [runAtTest, lintAtTest, linterConfig, linterWeight].forEach((el) => {
+        [runAtTest, lintAtTest, linterConfig, linterWeight, cpuTime].forEach((el) => {
             if (!el) return;
             const onOptionChanged = (event) => {
                 syncOptionsStateFromInputs();
                 saveConfig();
                 if (el === linterWeight && event && event.type === "change") {
                     linterWeight.value = formatWeightValue(state.linterWeight);
+                }
+                if (el === cpuTime && event && event.type === "change") {
+                    cpuTime.value = formatCpuTimeValue(state.cpuTime);
                 }
             };
             el.addEventListener("change", onOptionChanged);
@@ -1135,6 +1171,7 @@ function configPluginPython(dtoString) {
         const lintAtTest = document.getElementById(ids.optLintAtTestId);
         const linterConfig = document.getElementById(ids.linterConfigId);
         const linterWeight = document.getElementById(ids.linterWeightId);
+        const cpuTime = document.getElementById(ids.cpuTimeId);
 
         state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
         state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
@@ -1142,6 +1179,7 @@ function configPluginPython(dtoString) {
 
         const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
+        state.cpuTime = parseCpuTimeValue(cpuTime ? cpuTime.value : state.cpuTime);
     }
 
     function parseWeightValue(rawValue) {
@@ -1157,13 +1195,22 @@ function configPluginPython(dtoString) {
         return String(parsed);
     }
 
+    function parseCpuTimeValue(rawValue) {
+        const parsed = Number.parseInt(String(rawValue == null ? "" : rawValue).trim(), 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    }
+
+    function formatCpuTimeValue(value) {
+        return String(parseCpuTimeValue(value));
+    }
+
     function bindSharedButtons() {
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl, { showTiming: true, label: "Run" });
         bindRequest(ids.btnLintId, "/lint", () => ({ code: getActiveEditorCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl);
-        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
-        bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
+        bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Check" });
+        bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Score" });
     }
 
     async function setupExamples() {
@@ -1285,7 +1332,7 @@ function configPluginPython(dtoString) {
         return getPreviewCode();
     }
 
-    function bindRequest(buttonId, endpoint, bodyBuilder, outputEl) {
+    function bindRequest(buttonId, endpoint, bodyBuilder, outputEl, options) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
 
@@ -1295,12 +1342,40 @@ function configPluginPython(dtoString) {
             saveConfig();
             const oldText = btn.textContent;
             btn.dataset.requestPending = "true";
+            const showTiming = !!(options && options.showTiming);
+            const actionLabel = (options && options.label) || oldText;
+            const now = () => (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now());
+            const startedAt = now();
+            let progressDelay = null;
+            let elapsedTimer = null;
+            let progressText = null;
+            let cpuTime = parseCpuTimeValue(state.cpuTime);
+
+            const elapsedSeconds = () => (now() - startedAt) / 1000;
+            const timingText = (limitExceeded = false) => `${actionLabel} timing: ${elapsedSeconds().toFixed(2)}s elapsed${limitExceeded ? ` (CPU time limit: ${cpuTime}s)` : ""}.`;
+            const updateElapsed = () => {
+                btn.textContent = `working... ${Math.floor(elapsedSeconds())}s elapsed`;
+                progressText.textContent = `${actionLabel} running...\nElapsed time: ${elapsedSeconds().toFixed(1)}s`;
+            };
+
             btn.disabled = true;
             btn.textContent = "working...";
             outputEl.textContent = "";
+            outputEl.setAttribute("aria-busy", "true");
+            progressDelay = window.setTimeout(() => {
+                progressText = document.createElement("span");
+                const progressBar = document.createElement("span");
+                progressBar.className = "request-progress";
+                progressBar.setAttribute("role", "progressbar");
+                progressBar.setAttribute("aria-label", `${actionLabel} running`);
+                outputEl.replaceChildren(progressText, progressBar);
+                updateElapsed();
+                elapsedTimer = window.setInterval(updateElapsed, 100);
+            }, 1000);
 
             try {
                 const payload = bodyBuilder();
+                cpuTime = parseCpuTimeValue(payload && payload.questionConfigDto && payload.questionConfigDto.cpuTime);
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
                     headers: await buildHeaders(),
@@ -1308,11 +1383,17 @@ function configPluginPython(dtoString) {
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
-                outputEl.textContent = data && data.output ? data.output : JSON.stringify(data);
+                const responseText = data && data.output ? data.output : JSON.stringify(data);
+                const limitExceeded = /Error while running code: Time limit exceeded/.test(responseText);
+                outputEl.textContent = showTiming ? `${responseText}\n\n${timingText(limitExceeded)}` : responseText;
             } catch (error) {
-                outputEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
+                const errorText = "Error: " + (error && error.message ? error.message : "request failed");
+                outputEl.textContent = showTiming ? `${errorText}\n\n${timingText()}` : errorText;
             } finally {
                 delete btn.dataset.requestPending;
+                if (progressDelay !== null) window.clearTimeout(progressDelay);
+                if (elapsedTimer !== null) window.clearInterval(elapsedTimer);
+                outputEl.setAttribute("aria-busy", "false");
                 btn.disabled = false;
                 if (buttonId === ids.btnRunId) updateRunButtonState();
                 btn.textContent = oldText;
@@ -1326,6 +1407,7 @@ function configPluginPython(dtoString) {
         const payload = {
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
+            cpuTime: parseCpuTimeValue(state.cpuTime),
             files: currentStoredFiles()
         };
         if (includeDataset) {
@@ -1345,6 +1427,7 @@ function configPluginPython(dtoString) {
             evalConfig: state.evalConfig || {},
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
+            cpuTime: parseCpuTimeValue(state.cpuTime),
             datasetVariables: datasetVariables
         };
 
@@ -1354,6 +1437,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
+        questionConfigDto.cpuTime = pluginConfig.cpuTime;
         questionConfigDto.datasetVariables = pluginConfig.datasetVariables;
 
         configField.value = JSON.stringify(questionConfigDto);
@@ -1371,6 +1455,14 @@ function configPluginPython(dtoString) {
             } else {
                 helpElement.innerHTML = defaultHelpHtml();
             }
+            helpElement.insertAdjacentHTML("beforeend", `
+                <h4>CPU time limit (seconds)</h4>
+                <p>Begrenzt die Prozessorzeit für Run, Check und Score (Standard: 5 Sekunden).
+                Wartezeiten, etwa durch <code>time.sleep()</code> oder Ein-/Ausgabe, verbrauchen keine CPU-Zeit.
+                Die angezeigte verstrichene Zeit misst die gesamte Anfrage und kann daher länger sein.
+                Jobe beendet eine Ausführung zusätzlich nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten.
+                Bei 5 Sekunden CPU-Limit sind daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
+            `);
         }
 
         if (dtoParams.wikiurl != null) {
