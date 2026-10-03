@@ -344,8 +344,8 @@ function configPluginPython(dtoString) {
                                     <span>Server build: <span data-build-role="server">loading...</span></span>
                                 </div>
                                 <div class="flags-row">
-                                    <label for="${ids.cpuTimeId}" title="Jobe CPU time in seconds (default: 5)">CPU time limit</label>
-                                    <input id="${ids.cpuTimeId}" type="number" min="1" step="1" class="text-input cpu-time-input" placeholder="5" />
+                                    <label for="${ids.cpuTimeId}" title="Maximum processor time in seconds (default: 5). Waiting and sleep do not consume CPU time. Elapsed request time can be longer; Jobe also enforces a wall-clock watchdog at twice the CPU limit.">CPU time limit (seconds)</label>
+                                    <input id="${ids.cpuTimeId}" title="CPU seconds, not elapsed seconds. A 5-second CPU limit can take about 10 seconds plus request overhead." type="number" min="1" step="1" class="text-input cpu-time-input" placeholder="5" />
                                     <label class="checkbox-row"><input id="${ids.optRunAtTestId}" type="checkbox" /> enable run</label>
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> enable lint</label>
                                 </div>
@@ -611,6 +611,30 @@ function configPluginPython(dtoString) {
                 white-space: pre-wrap;
                 font-family: monospace;
                 font-size: 13px;
+            }
+            .pluginPythonConfigForm .request-progress {
+                display: block;
+                width: 120px;
+                height: 4px;
+                margin-top: 10px;
+                overflow: hidden;
+                background: #303830;
+                border-radius: 2px;
+            }
+            .pluginPythonConfigForm .request-progress::after {
+                content: "";
+                display: block;
+                width: 40%;
+                height: 100%;
+                background: #8df58d;
+                animation: python-request-progress 1.2s linear infinite;
+            }
+            @keyframes python-request-progress {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(250%); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .pluginPythonConfigForm .request-progress::after { animation: none; }
             }
             .pluginPythonConfigForm .files-grid {
                 display: grid;
@@ -1322,28 +1346,36 @@ function configPluginPython(dtoString) {
             const actionLabel = (options && options.label) || oldText;
             const now = () => (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now());
             const startedAt = now();
-            let countdownTimer = null;
+            let progressDelay = null;
+            let elapsedTimer = null;
+            let progressText = null;
             let cpuTime = parseCpuTimeValue(state.cpuTime);
 
             const elapsedSeconds = () => (now() - startedAt) / 1000;
-            const timingText = () => `${actionLabel} timing: ${elapsedSeconds().toFixed(2)}s elapsed (CPU time limit: ${cpuTime}s).`;
-            const updateCountdown = () => {
-                const remaining = Math.max(cpuTime - Math.floor(elapsedSeconds()), 0);
-                btn.textContent = `working... ${remaining}s`;
-                outputEl.textContent = `${actionLabel} running...\nCPU time limit: ${cpuTime}s\nEstimated remaining: ${remaining}s`;
+            const timingText = (limitExceeded = false) => `${actionLabel} timing: ${elapsedSeconds().toFixed(2)}s elapsed${limitExceeded ? ` (CPU time limit: ${cpuTime}s)` : ""}.`;
+            const updateElapsed = () => {
+                btn.textContent = `working... ${Math.floor(elapsedSeconds())}s elapsed`;
+                progressText.textContent = `${actionLabel} running...\nElapsed time: ${elapsedSeconds().toFixed(1)}s`;
             };
 
             btn.disabled = true;
             btn.textContent = "working...";
             outputEl.textContent = "";
+            outputEl.setAttribute("aria-busy", "true");
+            progressDelay = window.setTimeout(() => {
+                progressText = document.createElement("span");
+                const progressBar = document.createElement("span");
+                progressBar.className = "request-progress";
+                progressBar.setAttribute("role", "progressbar");
+                progressBar.setAttribute("aria-label", `${actionLabel} running`);
+                outputEl.replaceChildren(progressText, progressBar);
+                updateElapsed();
+                elapsedTimer = window.setInterval(updateElapsed, 100);
+            }, 1000);
 
             try {
                 const payload = bodyBuilder();
                 cpuTime = parseCpuTimeValue(payload && payload.questionConfigDto && payload.questionConfigDto.cpuTime);
-                if (showTiming) {
-                    updateCountdown();
-                    countdownTimer = window.setInterval(updateCountdown, 1000);
-                }
                 const response = await fetch(serviceBase + endpoint, {
                     method: "POST",
                     headers: await buildHeaders(),
@@ -1352,13 +1384,16 @@ function configPluginPython(dtoString) {
                 });
                 const data = await response.json();
                 const responseText = data && data.output ? data.output : JSON.stringify(data);
-                outputEl.textContent = showTiming ? `${responseText}\n\n${timingText()}` : responseText;
+                const limitExceeded = /Error while running code: Time limit exceeded/.test(responseText);
+                outputEl.textContent = showTiming ? `${responseText}\n\n${timingText(limitExceeded)}` : responseText;
             } catch (error) {
                 const errorText = "Error: " + (error && error.message ? error.message : "request failed");
                 outputEl.textContent = showTiming ? `${errorText}\n\n${timingText()}` : errorText;
             } finally {
                 delete btn.dataset.requestPending;
-                if (countdownTimer !== null) window.clearInterval(countdownTimer);
+                if (progressDelay !== null) window.clearTimeout(progressDelay);
+                if (elapsedTimer !== null) window.clearInterval(elapsedTimer);
+                outputEl.setAttribute("aria-busy", "false");
                 btn.disabled = false;
                 if (buttonId === ids.btnRunId) updateRunButtonState();
                 btn.textContent = oldText;
@@ -1420,6 +1455,14 @@ function configPluginPython(dtoString) {
             } else {
                 helpElement.innerHTML = defaultHelpHtml();
             }
+            helpElement.insertAdjacentHTML("beforeend", `
+                <h4>CPU time limit (seconds)</h4>
+                <p>Begrenzt die Prozessorzeit für Run, Check und Score (Standard: 5 Sekunden).
+                Wartezeiten, etwa durch <code>time.sleep()</code> oder Ein-/Ausgabe, verbrauchen keine CPU-Zeit.
+                Die angezeigte verstrichene Zeit misst die gesamte Anfrage und kann daher länger sein.
+                Jobe beendet eine Ausführung zusätzlich nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten.
+                Bei 5 Sekunden CPU-Limit sind daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
+            `);
         }
 
         if (dtoParams.wikiurl != null) {

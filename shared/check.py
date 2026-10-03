@@ -88,7 +88,7 @@ if __name__ == '__main__':
             'errors': [
                 'Error running Jobe unit tests. '
                 f'{result.__repr__().strip()} '
-                'Please check the validation tests, imports, uploaded files, and the submitted Python syntax.'
+                'Check your code and tests.'
             ],
         })
     return CheckResult.from_str(result.stdout)
