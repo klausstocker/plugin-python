@@ -28,8 +28,12 @@ Changing the flag requires restarting the plugin process.
 Detailed help lives in `resources/help/Python.html`, is included in the plugin
 image, and is served at `/help` (also `/pluginpython/help` through the proxy).
 The configuration dialog receives this detailed help separately from the overview.
-Examples and the helpers download are served at `/pluginpython/help/examples.html`
-and `/pluginpython/help/helpers.py` in both development and production. The dialog
+Public plugin resources are served through FastAPI StaticFiles at `/pluginpython/static/`
+(also `/static/` without the proxy prefix). Examples and the helpers download use
+`/pluginpython/static/examples.html` and `/pluginpython/static/helpers.py` in both
+development and production. Configuration help loads logos from the same static
+mount and does not require LeTTo resources. The short overview still uses
+`/images/plugins/Python/` from the synchronized resources directory. The dialog
 resolves these links using its `serviceBase`; no Letto `/images/` mount is required.
 
 ## Teaching examples

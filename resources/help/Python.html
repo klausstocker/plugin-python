@@ -24,17 +24,22 @@
     }
   </style>
   <div class="python-plugin-help">
-    <h1>Python - Plugin</h1>
+    <h1 style="display: flex; align-items: center; gap: 0.4rem;"><img src="static/python-logo.png"
+        data-plugin-static-file="python-logo.png" alt="" width="40" height="40"
+        style="object-fit: contain; flex-shrink: 0;">Python - Plugin<img src="static/unittest-logo.png"
+        data-plugin-static-file="unittest-logo.png" alt="" width="40" height="40"
+        style="object-fit: contain; flex-shrink: 0;"></h1>
 
     <p>Mit diesem Plugin können Python-Aufgaben erstellt, ausprobiert und automatisch bewertet werden.</p>
 
     <h2>Beispiele</h2>
-    <p><a href="help/examples.html" data-plugin-help-file="examples.html" target="_blank" rel="noopener">Python-Beispiele: von print bis SQLite</a>
+    <p><a href="static/examples.html" data-plugin-help-file="examples.html" target="_blank" rel="noopener">Python-Beispiele: von print bis SQLite</a>
       mit Funktionen des Plugins, Aufgaben und möglichen Lösungen.</p>
 
     <h2>Kurz erklärt</h2>
     <ul>
-      <li><strong>UnitTest:</strong> Enthält die UnitTests, mit denen die eingereichte Lösung geprüft wird.</li>
+      <li><strong>UnitTest:</strong>
+        Enthält die UnitTests, mit denen die eingereichte Lösung geprüft wird.</li>
       <li><strong>Preview:</strong> Code, der im Beispiel als Angabe/Template vorgegeben wird.</li>
       <li><strong>Files:</strong> Hier lassen sich zusätzliche Dateien verwalten.</li>
     </ul>
@@ -86,7 +91,7 @@
 
     <h2>Hilfsmodul helpers.py</h2>
     <p>Das Modul <code>helpers.py</code> stellt Hilfsklassen für UnitTests bereit:
-      <a href="help/helpers.py" data-plugin-help-file="helpers.py" download="helpers.py">herunterladen</a>.</p>
+      <a href="static/helpers.py" data-plugin-help-file="helpers.py" download="helpers.py">herunterladen</a>.</p>
     <ul>
       <li><strong><code>RedirectedStdout</code>:</strong> Fängt innerhalb eines
         <code>with</code>-Blocks die Standardausgabe (z. B. <code>print</code>) auf.

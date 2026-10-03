@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File, Request
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
 from app.dev_ui import install_dev_ui
+from app.static_resources import install_static_resources
 from app.dataset_helper import (
     dataset_file_from_variables,
     extract_dataset_variables,
@@ -1391,6 +1392,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+install_static_resources(app, SERVICEPATH)
+
 
 @app.middleware("http")
 async def log_http_requests(request: Request, call_next):
@@ -1654,20 +1657,6 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
 def detailed_help():
     path = os.path.join(os.getenv("RESOURCE_DIR", "/app/resources"), CONF_DETAILED_HELPFILE)
     return FileResponse(path, media_type="text/html")
-
-
-@app.get("/help/examples.html", response_class=FileResponse)
-@app.get(f"{SERVICEPATH}/help/examples.html", response_class=FileResponse)
-def help_examples():
-    path = os.path.join(os.getenv("RESOURCE_DIR", "/app/resources"), "plugins/Python/examples.html")
-    return FileResponse(path, media_type="text/html")
-
-
-@app.get("/help/helpers.py", response_class=FileResponse)
-@app.get(f"{SERVICEPATH}/help/helpers.py", response_class=FileResponse)
-def help_helpers():
-    path = os.path.join(os.getenv("RESOURCE_DIR", "/app/resources"), "plugins/Python/helpers.py")
-    return FileResponse(path, media_type="text/plain", filename="helpers.py")
 
 
 # Info endpoints (both internal and external convenience)

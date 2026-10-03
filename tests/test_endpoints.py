@@ -61,6 +61,9 @@ class TestEndpoints(unittest.TestCase):
         self.assertNotIn("Linter presets", overview)
 
     def test_help_files_are_served_with_and_without_proxy_prefix(self):
+        from fastapi import FastAPI
+        from app.static_resources import install_static_resources
+
         with tempfile.TemporaryDirectory() as directory:
             resources = Path(directory) / "plugins/Python"
             resources.mkdir(parents=True)
@@ -68,17 +71,22 @@ class TestEndpoints(unittest.TestCase):
             helpers = "class RedirectedStdout: pass\n"
             (resources / "examples.html").write_text(examples, encoding="utf-8")
             (resources / "helpers.py").write_text(helpers, encoding="utf-8")
+            (Path(directory) / "secret.txt").write_text("private", encoding="utf-8")
             with patch.dict(os.environ, {"RESOURCE_DIR": directory}):
+                static_app = FastAPI()
+                install_static_resources(static_app, BASE_PATH)
+                client = TestClient(static_app)
                 for prefix in ("", BASE_PATH):
                     with self.subTest(prefix=prefix):
-                        response = self.client.get(f"{prefix}/help/examples.html")
+                        response = client.get(f"{prefix}/static/examples.html")
                         self.assertEqual(response.status_code, 200)
                         self.assertEqual(response.text, examples)
                         self.assertTrue(response.headers["content-type"].startswith("text/html"))
-                        response = self.client.get(f"{prefix}/help/helpers.py")
+                        response = client.get(f"{prefix}/static/helpers.py")
                         self.assertEqual(response.status_code, 200)
                         self.assertEqual(response.text.replace("\r\n", "\n"), helpers)
-                        self.assertIn('filename="helpers.py"', response.headers["content-disposition"])
+                        self.assertEqual(client.get(f"{prefix}/static/missing.html").status_code, 404)
+                        self.assertEqual(client.get(f"{prefix}/static/%2E%2E/secret.txt").status_code, 404)
 
     def test_get_info_returns_service_info_dto(self):
         response = self.client.get(f"{BASE_PATH}/open/info")

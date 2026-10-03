@@ -1512,7 +1512,10 @@ function configPluginPython(dtoString) {
                 // Help is a complete HTML document; its body styles must not affect LeTTo.
                 helpDocument.querySelectorAll("style, link[rel='stylesheet'], script").forEach((element) => element.remove());
                 helpDocument.querySelectorAll("a[data-plugin-help-file]").forEach((link) => {
-                    link.setAttribute("href", `${serviceBase}/help/${encodeURIComponent(link.dataset.pluginHelpFile)}`);
+                    link.setAttribute("href", `${serviceBase}/static/${encodeURIComponent(link.dataset.pluginHelpFile)}`);
+                });
+                helpDocument.querySelectorAll("img[data-plugin-static-file]").forEach((image) => {
+                    image.setAttribute("src", `${serviceBase}/static/${encodeURIComponent(image.dataset.pluginStaticFile)}`);
                 });
                 helpElement.replaceChildren(...Array.from(helpDocument.body.childNodes));
             } else {
