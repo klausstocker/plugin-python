@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, APIRouter, Body, UploadFile, File, Request
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
+from app.dev_ui import install_dev_ui
 from app.dataset_helper import (
     dataset_file_from_variables,
     extract_dataset_variables,
@@ -1682,6 +1683,7 @@ def version():
     return CONF_VERSION
 
 app.include_router(code_execution_router)
+install_dev_ui(app, SERVICEPATH)
 
 # Mount internal open API at /open and (for proxy setups) also under /pluginpython/open
 app.include_router(mount_internal_open(LOCAL_API))

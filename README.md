@@ -1,5 +1,27 @@
 # plugin-python 
 
+## Standalone development dialog
+
+On Windows, run `build.bat --no-push` to build both images locally, then
+`start_development.bat` to start them with `.env.docker-local`. The start script
+enables the development UI and disables Letto registration automatically,
+creates `nw-letto` if needed, and uses local images without pulling.
+
+For local GUI tests without Letto, set `PLUGIN_DEV_UI=true` and
+`PLUGIN_REGISTER_ON_READY=false` in `.env.docker-local`, then recreate the
+plugin container using the local Docker commands below. The image must contain
+this development router; rebuild it when testing source changes.
+
+Open `http://localhost:8209/pluginpython/dev/config`. The dialog uses the normal
+plugin execution endpoints and the Jobe container. Bundled resources are served
+at `/pluginpython/dev/resources/`, for example
+`/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js`.
+jQuery and Ace currently require internet access to their CDN.
+
+`PLUGIN_DEV_UI` defaults to `false`. Leave it unset or false in production:
+the dialog and the complete development resource mount then return 404.
+Changing the flag requires restarting the plugin process.
+
 ## Teaching examples
 
 See [the examples guide](examples/README.md) for ten small examples, from printed
