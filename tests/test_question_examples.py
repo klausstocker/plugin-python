@@ -121,6 +121,5 @@ class TestExampleSubmissions(unittest.TestCase):
         self.assertNotIn("Build the HTML guide", html)
         self.assertNotIn("Run locally", html)
         self.assertNotIn("Teacher checker", html)
-        for filename in ("Python.html", "PythonConfigScript.js"):
-            help_text = (root / "resources/plugins/Python" / filename).read_text(encoding="utf-8")
-            self.assertIn('/images/plugins/Python/examples.html', help_text)
+        help_text = (root / "resources/help/Python.html").read_text(encoding="utf-8")
+        self.assertIn('/images/plugins/Python/examples.html', help_text)

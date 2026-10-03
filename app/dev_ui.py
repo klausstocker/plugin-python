@@ -36,8 +36,5 @@ def install_dev_ui(app: FastAPI, service_path: str) -> None:
 <div id="configform_div"></div>
 <script>
 configPluginPython(JSON.stringify({dto}));
-// Resolve the dialog's existing Letto documentation link against dev resources.
-const examplesLink = document.querySelector('#configPluginHelp a[href="/images/plugins/Python/examples.html"]');
-if (examplesLink) examplesLink.href = {json.dumps(prefix + '/resources/plugins/Python/examples.html')};
 </script>
 </body></html>"""

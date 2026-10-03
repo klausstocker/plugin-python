@@ -40,6 +40,7 @@ function configPluginPython(dtoString) {
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optLintAtTestId: `optLintAtTest_${pluginTag}`,
         linterConfigId: `linterConfig_${pluginTag}`,
+        linterPresetName: `linterPreset_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
         cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
@@ -52,6 +53,15 @@ function configPluginPython(dtoString) {
         mainSplitId: `mainSplit_${pluginTag}`,
         splitHandleId: `splitHandle_${pluginTag}`
     };
+
+    const linterPresets = [
+        { id: "errors", label: "Only errors", config: "--disable=all --enable=F,E" },
+        { id: "warnings", label: "Errors + warnings", config: "--disable=all --enable=F,E,W" },
+        { id: "conventions", label: "Conventions", config: "--disable=all --enable=F,E,W,C --disable=C0114,C0115,C0116" },
+        { id: "docstrings", label: "Conventions + docstrings", config: "--disable=all --enable=F,E,W,C" },
+        { id: "all", label: "Default", config: "" },
+        { id: "custom", label: "Custom", config: null }
+    ];
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
@@ -356,7 +366,12 @@ function configPluginPython(dtoString) {
                                             <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
                                             <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
                                         </div>
-                                        <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                                        <div class="linter-config-body">
+                                            <div class="linter-presets" role="radiogroup" aria-label="Linter presets">
+                                                ${linterPresets.map((preset) => `<label class="checkbox-row"><input type="radio" name="${ids.linterPresetName}" value="${preset.id}" /> ${preset.label}</label>`).join("")}
+                                            </div>
+                                            <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                                        </div>
                                     </div>
                                     <div class="dataset-variable-section" title="Dataset variables are provided to UnitTest as a generated dataset.py file. Use from dataset import DATASET_VARIABLES and then DATASET_VARIABLES[&quot;name&quot;].value or .unit. Valid Python identifiers can also be imported directly, e.g. from dataset import myVar.">
                                         <div class="dataset-variable-head-row">
@@ -389,7 +404,7 @@ function configPluginPython(dtoString) {
                 <div class="config-help">
                     <div class="help-head-row">
                         <h3>Help</h3>
-                        <button type="button" id="${ids.helpToggleId}" class="icon-btn" title="Hide help">◂</button>
+                        <button type="button" id="${ids.helpToggleId}" class="icon-btn" title="Hide help" aria-label="Hide help" aria-expanded="true">◂</button>
                     </div>
                     <a href="https://doc.letto.at/wiki/Plugins" target="_blank">Wiki-Plugins</a>
                     <div id="configPluginHelp"></div>
@@ -437,6 +452,16 @@ function configPluginPython(dtoString) {
                 padding: 8px;
                 overflow: auto;
                 min-width: 0;
+            }
+            .pluginPythonConfigForm .config-help.help-collapsed {
+                flex: 0 0 auto;
+                align-self: flex-start;
+                padding: 4px;
+                overflow: visible;
+            }
+            .pluginPythonConfigForm .config-help.help-collapsed > :not(.help-head-row),
+            .pluginPythonConfigForm .config-help.help-collapsed .help-head-row h3 {
+                display: none;
             }
             .pluginPythonConfigForm .config-help h4 {
                 margin: 14px 0 4px;
@@ -742,7 +767,23 @@ function configPluginPython(dtoString) {
                 width: 90px;
                 margin: 0;
             }
+            .pluginPythonConfigForm .linter-config-body {
+                display: flex;
+                align-items: stretch;
+                gap: 12px;
+                flex: 1;
+                min-width: 0;
+            }
+            .pluginPythonConfigForm .linter-presets {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                flex: 0 0 auto;
+                padding-top: 4px;
+            }
             .pluginPythonConfigForm .linter-config-section textarea {
+                width: 0;
+                min-width: 80px;
                 flex: 1;
                 min-height: 120px;
                 margin-bottom: 0;
@@ -823,10 +864,11 @@ function configPluginPython(dtoString) {
 
         if (helpToggle && helpCol) {
             helpToggle.addEventListener("click", () => {
-                const hidden = helpCol.style.display === "none";
-                helpCol.style.display = hidden ? "" : "none";
-                helpToggle.textContent = hidden ? "◂" : "▸";
-                helpToggle.title = hidden ? "Hide help" : "Show help";
+                const collapsed = helpCol.classList.toggle("help-collapsed");
+                helpToggle.textContent = collapsed ? "▸" : "◂";
+                helpToggle.title = collapsed ? "Show help" : "Hide help";
+                helpToggle.setAttribute("aria-expanded", String(!collapsed));
+                helpToggle.setAttribute("aria-label", helpToggle.title);
             });
         }
 
@@ -1149,9 +1191,27 @@ function configPluginPython(dtoString) {
         if (linterWeight) linterWeight.value = formatWeightValue(state.linterWeight);
         if (cpuTime) cpuTime.value = formatCpuTimeValue(state.cpuTime);
 
+        const presetRadios = Array.from(document.getElementsByName(ids.linterPresetName));
+        const selectPreset = (presetId) => {
+            presetRadios.forEach((radio) => { radio.checked = radio.value === presetId; });
+        };
+        const matchingPreset = linterPresets.find((preset) => preset.config === (state.linterConfig || ""));
+        selectPreset(matchingPreset ? matchingPreset.id : "custom");
+        presetRadios.forEach((radio) => {
+            radio.onchange = () => {
+                if (!radio.checked) return;
+                const preset = linterPresets.find((entry) => entry.id === radio.value);
+                if (!preset || preset.config === null || !linterConfig) return;
+                linterConfig.value = preset.config;
+                syncOptionsStateFromInputs();
+                saveConfig();
+            };
+        });
+
         [runAtTest, lintAtTest, linterConfig, linterWeight, cpuTime].forEach((el) => {
             if (!el) return;
             const onOptionChanged = (event) => {
+                if (el === linterConfig) selectPreset("custom");
                 syncOptionsStateFromInputs();
                 saveConfig();
                 if (el === linterWeight && event && event.type === "change") {
@@ -1443,26 +1503,21 @@ function configPluginPython(dtoString) {
         configField.value = JSON.stringify(questionConfigDto);
     }
 
-    function renderHelp() {
+    async function renderHelp() {
         const helpElement = document.getElementById("configPluginHelp");
         if (helpElement) {
-            const suppliedHelp = typeof dtoParams.help === "string" ? dtoParams.help.trim() : "";
+            const suppliedHelp = (typeof dtoParams.help === "string" ? dtoParams.help.trim() : "") || await defaultHelpHtml();
             if (suppliedHelp) {
                 const helpDocument = new DOMParser().parseFromString(suppliedHelp, "text/html");
                 // Help is a complete HTML document; its body styles must not affect LeTTo.
                 helpDocument.querySelectorAll("style, link[rel='stylesheet'], script").forEach((element) => element.remove());
+                helpDocument.querySelectorAll("a[data-plugin-help-file]").forEach((link) => {
+                    link.setAttribute("href", `${serviceBase}/help/${encodeURIComponent(link.dataset.pluginHelpFile)}`);
+                });
                 helpElement.replaceChildren(...Array.from(helpDocument.body.childNodes));
             } else {
-                helpElement.innerHTML = defaultHelpHtml();
+                helpElement.innerHTML = "<p>Help is not available. Please contact the plugin author.</p>";
             }
-            helpElement.insertAdjacentHTML("beforeend", `
-                <h4>CPU time limit (seconds)</h4>
-                <p>Begrenzt die Prozessorzeit für Run, Check und Score (Standard: 5 Sekunden).
-                Wartezeiten, etwa durch <code>time.sleep()</code> oder Ein-/Ausgabe, verbrauchen keine CPU-Zeit.
-                Die angezeigte verstrichene Zeit misst die gesamte Anfrage und kann daher länger sein.
-                Jobe beendet eine Ausführung zusätzlich nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten.
-                Bei 5 Sekunden CPU-Limit sind daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
-            `);
         }
 
         if (dtoParams.wikiurl != null) {
@@ -1471,35 +1526,17 @@ function configPluginPython(dtoString) {
         }
     }
 
-    function defaultHelpHtml() {
-        return `
-            <p><a href="/images/plugins/Python/examples.html" target="_blank" rel="noopener">Python-Beispiele: von print bis SQLite</a></p>
-            <h4>Kurz erklärt</h4>
-            <ul>
-                <li><strong>UnitTest:</strong> Hier stehen die Tests, mit denen die Lösung geprüft wird.</li>
-                <li><strong>Preview:</strong> Dieser Python-Code dient als Vorschau beziehungsweise Musterlösung.</li>
-                <li><strong>Files:</strong> Zusätzliche Dateien können hochgeladen, heruntergeladen und gelöscht werden.</li>
-            </ul>
-            <h4>Configuration</h4>
-            <ul>
-                <li><strong>enable run:</strong> Zeigt den Button "Run Code" in der Aufgabe an.</li>
-                <li><strong>enable lint:</strong> Zeigt den Button "Lint Code" in der Aufgabe an.</li>
-                <li><strong>Linter configuration:</strong> Übergibt zusätzliche Optionen an den Linter, zum Beispiel deaktivierte Prüfregeln.</li>
-                <li><strong>Weight:</strong> Bestimmt, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis in die Punkte eingeht.</li>
-                <li><strong>Dataset variables:</strong> Zeigt die für die Aufgabe verfügbaren Variablen mit Wert und Einheit. Im UnitTest können sie aus <code>dataset</code> importiert werden.</li>
-            </ul>
-            <p>Die Module <code>answer</code>, <code>dataset</code> und <code>helpers</code> werden erst bei <strong>check</strong>/<strong>score</strong> bereitgestellt. Beim Linten der UnitTests die Import-Fehlermeldung gezielt an der jeweiligen Importzeile deaktivieren:</p>
-            <pre><code>import answer  # pylint: disable=import-error
-from dataset import DATASET_VARIABLES  # pylint: disable=import-error
-from helpers import RedirectedStdout  # pylint: disable=import-error</code></pre>
-            <h4>Buttons</h4>
-            <ul>
-                <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
-                <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
-                <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
-                <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten Linter-Ergebnis.</li>
-            </ul>
-        `;
+    async function defaultHelpHtml() {
+        try {
+            const response = await fetch(serviceBase + "/help", {
+                method: "GET",
+                credentials: "include"
+            });
+            if (!response.ok) throw new Error("Help request failed");
+            return await response.text();
+        } catch (e) {
+            return "";
+        }
     }
 
     function renderDatasetVariableList(variables) {

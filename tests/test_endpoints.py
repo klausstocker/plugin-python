@@ -44,6 +44,42 @@ class TestEndpoints(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, "pong")
 
+    def test_detailed_help_is_served_separately_from_plugin_overview(self):
+        from app.main import PluginPython
+
+        resources = Path(__file__).resolve().parents[1] / "resources"
+        detailed = (resources / "help/Python.html").read_text(encoding="utf-8")
+        overview = (resources / "plugins/Python/Python.html").read_text(encoding="utf-8")
+        with patch.dict(os.environ, {"RESOURCE_DIR": str(resources)}):
+            for path in ("/help", f"{BASE_PATH}/help"):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.headers["content-type"].startswith("text/html"))
+                self.assertEqual(response.text.replace("\r\n", "\n"), detailed)
+            self.assertEqual(PluginPython("python", "").get_help(), overview.strip())
+        self.assertIn("Linter presets", detailed)
+        self.assertNotIn("Linter presets", overview)
+
+    def test_help_files_are_served_with_and_without_proxy_prefix(self):
+        with tempfile.TemporaryDirectory() as directory:
+            resources = Path(directory) / "plugins/Python"
+            resources.mkdir(parents=True)
+            examples = "<!doctype html><h1>Examples</h1>"
+            helpers = "class RedirectedStdout: pass\n"
+            (resources / "examples.html").write_text(examples, encoding="utf-8")
+            (resources / "helpers.py").write_text(helpers, encoding="utf-8")
+            with patch.dict(os.environ, {"RESOURCE_DIR": directory}):
+                for prefix in ("", BASE_PATH):
+                    with self.subTest(prefix=prefix):
+                        response = self.client.get(f"{prefix}/help/examples.html")
+                        self.assertEqual(response.status_code, 200)
+                        self.assertEqual(response.text, examples)
+                        self.assertTrue(response.headers["content-type"].startswith("text/html"))
+                        response = self.client.get(f"{prefix}/help/helpers.py")
+                        self.assertEqual(response.status_code, 200)
+                        self.assertEqual(response.text.replace("\r\n", "\n"), helpers)
+                        self.assertIn('filename="helpers.py"', response.headers["content-disposition"])
+
     def test_get_info_returns_service_info_dto(self):
         response = self.client.get(f"{BASE_PATH}/open/info")
 

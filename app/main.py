@@ -66,6 +66,7 @@ CONF_INIT_JS = "initPluginPython"
 CONF_CONFIG_JS = "configPluginPython"
 # Hilfe als HTML-Datei
 CONF_HELPFILES = ["plugins/Python/Python.html"]
+CONF_DETAILED_HELPFILE = "help/Python.html"
 # Javascript Dateien die für dieses Plugin von LeTTo eingebunden werden müssen
 CONF_JSLIBS = ["plugins/Python/PythonScript.js", "plugins/Python/PythonConfigScript.js"]
 # Namen der Wiki-Seite wenn eine Doku am LeTTo-Wiki vorliegt
@@ -1332,7 +1333,7 @@ def create_or_update_configuration_state(
     state.pluginConfigDto.params.pop("pluginToken", None)
 
     if state.pluginPython is not None:
-        state.pluginConfigDto.params["help"] = state.pluginPython.get_help()
+        state.pluginConfigDto.params["help"] = read_resource_text(CONF_DETAILED_HELPFILE)
 
         state.pluginConfigurationInfoDto = PluginConfigurationInfoDto(
             configurationID=configuration_id,
@@ -1646,6 +1647,27 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         return plugin_dto
 
     return r
+
+
+@app.get("/help", response_class=FileResponse)
+@app.get(f"{SERVICEPATH}/help", response_class=FileResponse)
+def detailed_help():
+    path = os.path.join(os.getenv("RESOURCE_DIR", "/app/resources"), CONF_DETAILED_HELPFILE)
+    return FileResponse(path, media_type="text/html")
+
+
+@app.get("/help/examples.html", response_class=FileResponse)
+@app.get(f"{SERVICEPATH}/help/examples.html", response_class=FileResponse)
+def help_examples():
+    path = os.path.join(os.getenv("RESOURCE_DIR", "/app/resources"), "plugins/Python/examples.html")
+    return FileResponse(path, media_type="text/html")
+
+
+@app.get("/help/helpers.py", response_class=FileResponse)
+@app.get(f"{SERVICEPATH}/help/helpers.py", response_class=FileResponse)
+def help_helpers():
+    path = os.path.join(os.getenv("RESOURCE_DIR", "/app/resources"), "plugins/Python/helpers.py")
+    return FileResponse(path, media_type="text/plain", filename="helpers.py")
 
 
 # Info endpoints (both internal and external convenience)

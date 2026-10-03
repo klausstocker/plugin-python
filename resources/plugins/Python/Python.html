@@ -1,84 +1,11 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="de">
 <head>
-  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
-  <title>Python - Plugin - Help</title>
+  <meta charset="UTF-8">
+  <title>Python - Plugin</title>
 </head>
-
 <body>
-  <style>
-    .python-plugin-help {
-      max-width: 760px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      font-family: sans-serif;
-      line-height: 1.5;
-    }
-
-    .python-plugin-help table.doc,
-    .python-plugin-help table.doc th,
-    .python-plugin-help table.doc td {
-      border: 1px solid black;
-      border-collapse: collapse;
-    }
-  </style>
-  <div class="python-plugin-help">
   <h1>Python - Plugin</h1>
-
-  <p>Mit diesem Plugin können Python-Aufgaben erstellt, ausprobiert und automatisch bewertet werden.</p>
-
-  <h2>Kurz erklärt</h2>
-  <ul>
-    <li><strong>UnitTest:</strong> Enthält die UnitTests, mit denen die eingereichte Lösung geprüft wird.</li>
-    <li><strong>Preview:</strong> Enthält den Python-Code für die Angabe bzw. Musterlösung.</li>
-    <li><strong>Files:</strong> Hier lassen sich zusätzliche Dateien verwalten.</li>
-  </ul>
-
-  <h2>Configuration</h2>
-  <ul>
-    <li><strong>enable run:</strong> Zeigt den Button "Run Code" in der Aufgabe an.</li>
-    <li><strong>enable lint:</strong> Zeigt den Button "Lint Code" in der Aufgabe an.</li>
-    <li><strong>Linter configuration:</strong> Hier können zusätzliche Linter-Optionen angegeben werden, beispielsweise
-      Regeln, die nicht geprüft werden sollen.</li>
-    <li><strong>Weight:</strong> Legt fest, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis (1.0) in die
-      Gesamtpunkte eingeht.</li>
-    <li><strong>Dataset variables:</strong> Zeigt die verfügbaren Aufgabenvariablen mit Wert und Einheit. Im UnitTest
-      können sie aus <code>dataset</code> importiert werden.</li>
-  </ul>
-
-  <p>Die Module <code>answer</code>, <code>dataset</code> und <code>helpers</code> werden erst bei
-    <strong>check</strong>/<strong>score</strong> bereitgestellt. Beim Linten der UnitTests die
-    Import-Fehlermeldung gezielt an der jeweiligen Importzeile deaktivieren:</p>
-  <pre><code>import answer  # pylint: disable=import-error
-from dataset import DATASET_VARIABLES  # pylint: disable=import-error
-from helpers import RedirectedStdout  # pylint: disable=import-error</code></pre>
-
-  <h2>Beispiele</h2>
-  <p><a href="/images/plugins/Python/examples.html" target="_blank" rel="noopener">Python-Beispiele: von print bis SQLite</a>
-    mit Funktionen des Plugins, Aufgaben und möglichen Lösungen.</p>
-
-  <h2>Hilfsmodul helpers.py</h2>
-  <p>Das Modul <code>helpers.py</code> stellt Hilfsklassen für UnitTests bereit:
-    <a href="/images/plugins/Python/helpers.py" download="helpers.py">herunterladen</a>.</p>
-  <ul>
-    <li><strong><code>RedirectedStdout</code>:</strong> Fängt innerhalb eines
-      <code>with</code>-Blocks die Standardausgabe (z. B. <code>print</code>) auf.
-      <code>str(ausgabe)</code> liefert den aufgefangenen Text. Beim Verlassen des
-      Blocks wird die ursprüngliche Standardausgabe wiederhergestellt, auch bei Fehlern.</li>
-  </ul>
-  <p>Zum lokalen Testen die Datei neben <code>test_answer.py</code> speichern.</p>
-
-  <h2>Buttons</h2>
-  <ul>
-    <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
-    <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
-    <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
-    <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten
-      Linter-Ergebnis.</li>
-  </ul>
-  </div>
-
+  <p>Python-Aufgaben erstellen, Code ausführen und Lösungen automatisch mit UnitTests und Pylint bewerten.</p>
 </body>
-
 </html>
