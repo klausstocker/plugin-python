@@ -61,15 +61,6 @@ class RunResult():
         return ret
 
 
-def trim(s):
-    '''Return the string s limited to 10k chars'''
-    MAX_LEN = 10000
-    if len(s) > MAX_LEN:
-        return s[:MAX_LEN] + '... [etc]'
-    else:
-        return s
-
-
 class JobeWrapper():
     def __init__(self, server):
         self.server = server

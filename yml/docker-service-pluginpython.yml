@@ -7,7 +7,7 @@ name: letto-plugin-python
 
 services:
   pluginpython:
-    image: "klausstocker/letto-plugin-python:${PLUGIN_PYTHON_TAG:?Set PLUGIN_PYTHON_TAG}"
+    image: "klausstocker/letto-plugin-python:1.0.0"
     restart: always
     networks:
       - nw-letto
@@ -32,28 +32,22 @@ services:
     environment:
       TZ: ${TIMEZONE:-Europe/Berlin}
       LC_ALL: ${LOCALE:-de_DE.UTF-8}
-      letto_schulen: ${LETTO_SCHULEN}
       SERVICEPATH: "/pluginpython"
       RESOURCE_DIR: "/app/resources"
       network_letto_address: letto-pluginpython
       docker_container_name: letto-pluginpython
-      servername: ${SERVER_NAME}
       letto_user_user_password: ${SERVICE_USER_PASSWORD}
-      letto_user_gast_password: ${SERVICE_GAST_PASSWORD}
       letto_setup_uri: ${LETTO_SETUP_URI:-http://letto-setup.nw-letto:8096}
       letto_plugin_uri_intern: ${LETTO_PLUGIN_URI_INTERN:-http://letto-pluginpython.nw-letto:8080}
       letto_plugin_uri_extern: ${LETTO_PLUGIN_URI_EXTERN:-https://${SERVER_NAME}/pluginpython}
       letto_pathImages: /opt/letto/images
       letto_pathPlugins: /opt/letto/plugins
-      letto_webPathImages: ${SERVER_NAME}/images
-      letto_webPathPlugins: ${SERVER_NAME}/images/plugins
-      debug: ${DEBUG_PLUGINS:-${DEBUG:-false}}
       PluginPythonLogLevel: ${PLUGIN_PYTHON_LOG_LEVEL:-INFO}
       PLUGIN_DEV_UI: ${PLUGIN_DEV_UI:-false}
       PLUGIN_REGISTER_ON_READY: ${PLUGIN_REGISTER_ON_READY:-true}
 
   jobe:
-    image: "klausstocker/letto-plugin-python-jobe:${PLUGIN_PYTHON_TAG:?Set PLUGIN_PYTHON_TAG}"
+    image: "klausstocker/letto-plugin-python-jobe:1.0.0"
     container_name: letto-jobe
     hostname: letto-jobe
     restart: always

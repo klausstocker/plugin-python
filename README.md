@@ -102,14 +102,9 @@ ARM64 but does not publish multi-platform manifests.
 
 Install `yml/docker-service-pluginpython.yml` in
 `/opt/letto/docker/compose/letto/` and configure the server's `.env` there
-as described in the installation section below. Include the image tag:
-
-```dotenv
-PLUGIN_PYTHON_TAG=v1.2.3
-```
-
-Use your published release tag or `latest`. Run the startup script from the
-repository, or copy it to the server and run it from any directory:
+as described in the installation section below. Set the desired image tags
+directly in the Compose file. Run the startup script from the repository,
+or copy it to the server and run it from any directory:
 
 ```bash
 bash start.sh
@@ -124,8 +119,7 @@ running services untouched; startup failures return a nonzero exit code without
 automatic rollback. Persistent volumes and bind mounts are retained. Other
 services are not stopped. Docker Compose with `--wait` support is required.
 Run with an account that can access Docker; for private repositories, first
-run `docker login` as that account. An exported `PLUGIN_PYTHON_TAG` overrides
-the value in `.env`.
+run `docker login` as that account.
 
 ## Free Docker disk space
 
@@ -164,11 +158,8 @@ New-Item -ItemType Directory -Force .docker-test\images | Out-Null
 New-Item -ItemType Directory -Force .docker-test\plugins | Out-Null
 
 @"
-LETTO_SCHULEN=test
-PLUGIN_PYTHON_TAG=latest
 SERVER_NAME=localhost
 SERVICE_USER_PASSWORD=test-user-password
-SERVICE_GAST_PASSWORD=test-guest-password
 LETTO_SETUP_URI=http://localhost:8096
 LETTO_PLUGIN_URI_EXTERN=http://localhost:8209/pluginpython
 VOLUME_LOG=./.docker-test/log
@@ -241,11 +232,8 @@ neben der Compose-Datei erstellen und die Beispielwerte anpassen:
 
 ```bash
 cat > .env <<'EOF'
-LETTO_SCHULEN=meine-schule
-PLUGIN_PYTHON_TAG=latest
 SERVER_NAME=letto.example.org
 SERVICE_USER_PASSWORD=BITTE_AENDERN
-SERVICE_GAST_PASSWORD=BITTE_AENDERN
 TIMEZONE=Europe/Berlin
 LOCALE=de_DE.UTF-8
 EOF
@@ -391,7 +379,6 @@ Externe Open-API (wie Java `@RequestMapping("/pluginpython/api/open")`):
   - `PLUGIN_EXEC_REQUIRE_TOKEN` ist standardmäßig `true` (Prüfung ist damit standardmäßig aktiv).
 - Token-Quelle:
   - Das Service erzeugt beim Start automatisch ein neues `EXEC_TOKEN` (zufällig, pro Prozessstart neu).
-  - `PLUGIN_EXEC_TOKEN` aus der Umgebung wird **nicht** verwendet.
   - Das aktuelle Token wird in die Plugin-Daten (`params.pluginToken`) eingebettet und von den JavaScript-Clients für Requests verwendet.
 - Übergabe des Tokens:
   - Bevorzugt: `Authorization: Bearer <token>`

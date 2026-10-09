@@ -90,5 +90,14 @@ before using **check** or **score**. Applying the example does not create it.
 It must appear under **Available dataset variables** in the configuration.
 
 **Task:** Implement `double(value)` to return twice the supplied value.
-The unit tests read `DATASET_VARIABLES["number"].value` from the runtime-provided
-`dataset` module and pass it to the student function.
+Import the runtime-provided `dataset` module to access the current LeTTo dataset.
+For example, a dataset variable named `i` is available as:
+
+```python
+import dataset
+
+value = dataset.i.value
+```
+
+In this example, the unit tests use `dataset.number.value` and pass it to the
+student function.

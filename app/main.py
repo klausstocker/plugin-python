@@ -267,38 +267,6 @@ def get_system_info():
     }
 
 
-def parse_time_seconds(s: str) -> float:
-    """
-    Java Datum.parseTime:
-      - HH:MM
-      - HH:MM:SS
-      - HH:MM:SS.mmm...
-    -> seconds (float)
-    """
-    s = (s or "").strip()
-    m = re.match(r"^(\d+):(\d+)$", s)
-    if m:
-        h = float(m.group(1))
-        mi = float(m.group(2))
-        return h * 3600.0 + mi * 60.0
-    m = re.match(r"^(\d+):(\d+):(\d+\.?\d*)$", s)
-    if m:
-        h = float(m.group(1))
-        mi = float(m.group(2))
-        sec = float(m.group(3))
-        return h * 3600.0 + mi * 60.0 + sec
-    raise ValueError("invalid time format")
-
-
-def equals_with_tolerance(a: float, b: float, toleranz: float, mode: str) -> bool:
-    # mode: "RELATIV" or "ABSOLUT"
-    if mode == "ABSOLUT":
-        return abs(a - b) <= toleranz
-    # RELATIV (default)
-    ref = max(abs(a), abs(b), 1e-12)
-    return abs(a - b) <= toleranz * ref
-
-
 def read_resource_text(rel_path: str) -> str:
     """
     Reads from ./resources (project root) at runtime inside container.
