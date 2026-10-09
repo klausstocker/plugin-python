@@ -2,7 +2,27 @@
 # With thanks to David Bowes (d.h.bowes@lancaster.ac.uk) who did all the hard work
 # on this originally.
 
+FROM docker.io/ubuntu:24.04 AS catch2-build
+ARG CATCH2_VERSION=3.16.0
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake git ca-certificates && \
+    git clone --depth 1 --branch "v${CATCH2_VERSION}" https://github.com/catchorg/Catch2.git /tmp/catch2 && \
+    cmake -S /tmp/catch2 -B /tmp/catch2-build \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/catch2 \
+        -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=OFF \
+        -DCATCH_BUILD_TESTING=OFF -DCATCH_INSTALL_DOCS=OFF && \
+    cmake --build /tmp/catch2-build --parallel 2 && \
+    cmake --install /tmp/catch2-build && \
+    printf '%s\n' "$CATCH2_VERSION" > /opt/catch2/VERSION
+COPY jobe/catch2_runner.cpp /tmp/catch2_runner.cpp
+RUN g++ -std=c++17 -O2 -I/opt/catch2/include -c /tmp/catch2_runner.cpp \
+    -o /opt/catch2/lib/letto-catch2-runner.o
+
 FROM docker.io/ubuntu:24.04
+COPY --from=catch2-build /opt/catch2 /opt/catch2
+COPY jobe/catch2-compile.sh /usr/local/bin/letto-catch2-compile
+RUN sed -i 's/\r$//' /usr/local/bin/letto-catch2-compile && \
+    chmod 755 /usr/local/bin/letto-catch2-compile
 
 # https://github.com/opencontainers/image-spec/blob/master/annotations.md
 LABEL \
@@ -88,6 +108,22 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
+COPY jobe/Catch2cTask.php jobe/Catch2cppTask.php /var/www/html/jobe/app/Libraries/
+COPY jobe/catch2_compile.py /usr/local/libexec/letto-catch2-compile.py
+COPY jobe/start-jobe.sh /usr/local/bin/start-jobe
+# Catch2 is required in every final image, not an optional runtime download.
+RUN test -s /opt/catch2/VERSION && \
+    test -s /opt/catch2/lib/libCatch2.a && \
+    test -s /opt/catch2/lib/letto-catch2-runner.o && \
+    test -r /opt/catch2/include/catch2/catch_test_macros.hpp && \
+    test -x /usr/local/bin/letto-catch2-compile && \
+    python3 -m py_compile /usr/local/libexec/letto-catch2-compile.py && \
+    php -l /var/www/html/jobe/app/Libraries/Catch2cTask.php && \
+    php -l /var/www/html/jobe/app/Libraries/Catch2cppTask.php && \
+    sed -i 's/\r$//' /usr/local/bin/start-jobe && \
+    chmod 755 /usr/local/bin/start-jobe && \
+    rm -f /tmp/jobe_language_cache_file
+
 # Expose apache
 EXPOSE 80
 
@@ -99,4 +135,5 @@ HEALTHCHECK --interval=1m --timeout=2s \
     CMD /usr/bin/python3 /var/www/html/jobe/minimaltest.py || exit 1
 
 # Start apache
+ENTRYPOINT ["/usr/local/bin/start-jobe"]
 CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]

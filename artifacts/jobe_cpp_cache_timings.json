@@ -1,0 +1,148 @@
+{
+  "server": "127.0.0.1:4001",
+  "language": "catch2cpp",
+  "versions": {
+    "c": "13.3.0",
+    "catch2c": "3.16.0",
+    "catch2cpp": "3.16.0",
+    "cpp": "13.3.0",
+    "java": "21.0.12.1",
+    "nodejs": "18.19.1",
+    "octave": "8.4.0",
+    "pascal": "3.2.2",
+    "php": "8.3.6",
+    "python3": "3.12.3"
+  },
+  "summary_seconds": {
+    "answer_compile_wall_seconds": {
+      "median": 0.0164542850034195,
+      "min": 0.015164583001023857,
+      "max": 0.13272314899950288
+    },
+    "answer_compile_cpu_seconds": {
+      "median": 0.013556,
+      "min": 0.009937999999999999,
+      "max": 0.103462
+    },
+    "test_cache_key_wall_seconds": {
+      "median": 0.0474180349992821,
+      "min": 0.044148928001959575,
+      "max": 0.13505762200293248
+    },
+    "test_compile_wall_seconds": {
+      "median": 0,
+      "min": 0,
+      "max": 0.49635329300144804
+    },
+    "test_compile_cpu_seconds": {
+      "median": 0,
+      "min": 0,
+      "max": 0.491151
+    },
+    "link_wall_seconds": {
+      "median": 0.170972668001923,
+      "min": 0.1093419390017516,
+      "max": 0.18689606000043568
+    },
+    "link_cpu_seconds": {
+      "median": 0.170211,
+      "min": 0.107565,
+      "max": 0.17186700000000002
+    },
+    "compile_sandbox_wall_seconds": {
+      "median": 0.342426852,
+      "min": 0.288999639,
+      "max": 1.123760213
+    },
+    "execute_sandbox_wall_seconds": {
+      "median": 0.019348958,
+      "min": 0.015996506,
+      "max": 0.021971237
+    },
+    "test_run_wall_seconds": {
+      "median": 0.00047363,
+      "min": 0.000394324,
+      "max": 0.000503739
+    },
+    "upload_and_verify_seconds": {
+      "median": 0.02141190000111237,
+      "min": 0.018119300017133355,
+      "max": 0.13141659999382682
+    },
+    "run_request_seconds": {
+      "median": 0.47209719999227673,
+      "min": 0.38279570001759566,
+      "max": 1.2475668000115547
+    },
+    "total_client_seconds": {
+      "median": 0.49024710000958294,
+      "min": 0.40424410000559874,
+      "max": 1.3790239999943879
+    }
+  },
+  "samples": [
+    {
+      "timings": {
+        "answer_compile_wall_seconds": 0.13272314899950288,
+        "answer_compile_cpu_seconds": 0.103462,
+        "test_cache_key_wall_seconds": 0.13505762200293248,
+        "test_cache_hit": false,
+        "test_compile_wall_seconds": 0.49635329300144804,
+        "test_compile_cpu_seconds": 0.491151,
+        "link_wall_seconds": 0.18689606000043568,
+        "link_cpu_seconds": 0.17186700000000002,
+        "compile_sandbox_wall_seconds": 1.123760213,
+        "execute_sandbox_wall_seconds": 0.019348958,
+        "test_run_wall_seconds": 0.00047363,
+        "upload_and_verify_seconds": 0.13141659999382682,
+        "run_request_seconds": 1.2475668000115547,
+        "total_client_seconds": 1.3790239999943879
+      },
+      "stdout": "\n__catch2_execution__{\"test_run_wall_seconds\":0.00047363}\n\n__catch2_report__\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Catch2TestRun name=\"catch2-tests\" rng-seed=\"1597324007\" xml-format-version=\"3\" catch2-version=\"3.16.0\">\n  <TestCase name=\"sum\" filename=\"test.cpp\" line=\"3\">\n    <OverallResult success=\"true\" skips=\"0\"/>\n  </TestCase>\n  <TestCase name=\"negative\" filename=\"test.cpp\" line=\"4\">\n    <OverallResult success=\"true\" skips=\"0\"/>\n  </TestCase>\n  <OverallResults successes=\"2\" failures=\"0\" expectedFailures=\"0\" skips=\"0\"/>\n  <OverallResultsCases successes=\"2\" failures=\"0\" expectedFailures=\"0\" skips=\"0\"/>\n</Catch2TestRun>\n",
+      "stderr": "",
+      "outcome": 15
+    },
+    {
+      "timings": {
+        "answer_compile_wall_seconds": 0.0164542850034195,
+        "answer_compile_cpu_seconds": 0.013556,
+        "test_cache_key_wall_seconds": 0.0474180349992821,
+        "test_cache_hit": true,
+        "test_compile_wall_seconds": 0,
+        "test_compile_cpu_seconds": 0,
+        "link_wall_seconds": 0.170972668001923,
+        "link_cpu_seconds": 0.170211,
+        "compile_sandbox_wall_seconds": 0.342426852,
+        "execute_sandbox_wall_seconds": 0.021971237,
+        "test_run_wall_seconds": 0.000503739,
+        "upload_and_verify_seconds": 0.018119300017133355,
+        "run_request_seconds": 0.47209719999227673,
+        "total_client_seconds": 0.49024710000958294
+      },
+      "stdout": "\n__catch2_execution__{\"test_run_wall_seconds\":0.000503739}\n\n__catch2_report__\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Catch2TestRun name=\"catch2-tests\" rng-seed=\"3318475924\" xml-format-version=\"3\" catch2-version=\"3.16.0\">\n  <TestCase name=\"sum\" filename=\"test.cpp\" line=\"3\">\n    <OverallResult success=\"true\" skips=\"0\"/>\n  </TestCase>\n  <TestCase name=\"negative\" filename=\"test.cpp\" line=\"4\">\n    <OverallResult success=\"true\" skips=\"0\"/>\n  </TestCase>\n  <OverallResults successes=\"2\" failures=\"0\" expectedFailures=\"0\" skips=\"0\"/>\n  <OverallResultsCases successes=\"2\" failures=\"0\" expectedFailures=\"0\" skips=\"0\"/>\n</Catch2TestRun>\n",
+      "stderr": "",
+      "outcome": 15
+    },
+    {
+      "timings": {
+        "answer_compile_wall_seconds": 0.015164583001023857,
+        "answer_compile_cpu_seconds": 0.009937999999999999,
+        "test_cache_key_wall_seconds": 0.044148928001959575,
+        "test_cache_hit": true,
+        "test_compile_wall_seconds": 0,
+        "test_compile_cpu_seconds": 0,
+        "link_wall_seconds": 0.1093419390017516,
+        "link_cpu_seconds": 0.107565,
+        "compile_sandbox_wall_seconds": 0.288999639,
+        "execute_sandbox_wall_seconds": 0.015996506,
+        "test_run_wall_seconds": 0.000394324,
+        "upload_and_verify_seconds": 0.02141190000111237,
+        "run_request_seconds": 0.38279570001759566,
+        "total_client_seconds": 0.40424410000559874
+      },
+      "stdout": "\n__catch2_execution__{\"test_run_wall_seconds\":0.000394324}\n\n__catch2_report__\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Catch2TestRun name=\"catch2-tests\" rng-seed=\"2017878435\" xml-format-version=\"3\" catch2-version=\"3.16.0\">\n  <TestCase name=\"sum\" filename=\"test.cpp\" line=\"3\">\n    <OverallResult success=\"true\" skips=\"0\"/>\n  </TestCase>\n  <TestCase name=\"negative\" filename=\"test.cpp\" line=\"4\">\n    <OverallResult success=\"true\" skips=\"0\"/>\n  </TestCase>\n  <OverallResults successes=\"2\" failures=\"0\" expectedFailures=\"0\" skips=\"0\"/>\n  <OverallResultsCases successes=\"2\" failures=\"0\" expectedFailures=\"0\" skips=\"0\"/>\n</Catch2TestRun>\n",
+      "stderr": "",
+      "outcome": 15
+    }
+  ]
+}

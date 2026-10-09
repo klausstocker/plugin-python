@@ -339,6 +339,160 @@ Sind die Docker-Hub-Repositories nicht öffentlich, muss vor `pull` einmal
     * `${letto_pathPlugins}` (z. B. `/opt/letto/plugins`)
     * `${letto_pathImages}/plugins` (z. B. `/opt/letto/images/plugins`)
 
+## Jobe-Integrationstests fuer C und C++
+
+Voraussetzung ist ein laufender Jobe-Container auf `localhost:4000`.
+
+```powershell
+py -m unittest tests.test_jobe tests.test_jobe_compiled -v
+```
+
+Die C/C++-Tests pruefen Sprach-IDs und Compiler-Versionen, stdout,
+Compilerfehler, Laufzeitabbruch, CPU-Zeitlimits, das Lesen und Schreiben von
+Dateien sowie hochgeladene Header und zusaetzliche Quelldateien. Die
+Sprachunterstuetzung wird vorausgesetzt; fehlende Sprachen lassen die Tests
+fehlschlagen.
+
+Im geprueften Entwicklungscontainer sind `c` und `cpp` mit GCC/G++ 13.3.0
+verfuegbar. Jobe verwendet fuer C standardmaessig C99; explizite C17- und
+C++17-Optionen funktionieren ueber `parameters.compileargs`. Eine weitere
+Quelldatei kann ueber `parameters.linkargs` mitkompiliert werden. Der Python-
+Wrapper bietet diese Compiler-/Linkeroptionen derzeit noch nicht an.
+Die getrennte C-Kompilierung mit anschliessendem Linken gegen einen C++-
+Catch2-Runner wird durch die unten beschriebenen Catch2-Tasks umgesetzt.
+
+Ein Programm mit Exitcode 1 wird von diesem Jobe als erfolgreich ausgefuehrt
+gemeldet; ein Abbruch mit `abort()` liefert dagegen Outcome 12. Catch2-
+Testergebnisse muessen deshalb spaeter anhand des Testreports bewertet werden.
+
+## Catch2 fuer C- und C++-Funktionstests
+
+Das Jobe-Dockerfile installiert die feste stabile Version
+[Catch2 3.16.0](https://github.com/catchorg/Catch2/releases/tag/v3.16.0).
+Catch2 und der Test-Runner werden beim Image-Build vorkompiliert; Compiler und
+CMake fuer den Catch2-Build bleiben im separaten Build-Stage.
+
+```powershell
+docker build -f jobe/Dockerfile -t klausstocker/letto-plugin-python-jobe:1.0.0 .
+```
+
+Nach dem Neuaufsetzen des Jobe-Containers mit diesem Image bietet Jobe
+zusaetzlich die internen Sprach-IDs `catch2c` und `catch2cpp` an.
+`shared.check_catch2.check_catch2` akzeptiert als Abgabesprache `c` oder `cpp`:
+
+```python
+from shared.check_catch2 import check_catch2
+
+result = check_catch2(
+    "localhost:4000",
+    "int calculate_sum(int a, int b) { return a + b; }",
+    '''#include <catch2/catch_test_macros.hpp>
+extern "C" { int calculate_sum(int, int); }
+TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }
+''',
+    language="c",
+)
+assert result.wasSuccessful()
+```
+
+C-Abgaben werden separat mit GCC als C17 kompiliert; Testcode ist C++17 und
+deklariert C-Funktionen mit `extern "C"`. Bei C++-Abgaben entfaellt `extern "C"`.
+Abgaben und Testcode definieren kein eigenes `main`; dieses liefert der
+vorkompilierte Runner. Hochgeladene Header und Datendateien sind ueber `files`
+verfuegbar. Kompilierung, Linken und Ausfuehrung erfolgen in Jobe-Sandboxes.
+
+Der XML-Report wird getrennt von studentischem stdout erzeugt und in ein
+`CheckResult` umgewandelt. Bewertet werden Testfaelle (`TEST_CASE`), keine
+einzelnen Assertions. Compiler-/Linkerfehler, Laufzeitabbruch, Zeitlimit und
+fehlende oder leere Reports liefern Fehler statt einer erfolgreichen Bewertung.
+Die Sprachauswahl in den Plugin-Endpunkten und im Dialog folgt separat.
+
+```powershell
+py -m unittest tests.test_check_catch2 -v
+```
+
+Zum Testen eines separaten Containers kann `JOBE_TEST_SERVER` gesetzt werden,
+zum Beispiel auf `localhost:4001`.
+
+### Laufzeiten messen
+
+Catch2 ist in jedem Build des Jobe-Dockerfiles enthalten. Der Build prueft
+Bibliothek, Header, Runner und Jobe-Tasks; es ist keine Installation nach dem
+Containerstart erforderlich. Aenderungen am laufenden Container allein gehen
+bei dessen Neuerstellung verloren, daher fuer dauerhafte Updates das Image
+mit `build.bat jobe --no-push` bauen und den Jobe-Container neu erstellen.
+
+```powershell
+py scripts/benchmark_jobe_cpp.py --runs 5
+```
+
+Der Benchmark speichert Einzelmessungen und die zurueckgegebenen XML-Reports
+in `artifacts/jobe_cpp_timings.json`. `--server localhost:4001` und
+`--output anderer-pfad.json` passen Server und Ausgabedatei an.
+Alle Zeitangaben in der JSON-Datei sind Sekunden; die Konsolentabelle zeigt
+Millisekunden. Es gibt keinen zusaetzlichen Download beliebiger Ergebnisdateien:
+Der Catch2-XML-Report wird als Teil von Jobe-stdout zurueckgegeben und lokal gespeichert.
+
+| Messung | Umfang |
+| --- | --- |
+| `total_client_seconds` | Von `run_test` inklusive Datei-Uploads bis zur empfangenen und dekodierten Antwort |
+| `upload_and_verify_seconds` | Datei-Uploads und deren HEAD-Pruefungen inklusive kleiner Vorbereitungsarbeit |
+| `run_request_seconds` | POST `/runs` bis zur empfangenen und dekodierten Antwort |
+| `answer_compile_wall_seconds` | GCC/G++-Aufruf zum Kompilieren der Abgabe in eine Objektdatei |
+| `test_compile_wall_seconds` | G++-Aufruf zum Kompilieren der Catch2-Testdatei |
+| `link_wall_seconds` | Separater G++-Linkeraufruf mit vorkompiliertem Runner und Catch2 |
+| `compile_sandbox_wall_seconds` | Alle drei Compiler-/Linkerphasen samt Python-Treiber und Sandbox-Verwaltung |
+| `test_run_wall_seconds` | Catch2 `Session::run`, inklusive Framework und XML-Reporter, ohne Prozessstart |
+| `execute_sandbox_wall_seconds` | Gesamte Ausfuehrungsphase inklusive Sandbox, Prozessstart und Reportausgabe |
+
+Die drei Compiler-/Linkerphasen liefern zusaetzlich `*_cpu_seconds`, gemessen
+ueber die vom Betriebssystem erfasste Benutzer- und System-CPU-Zeit ihrer
+Kindprozesse. Die anderen Angaben sind monotone Wall-Clock-Zeiten. Die
+Messbereiche ueberlappen; sie duerfen nicht alle addiert werden. Die Differenz
+zwischen POST-Zeit und beiden Sandbox-Zeiten enthaelt unter anderem
+HTTP-Verarbeitung, Arbeitsplatzvorbereitung und Aufraeumen, keine isolierte
+Netzwerkzeit. Fehlgeschlagene Phasen liefern nur die bis dahin vorhandenen
+Messungen; bei hartem Sandbox-Abbruch koennen innere Messungen fehlen.
+
+Eine erste lokale Messung mit zwei sehr kleinen C++-Testfaellen ergab nach
+dem ersten Lauf etwa 0,65 bis 0,68 Sekunden insgesamt. Der Median von drei
+Laeufen lag bei etwa 17 ms fuer Abgabekompilierung, 360 ms fuer Testkompilierung,
+117 ms fuer Linken und 0,44 ms fuer Catch2 selbst. Der erste Lauf dauerte
+1,72 Sekunden; diese Werte sind eine lokale Baseline, kein Geschwindigkeitsversprechen.
+
+### Cache fuer Catch2-Testobjekte
+
+Jobe speichert erfolgreich kompilierte Testobjekte in `/var/cache/jobe/catch2`.
+Der Docker-Entrypoint leert dieses Verzeichnis bei jedem Containerstart,
+auch bei `docker restart`. Es wird kein Volume benoetigt und kein Versionsschluessel
+verwendet. Fuer einen neuen Compiler oder eine neue Catch2-Version muss der
+Container mit dem entsprechenden Image neu erstellt werden.
+
+Jede Abgabe kann einen Cache-Miss fuellen; ein vorheriger Aufruf im Lehrer-Dialog
+ist nicht erforderlich. Der SHA-256-Schluessel umfasst Testquelle und Dateinamen,
+Test-Compilerflags, die vom Praeprozessor gefundenen lokalen Includes und alle
+weiteren hochgeladenen Hilfsdateien. Aenderungen an Hilfsdateien duerfen deshalb
+auch dann eine Neukompilierung ausloesen, wenn die Datei nicht verwendet wird.
+Abgabeinhalte werden nur dann mitgehasht, wenn die Tests die Abgabedatei selbst
+inkludieren. Andernfalls koennen verschiedene Abgaben dasselbe Testobjekt nutzen.
+
+Abgabeobjekt und ausfuehrbares Programm werden immer neu erstellt. Bei unbekannten
+externen Includes, zeitabhaengigen Makros oder nicht verfuegbarem Cache wird
+konservativ neu kompiliert. Fehlerhaftes Linken mit einem gecachten Objekt wird
+einmal mit frisch kompiliertem Testobjekt wiederholt. Eine fehlerhafte Kompilierung bzw. ein fehlerhaftes
+Linken fuellt den Cache nicht. Assertion-Fehler im anschliessenden Testlauf
+verhindern dagegen nicht die Wiederverwendung des korrekt gebauten Testobjekts.
+
+Jobe verwaltet Cache-Locks und publiziert Objekte atomar vor der Ausfuehrung
+studentischen Codes. Die Sandbox hat nur Lesezugriff auf den gemeinsamen Cache.
+Parallele Abgaben mit identischem Schluessel teilen sich die erste Kompilierung.
+Die erste Version hat keine Groessenbegrenzung; der Cache wird beim Start geleert.
+
+`RunResult.timings` enthaelt `test_cache_hit` und die Zeit fuer die
+Abhaengigkeitsanalyse (`test_cache_key_wall_seconds`). Bei einem Treffer sind
+Testkompilierungszeiten null; Cache-Pruefung, Kopieren, Abgabekompilierung und
+Linken kosten weiterhin Zeit. Der Benchmark speichert den Trefferstatus pro Lauf.
+
 ## Wichtige Endpoints
 - `GET /ping`  → `pong`
 - `GET /pluginpython/open/ping` → `pong`

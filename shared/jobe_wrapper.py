@@ -3,6 +3,7 @@ import json
 import http.client
 import base64
 import uuid
+from time import perf_counter
 
 RESOURCE_BASE = '/jobe/index.php/restapi'
 
@@ -40,6 +41,7 @@ class RunResult():
         return self._outcome in [0, 15]
     
     def __init__(self, ro: dict):
+        self.timings = ro.get('timings', {}) if isinstance(ro, dict) else {}
         if not isinstance(ro, dict) or 'outcome' not in ro:
             print("Bad result object", ro)
             self._outcome = 1
@@ -92,6 +94,8 @@ class JobeWrapper():
     def run_test(self, language, code, sourceFilename, files=None, cputime=None):
         '''Execute the given code in the given language.
         Return the result object.'''
+        started = perf_counter()
+        upload_started = started
         runspec = {
             'language_id': language,
             'sourcefilename': sourceFilename,
@@ -109,12 +113,19 @@ class JobeWrapper():
                 return RunResult({'outcome': 99, 'stderr': f'could not verify file {name}'})
             runspec['file_list'].append((fileId, name))
 
+        upload_seconds = perf_counter() - upload_started
         resource = f'{RESOURCE_BASE}/runs'
         data = json.dumps({ 'run_spec' : runspec }, separators=(',', ':'))
         headers = {"Content-type": "application/json; charset=utf-8",
                 "Accept": "application/json"}
-        result = self.do_http('POST', resource, headers, data)
-        return RunResult(result)
+        request_started = perf_counter()
+        result = RunResult(self.do_http('POST', resource, headers, data))
+        result.timings.update({
+            'upload_and_verify_seconds': upload_seconds,
+            'run_request_seconds': perf_counter() - request_started,
+            'total_client_seconds': perf_counter() - started,
+        })
+        return result
 
 
     def do_http(self, method, resource, headers, data=None):
@@ -145,7 +156,7 @@ class JobeWrapper():
 
     def languages(self):
         resource = f'{RESOURCE_BASE}/languages'
-        lang_versions = self.do_http('GET', resource)
+        lang_versions = self.do_http('GET', resource, {"Accept": "application/json"})
         ret = {lang: version for lang, version in lang_versions}
         return ret
     

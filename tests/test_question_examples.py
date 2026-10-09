@@ -45,7 +45,7 @@ class TestExampleSubmissions(unittest.TestCase):
                 self.assertFalse(result.wasSuccessful(), repr(result))
 
     def run_example(self, example, code, dataset_value=7):
-        def run_submission(language, source, filename, submitted_files):
+        def run_submission(language, source, filename, submitted_files, cputime=None):
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 for _file_id, name, content in submitted_files:
@@ -122,4 +122,5 @@ class TestExampleSubmissions(unittest.TestCase):
         self.assertNotIn("Run locally", html)
         self.assertNotIn("Teacher checker", html)
         help_text = (root / "resources/help/Python.html").read_text(encoding="utf-8")
-        self.assertIn('/images/plugins/Python/examples.html', help_text)
+        self.assertIn('href="static/examples.html"', help_text)
+        self.assertIn('data-plugin-help-file="examples.html"', help_text)

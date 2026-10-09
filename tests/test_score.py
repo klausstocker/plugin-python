@@ -28,10 +28,13 @@ class TestScoreCode(unittest.TestCase):
     def test_score_without_lint_weight_uses_check_score_only(self, lint_mock, check_mock):
         check_mock.return_value = FakeCheckResult(0.6)
 
-        score, result = scoreCode('jobe:80', 'print(1)', 'tests', '--disable=C0114', 0.0)
+        files = [('input-id', 'input.txt', b'7')]
+        score, result = scoreCode('jobe:80', 'print(1)', 'tests', '--disable=C0114', 0.0,
+                                  files=files, cputime=12)
 
         self.assertEqual(score, 0.6)
         self.assertIs(result.check_result, check_mock.return_value)
+        check_mock.assert_called_once_with('jobe:80', 'print(1)', 'tests', files=files, cputime=12)
         lint_mock.assert_not_called()
 
     @patch('shared.score.checkCode')
@@ -45,10 +48,6 @@ class TestScoreCode(unittest.TestCase):
         expected = (0.4 + 2.0 * 0.8) / (1.0 + 2.0)
         self.assertAlmostEqual(score, expected)
         lint_mock.assert_called_once_with('print(1)', '--disable=C0114')
-
-
-if __name__ == '__main__':
-    unittest.main()
 
 
 class TestScoreResult(unittest.TestCase):
@@ -86,3 +85,7 @@ class TestScoreResult(unittest.TestCase):
         self.assertIn("Linter weight: 2.0000", text)
         self.assertIn("Linter score: 70.00 %", text)
         self.assertIn("Overall score: 63.33 %", text)
+
+
+if __name__ == '__main__':
+    unittest.main()

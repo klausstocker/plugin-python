@@ -78,7 +78,8 @@ class Checker(unittest.TestCase): # do not rename
 """
         result = checkCode('localhost:4000', code, testCode)
         self.assertEqual(result.count, 2)
-        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(result.failure_count, 1)
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(result.score(), 0.5)
 
 
