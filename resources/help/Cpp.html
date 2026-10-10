@@ -66,16 +66,21 @@
       der Trenner zwischen Editor und Ausgabe lässt sich verschieben.</p>
 
     <h2>Configuration</h2>
+    <p>Die Tabs <strong>Compiler</strong> und <strong>clang-format</strong> enthalten die Code-Einstellungen.
+      Daneben zeigt <strong>Available dataset variables</strong> die aktuellen Namen, Werte und Einheiten.
+      Die Verwendung im Lehrertest ist im Abschnitt <strong>Dataset variables (teacher tests)</strong> beschrieben.</p>
     <ul>
       <li><strong>Answer language:</strong> C17 oder C++17 für Template und Studentenlösung auswählen.</li>
       <li><strong>enable run:</strong> Zeigt den Button <strong>Run Code</strong> in der Aufgabe an.</li>
       <li><strong>enable compile:</strong> Zeigt den Button <strong>Compile Code</strong> in der Aufgabe an.</li>
       <li><strong>CPU time limit (seconds):</strong> Begrenzt die Prozessorzeit (Standard: 5 Sekunden).</li>
-      <li><strong>clang-format configuration (YAML):</strong> Formatierungsoptionen dieser Aufgabe, z. B.
+      <li><strong>clang-format configuration (YAML):</strong> Im Tab <strong>clang-format</strong> die
+        Formatierungsoptionen dieser Aufgabe eintragen, z. B.
         <code>BasedOnStyle: LLVM</code> und <code>IndentWidth: 4</code>. Eine leere Konfiguration verwendet die Vorgaben.
         Die Einstellungen werden mit der Aufgabe gespeichert und von den Format-Buttons für Lehrende und
         Studierende verwendet; sie gelten für Lehrertests, Template und Studentenlösung.</li>
-      <li><strong>Additional compiler flags:</strong> Zusätzliche Optionen für run, compile, check und Bewertung,
+      <li><strong>Additional compiler flags:</strong> Im Tab <strong>Compiler</strong> zusätzliche Optionen
+        für run, compile, check und Bewertung eintragen, durch Leerzeichen oder Zeilenumbrüche getrennt,
         z. B. <code>-O2 -Wextra -DNUMBER=42</code>. <code>-std=c++20</code> ändert den C++-Standard;
         Die Vorgaben sind C17/C++17 und <code>-Wall -Werror</code>; <code>-Wno-error</code> erlaubt Warnungen.
         C-Standardoptionen ändern den C++17-Teststandard nicht.</li>
@@ -125,6 +130,37 @@ int main(void) {
     <p>Die getesteten Funktionen bleiben außerhalb des Guards. Hilfsfunktionen und Includes, die nur
       <code>main</code> benötigt, können innerhalb stehen. Eine ungeschützte <code>main</code>-Funktion
       kollidiert beim Linken mit Catch2. Reine Funktionsantworten dürfen <code>main</code> weglassen.</p>
+
+    <h2>Dataset variables (teacher tests)</h2>
+    <p>Die Lehrertests erhalten eine pro Student erzeugte <code>dataset.h</code> mit den aktuellen
+      Dataset-Werten. Die Werte stehen nur bei <strong>check</strong> und Bewertung bereit.
+      Studentencode darf keine Dataset-Werte importieren; die Lehrertests geben sie als Funktionsargumente
+      weiter. <strong>run</strong> und <strong>compile</strong> erhalten keine <code>dataset.h</code>.</p>
+    <p><code>helpers.h</code> definiert <code>variable</code> mit <code>float value</code> und
+      <code>const char *unit</code> fuer C und C++. Beide Header werden automatisch bereitgestellt.
+      Download fuer die lokale Vorbereitung der Lehrertests:
+      <a href="static/helpers.h" data-plugin-help-file="helpers.h" download="helpers.h">helpers.h (C und C++)</a>.</p>
+    <p>In beiden Sprachen gibt es eine Tabelle <code>DATASET_VARIABLES</code> und
+      <code>DATASET_VARIABLE_COUNT</code>. <code>dataset_get("name")</code> liefert einen Zeiger
+      auf <code>variable</code> oder <code>NULL</code> fuer einen fehlenden Namen.
+      Diese Schnittstelle ist auch in den als C++ kompilierten Catch2-Tests verwendbar:</p>
+    <pre>#include "dataset.h"
+#include &lt;catch2/catch_test_macros.hpp&gt;
+#if __has_include("answer.c")
+#define ANSWER_LINKAGE extern "C"
+#else
+#define ANSWER_LINKAGE
+#endif
+ANSWER_LINKAGE float double_value(float);
+TEST_CASE("dataset") {
+    const variable *number = dataset_get("number");
+    REQUIRE(number != nullptr);
+    REQUIRE(double_value(number-&gt;value) == number-&gt;value * 2);
+}</pre>
+    <p>Einheit ueber <code>number-&gt;unit</code> lesen. Strings mit <code>strcmp</code> vergleichen.
+      Dataset-Werte muessen numerisch sein und in den Wertebereich von <code>float</code> passen;
+      eine fehlende Einheit ist ein leerer String. Ohne Dataset ist die Tabelle leer.
+      Die Bewertung verwendet immer das aktuelle studentische Dataset, keine gespeicherten Vorschauwerte.</p>
 
     <h2>Files</h2>
     <p>Hochgeladene Dateien und Beispieldateien stehen beim Ausführen und Testen im Arbeitsverzeichnis bereit.

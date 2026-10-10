@@ -426,6 +426,7 @@ die Endpunkte des regulaeren Plugins auf `http://localhost:8209`;
 | `test_cpp_entrypoint` | Studentisches `main` beim Run ausfuehren, bei Catch2 ausschliessen | Projekt-Jobe per HTTP |
 | `test_check_catch2` | Bewertung, Compilerfehler, Zeitlimits und Testobjekt-Cache | Python; Integrationstests nutzen Projekt-Jobe |
 | `test_cpp_plugin` | C/C++-Endpunkte, Beispiele, Registrierung und statische Ressourcen | Python; Integrationstests nutzen Projekt-Jobe |
+| `test_cpp_dataset` | Dataset-Header fuer Lehrertests, studentische Werte bei Bewertung und Header-Downloads | Python; Integrationstests nutzen Projekt-Jobe |
 | `test_endpoints`, `test_question_examples`, `test_score`, `test_dataset`, `test_dev_ui` | Python-Endpunkte, Beispielabgaben, Bewertung und Entwicklungsdialog | Python, kein Docker |
 | `test_jobe`, `test_jobe_compiled` | Python/C/C++-Ausfuehrung, Uploads und CPU-Zeitlimits | Projekt-Jobe |
 
@@ -439,6 +440,27 @@ und Konfiguration verwenden Mocks und laufen ohne gestartetes Plugin.
 
 Die Tests benoetigen keinen Browser und keine Ace-Testdatei. UI-Verhalten wie
 Ace Undo und gleichzeitige Eingaben wird bei der Entwicklung manuell geprueft.
+
+## C/C++ Dataset-Variablen
+
+Catch2-Lehrertests koennen `dataset.h` einbinden. C und C++ verwenden dieselbe
+Name/Wert-Tabelle `DATASET_VARIABLES` und `dataset_get("name")`, das
+`const variable *` oder `NULL` liefert. `variable` hat `float value` und
+`const char *unit`; `DATASET_VARIABLE_COUNT` gibt die Anzahl der Variablen an.
+Auch C-Lehrertests laufen als C++.
+
+Die Header werden automatisch hochgeladen. Lehrer koennen die gemeinsame
+`helpers.h` ueber die C/C++-Hilfe herunterladen. `dataset.h` wird fuer jede
+Bewertung aus den aktuellen studentischen `varsQuestion` erzeugt. Bei den
+Lehrerbuttons check/score kommen die Vorschauwerte aus der Frage zum Einsatz.
+Numerische Werte werden als `float` gespeichert, Einheiten als UTF-8-Strings;
+ohne Dataset bleibt die Tabelle leer. Nichtnumerische Werte oder Werte
+ausserhalb des `float`-Wertebereichs werden mit einer Fehlermeldung abgewiesen.
+
+Studentenfunktionen verwenden normale Parameter, keine Dataset-Imports. Run und
+Compile erhalten keine `dataset.h`; auch eine gleichnamige hochgeladene Datei
+wird dort ausgeschlossen. `helpers.h` und `dataset.h` fuer Lehrertests werden
+automatisch bereitgestellt und ersetzen gleichnamige Aufgabendateien.
 
 ## Jobe-Integrationstests fuer C und C++
 

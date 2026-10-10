@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 from app import code_execution_endpoints as common
 from shared.check_catch2 import check_catch2
 from shared.cpp_examples import cpp_examples
+from shared.cpp_dataset import cpp_dataset_files_from_payload, cpp_helper_files
 from shared.jobe_wrapper import JobeWrapper
 from shared.question_config import CppQuestionConfigDto
 from shared.compiler_flags import parse_compiler_flags
@@ -45,7 +46,11 @@ async def execute(request: Request):
         data = CppRequest.model_validate(body)
         config = data.questionConfigDto
         compiler_flags = parse_compiler_flags(config.compilerFlags)
-        files = common._jobe_files_from_body(body, include_dataset=False)
+        file_data = common._file_specs_from_body(body, include_dataset=False)
+        file_data.pop('dataset.h', None)
+        file_data.update(cpp_helper_files(config.language) if operation in ('run', 'compile')
+                         else cpp_dataset_files_from_payload(config.datasetVariables, config.language))
+        files = common.JobeWrapper.createFiles(file_data)
         if operation in ('run', 'compile'):
             standard = '-std=c17' if config.language == 'c' else '-std=c++17'
             filename = 'answer.c' if config.language == 'c' else 'answer.cpp'

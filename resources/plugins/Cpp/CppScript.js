@@ -26,8 +26,9 @@ function initPluginCpp(dtoString, active) {
     }
 
 
-    const plugin_div = "#" + dto.tagName + "_div";
-    const plugin_inp = "." + dto.tagName + "_inp";
+    const pluginContainer = document.getElementById(dto.tagName + "_div");
+    // PrimeFaces can initialize a plugin after its question fragment was removed.
+    if (!pluginContainer) return;
     const plugin = {
         name: dto.tagName,
         active: !!active,
@@ -52,8 +53,9 @@ function initPluginCpp(dtoString, active) {
     let orientation = "horizontal";
     let splitRatio = defaultRatio;
     let aceEditor = null;
+    let editorContainer = null;
 
-    const answerField = $(plugin_inp)[0];
+    const answerField = document.getElementsByClassName(dto.tagName + "_inp")[0];
     const defaultMain = dtoData.indication || "// Write your C/C++ code here\n";
     const initialMain = (answerField && answerField.value) || defaultMain;
     const files = dtoData.files || {};
@@ -67,19 +69,18 @@ function initPluginCpp(dtoString, active) {
     }
 
     drawLayout();
+    editorContainer = pluginContainer.querySelector(".editor-box");
+    if (!editorContainer) return;
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
     setupBuildInfo();
 
     function drawLayout() {
-        const clsName = "." + rootClass;
-        if ($(clsName).length > 0) {
-            $(clsName).remove();
-        }
+        $(pluginContainer).children(".code-runner-root").remove();
 
-        $(plugin_div).append(`
-            <div class="${rootClass} code-runner-root" data-service-base="${plugin.serviceBase}">
+        $(pluginContainer).append(`
+            <div class="${escapeHtmlAttr(rootClass)} code-runner-root" data-service-base="${escapeHtmlAttr(plugin.serviceBase)}">
                 <div class="container horizontal" id="${containerId}">
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
@@ -90,7 +91,7 @@ function initPluginCpp(dtoString, active) {
 Server build: loading...">?</span>
                             </span>
                         </div>
-                        <div id="${mainEditorId}" class="editor-box"></div>
+                        <div id="${escapeHtmlAttr(mainEditorId)}" class="editor-box"></div>
                     </div>
                     <div class="splitter" id="${splitterId}" role="separator" aria-label="Resize panels"></div>
                     <div class="panel panel-output" id="${outputPanelId}">
@@ -285,12 +286,13 @@ Server build: loading...">?</span>
 
     async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
+        if (!editorContainer.isConnected) return;
         if (!aceAvailable || !window.ace) {
             fallbackTextareas(initialMainCode);
             return;
         }
 
-        const editor = ace.edit(mainEditorId);
+        const editor = ace.edit(editorContainer);
         aceEditor = editor;
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/c_cpp");
@@ -309,7 +311,7 @@ Server build: loading...">?</span>
     }
 
     function fallbackTextareas(initialMainCode) {
-        const mainEl = document.getElementById(mainEditorId);
+        const mainEl = editorContainer;
         mainEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialMainCode)}</textarea>`;
 
         const mainTextArea = mainEl.querySelector("textarea");
@@ -343,7 +345,7 @@ Server build: loading...">?</span>
                     return data.code;
                 },
                 getTarget: () => {
-                    const textarea = document.getElementById(mainEditorId).querySelector("textarea");
+                    const textarea = editorContainer.querySelector("textarea");
                     return aceEditor || textarea ? { editor: aceEditor, textarea, filename: (dtoData.language === "c" ? "main.c" : "main.cpp") } : null;
                 },
                 onChange: () => { if (answerField) answerField.value = plugin.getMainCode(); }
@@ -355,7 +357,6 @@ Server build: loading...">?</span>
 
     function bindActions() {
         setupFormatting();
-        const editorContainer = document.getElementById(mainEditorId);
         const stopEnterPropagation = (event) => {
             if (event.key === "Enter" || event.keyCode === 13) {
                 // Keep Enter inside Ace/the fallback textarea without cancelling newlines.

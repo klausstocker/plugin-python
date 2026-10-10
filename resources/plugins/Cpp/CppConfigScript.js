@@ -43,8 +43,12 @@ function configPluginCpp(dtoString) {
         optCompileAtTestId: `optCompileAtTest_${pluginTag}`,
         compilerFlagsId: `compilerFlags_${pluginTag}`,
         languageId: `language_${pluginTag}`,
-        languageWarningId: `languageWarning_${pluginTag}`,
         formatterConfigId: `formatterConfig_${pluginTag}`,
+        settingsTabsId: `settingsTabs_${pluginTag}`,
+        compilerTabId: `compilerTab_${pluginTag}`,
+        formatterTabId: `formatterTab_${pluginTag}`,
+        compilerPanelId: `compilerPanel_${pluginTag}`,
+        formatterPanelId: `formatterPanel_${pluginTag}`,
         cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
@@ -58,6 +62,7 @@ function configPluginCpp(dtoString) {
 
     const state = parseConfig(configField && configField.value ? configField.value : "", jsonData);
     const questionConfigDto = parseQuestionConfigDto(configField && configField.value ? configField.value : "", dto);
+    const datasetVariables = parseDatasetVariables(dtoParams.datasetVariables ?? jsonData.datasetVariables ?? questionConfigDto.datasetVariables);
     // Keep editor callbacks local so reopening the dialog cannot read stale editors.
     const editorAccess = {};
     let unitEditor = null;
@@ -67,6 +72,7 @@ function configPluginCpp(dtoString) {
     drawForm();
     ensureStyles();
     setupTabs();
+    setupSettingsTabs();
     setupResizableSections();
     setupEditors(state.validation, state.indication);
     setupFileTab();
@@ -101,6 +107,19 @@ function configPluginCpp(dtoString) {
                 return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(rawValue), c => c.charCodeAt(0))));
             } catch (_) { return null; }
         }
+    }
+
+    function parseDatasetVariables(value) {
+        try {
+            const variables = typeof value === "string" ? JSON.parse(value) : value;
+            return Array.isArray(variables) ? variables.filter(item => item && typeof item.name === "string") : [];
+        } catch (_) { return []; }
+    }
+
+    function renderDatasetVariables() {
+        if (!datasetVariables.length) return '<p class="dataset-variable-empty">No dataset variables available for this question.</p>';
+        const rows = datasetVariables.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.value == null ? "" : String(item.value))}</td><td>${escapeHtml(item.unit || "")}</td></tr>`).join("");
+        return `<table class="dataset-variable-table" aria-label="Available dataset variables"><thead><tr><th>Name</th><th>Value</th><th>Unit</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     function currentStoredFiles() {
@@ -204,15 +223,28 @@ function configPluginCpp(dtoString) {
                                         <option value="cpp">C++17</option><option value="c">C17</option>
                                     </select>
                                 </div>
-                                <div class="formatter-config-section">
-                                    <label for="${ids.formatterConfigId}">clang-format configuration (YAML)</label>
-                                    <textarea id="${ids.formatterConfigId}" class="text-input" rows="6" spellcheck="false" style="width:100%;box-sizing:border-box;font-family:monospace" placeholder="BasedOnStyle: LLVM&#10;IndentWidth: 4&#10;ColumnLimit: 100&#10;SortIncludes: Never&#10;AllowShortFunctionsOnASingleLine: None"></textarea>
+                                <div class="config-horizontal-row">
+                                    <div class="settings-section">
+                                        <div id="${ids.settingsTabsId}" class="settings-tabs" role="tablist" aria-label="Code settings">
+                                            <button type="button" id="${ids.compilerTabId}" class="settings-tab" role="tab" aria-selected="true" aria-controls="${ids.compilerPanelId}">Compiler</button>
+                                            <button type="button" id="${ids.formatterTabId}" class="settings-tab" role="tab" aria-selected="false" aria-controls="${ids.formatterPanelId}" tabindex="-1">clang-format</button>
+                                        </div>
+                                        <div id="${ids.compilerPanelId}" class="settings-panel compiler-flags-section" role="tabpanel" aria-labelledby="${ids.compilerTabId}">
+                                            <label for="${ids.compilerFlagsId}">Additional compiler flags</label>
+                                            <textarea id="${ids.compilerFlagsId}" class="text-input" rows="4" spellcheck="false" placeholder="e.g. -O2 -Wextra -DNUMBER=42"></textarea>
+                                        </div>
+                                        <div id="${ids.formatterPanelId}" class="settings-panel formatter-config-section" role="tabpanel" aria-labelledby="${ids.formatterTabId}" hidden>
+                                            <label for="${ids.formatterConfigId}">clang-format configuration (YAML)</label>
+                                            <textarea id="${ids.formatterConfigId}" class="text-input" rows="6" spellcheck="false" placeholder="BasedOnStyle: LLVM&#10;IndentWidth: 4"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="dataset-variable-section">
+                                        <div class="dataset-variable-head-row">
+                                            <h4>Available dataset variables</h4>
+                                        </div>
+                                        <div class="dataset-variable-list">${renderDatasetVariables()}</div>
+                                    </div>
                                 </div>
-                                <div class="compiler-flags-section">
-                                    <label for="${ids.compilerFlagsId}">Additional compiler flags</label>
-                                    <input id="${ids.compilerFlagsId}" type="text" class="text-input" style="width:100%;box-sizing:border-box;font-family:monospace" placeholder="e.g. -O2 -Wextra -DNUMBER=42" />
-                                </div>
-                                <p id="${ids.languageWarningId}" class="language-warning" role="status" hidden></p>
                             </div>
                         </div>
 
@@ -367,6 +399,7 @@ function configPluginCpp(dtoString) {
                 flex-shrink: 0;
             }
             .pluginCppConfigForm .tab-btn,
+            .pluginCppConfigForm .settings-tab,
             .pluginCppConfigForm .cfg-btn {
                 border: 1px solid #b8b8b8;
                 background: #f0f0f0;
@@ -374,7 +407,8 @@ function configPluginCpp(dtoString) {
                 border-radius: 4px;
                 cursor: pointer;
             }
-            .pluginCppConfigForm .tab-btn.active {
+            .pluginCppConfigForm .tab-btn.active,
+            .pluginCppConfigForm .settings-tab[aria-selected="true"] {
                 background: #dce9ff;
             }
             .pluginCppConfigForm .main-split {
@@ -591,9 +625,75 @@ function configPluginCpp(dtoString) {
                 width: auto;
                 margin: 0;
             }
-            .pluginCppConfigForm .language-warning {
-                color: #8a4b00;
-                margin: 4px 0;
+            .pluginCppConfigForm #tab-options {
+                overflow: auto;
+            }
+            .pluginCppConfigForm .config-horizontal-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: stretch;
+            }
+            .pluginCppConfigForm .settings-section,
+            .pluginCppConfigForm .dataset-variable-section {
+                flex: 1 1 240px;
+                min-width: 0;
+                border: 1px solid #d0d0d0;
+                border-radius: 4px;
+                padding: 8px;
+                background: #fafafa;
+            }
+            .pluginCppConfigForm .settings-section,
+            .pluginCppConfigForm .settings-panel {
+                display: flex;
+                flex-direction: column;
+            }
+            .pluginCppConfigForm .settings-tabs {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-bottom: 8px;
+            }
+            .pluginCppConfigForm .settings-panel {
+                flex: 1;
+                min-width: 0;
+            }
+            .pluginCppConfigForm .settings-panel[hidden] {
+                display: none;
+            }
+            .pluginCppConfigForm .settings-panel textarea {
+                flex: 1;
+                min-height: 120px;
+                margin-bottom: 0;
+            }
+            .pluginCppConfigForm .dataset-variable-head-row h4 {
+                margin: 0 0 6px;
+            }
+            .pluginCppConfigForm .dataset-variable-list {
+                max-height: 160px;
+                overflow: auto;
+            }
+            .pluginCppConfigForm .dataset-variable-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-family: monospace;
+                font-size: 12px;
+            }
+            .pluginCppConfigForm .dataset-variable-table th,
+            .pluginCppConfigForm .dataset-variable-table td {
+                border: 1px solid #ddd;
+                padding: 4px 6px;
+                text-align: left;
+                vertical-align: top;
+                overflow-wrap: anywhere;
+            }
+            .pluginCppConfigForm .dataset-variable-table th {
+                background: #f0f0f0;
+            }
+            .pluginCppConfigForm .dataset-variable-empty {
+                margin: 0;
+                color: #666;
+                font-size: 12px;
             }
             .pluginCppConfigForm .small-gap {
                 gap: 8px;
@@ -929,6 +1029,32 @@ function configPluginCpp(dtoString) {
         }
     }
 
+    function setupSettingsTabs() {
+        const tabs = [...document.getElementById(ids.settingsTabsId).querySelectorAll(".settings-tab")];
+        function selectTab(selected) {
+            tabs.forEach((tab) => {
+                const active = tab === selected;
+                tab.setAttribute("aria-selected", String(active));
+                tab.tabIndex = active ? 0 : -1;
+                document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+            });
+        }
+        tabs.forEach((tab, index) => {
+            tab.addEventListener("click", () => selectTab(tab));
+            tab.addEventListener("keydown", (event) => {
+                let target;
+                if (event.key === "ArrowRight") target = tabs[(index + 1) % tabs.length];
+                else if (event.key === "ArrowLeft") target = tabs[(index + tabs.length - 1) % tabs.length];
+                else if (event.key === "Home") target = tabs[0];
+                else if (event.key === "End") target = tabs[tabs.length - 1];
+                else return;
+                event.preventDefault();
+                selectTab(target);
+                target.focus();
+            });
+        });
+    }
+
     function setupOptionsTab() {
         const runAtTest = document.getElementById(ids.optRunAtTestId);
         const compileAtTest = document.getElementById(ids.optCompileAtTestId);
@@ -942,17 +1068,19 @@ function configPluginCpp(dtoString) {
         const compilerFlags = document.getElementById(ids.compilerFlagsId);
         formatterConfig.value = state.formatterConfig;
         compilerFlags.value = state.compilerFlags;
-        [runAtTest, compileAtTest, cpuTime, language, formatterConfig, compilerFlags].forEach((element) => {
+        [runAtTest, compileAtTest, cpuTime, formatterConfig, compilerFlags].forEach((element) => {
             element.oninput = element.onchange = (event) => {
-                if (element === language && state.language !== language.value) {
-                    const warning = document.getElementById(ids.languageWarningId);
-                    warning.textContent = 'Answer language changed. Check the template and test declarations: C answers need extern "C"; C++ answers use C++ linkage. The bundled examples select linkage automatically. See the help for the pattern.';
-                    warning.hidden = false;
-                }
                 saveConfig();
                 if (element === cpuTime && event.type === "change") cpuTime.value = formatCpuTimeValue(state.cpuTime);
             };
         });
+        language.onchange = () => {
+            const changed = state.language !== language.value;
+            saveConfig();
+            if (changed) {
+                window.alert('Answer language changed. Check the template and test declarations: C answers need extern "C"; C++ answers use C++ linkage.');
+            }
+        };
     }
 
     function syncOptionsStateFromInputs() {
@@ -1014,8 +1142,8 @@ function configPluginCpp(dtoString) {
         setupFormatting();
         const outputEl = document.getElementById(ids.outputId);
 
-        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Run" });
-        bindRequest(ids.btnCompileId, "/compile", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Compile" });
+        bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload(false) }), outputEl, { showTiming: true, label: "Run" });
+        bindRequest(ids.btnCompileId, "/compile", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload(false) }), outputEl, { showTiming: true, label: "Compile" });
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Check" });
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Score" });
     }
@@ -1131,7 +1259,6 @@ function configPluginCpp(dtoString) {
         Object.assign(state, next);
         setupFileTab();
         setupOptionsTab();
-        document.getElementById(ids.languageWarningId).hidden = true;
         saveConfig();
     }
 
@@ -1204,15 +1331,17 @@ function configPluginCpp(dtoString) {
         });
     }
 
-    function buildQuestionConfigDtoPayload() {
+    function buildQuestionConfigDtoPayload(includeDataset = true) {
         syncOptionsStateFromInputs();
-        return {
+        const payload = {
             formatterConfig: state.formatterConfig,
             compilerFlags: state.compilerFlags,
             language: state.language,
             cpuTime: parseCpuTimeValue(state.cpuTime),
             files: currentStoredFiles()
         };
+        if (includeDataset) payload.datasetVariables = datasetVariables;
+        return payload;
     }
 
     function saveConfig() {
@@ -1231,6 +1360,7 @@ function configPluginCpp(dtoString) {
             linterWeight: 0,
             cpuTime: parseCpuTimeValue(state.cpuTime)
         });
+        delete questionConfigDto.datasetVariables;
         configField.value = JSON.stringify(questionConfigDto);
         configField.dispatchEvent(new Event("input", { bubbles: true }));
         configField.dispatchEvent(new Event("change", { bubbles: true }));

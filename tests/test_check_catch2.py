@@ -57,7 +57,9 @@ class TestCatch2Submissions(unittest.TestCase):
                 self.assertEqual(args.args, ('catch2' + language, 'teacher tests', 'test.cpp'))
                 self.assertEqual(args.kwargs['cputime'], 9)
                 uploaded = {name: content for _, name, content in args.kwargs['files']}
-                self.assertEqual(uploaded, {filename: b'student code', 'input.txt': b'stale'})
+                self.assertEqual(uploaded[filename], b'student code')
+                self.assertEqual(uploaded['input.txt'], b'stale')
+                self.assertEqual(set(uploaded), {filename, 'input.txt', 'helpers.h', 'dataset.h'})
 
     def test_jobe_failure_becomes_a_check_error(self):
         for outcome in (11, 12, 13, 99):

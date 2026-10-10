@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from shared.check_result import CheckResult
 from shared.jobe_wrapper import JobeWrapper
 from shared.compiler_flags import parse_compiler_flags
+from shared.cpp_dataset import cpp_dataset_files
 
 REPORT_MARKER = '__catch2_report__\n'
 
@@ -39,9 +40,13 @@ def check_catch2(server, code, test_code, language='cpp', files=None, cputime=No
     if language not in {'c', 'cpp'}:
         raise ValueError('Catch2 answer language must be c or cpp')
     answer_name = 'answer.c' if language == 'c' else 'answer.cpp'
-    reserved = {'answer.c', 'answer.cpp', 'answer.o', 'test.cpp', 'test.cpp.exe',
+    reserved = {'answer.c', 'answer.cpp', 'answer.o', 'test.cpp', 'test.cpp.exe', 'helpers.h',
                 'catch2-tests.o', 'catch2-results.xml'}
     auxiliary_files = [spec for spec in files or [] if spec[1] not in reserved]
+    support = cpp_dataset_files([], language)
+    if any(spec[1] == 'dataset.h' for spec in auxiliary_files):
+        support.pop('dataset.h')
+    auxiliary_files += JobeWrapper.createFiles(support)
     answer_files = JobeWrapper.createFiles({answer_name: code.encode('utf-8')})
     result = JobeWrapper(server).run_test(
         'catch2' + language, test_code, 'test.cpp',

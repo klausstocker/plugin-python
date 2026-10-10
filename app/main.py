@@ -26,6 +26,7 @@ from app.dev_ui import install_dev_ui
 from app.static_resources import install_static_resources
 from app.cpp_execution_endpoints import CPP_SERVICEPATH, router as cpp_execution_router
 from shared.check_catch2 import check_catch2
+from shared.cpp_dataset import cpp_dataset_files
 from shared.question_config import CppQuestionConfigDto
 from app.dataset_helper import (
     dataset_file_from_variables,
@@ -1039,6 +1040,9 @@ class PluginCpp(PluginPython):
     INIT_JS = "initPluginCpp"
     CONFIG_JS = "configPluginCpp"
 
+    def get_help(self) -> str:
+        return super().get_help().replace("{{CPP_SERVICEPATH}}", html.escape(self.SERVICEPATH, quote=True))
+
     def get_html(self, params, q):
         return '<div class="letto-plugin-cpp">Write your program in C or C++</div>'
 
@@ -1051,10 +1055,12 @@ class PluginCpp(PluginPython):
             if pluginDto and pluginDto.jsonData:
                 raw = base64.b64decode(pluginDto.jsonData).decode("utf-8")
             settings = CppQuestionConfigDto.model_validate_json(raw)
+            files_for_jobe = _extract_file_specs_from_config(config, pluginDto)
+            files_for_jobe.update(cpp_dataset_files(extract_dataset_variables(varsQuestion), settings.language))
             result = check_catch2(
                 os.getenv("JOBE_SERVER", "jobe:80"), antwort or "",
                 _extract_validation_code(answerDto, config, pluginDto), language=settings.language,
-                files=JobeWrapper.createFiles(_extract_file_specs_from_config(config, pluginDto)),
+                files=JobeWrapper.createFiles(files_for_jobe),
                 cputime=_extract_cputime(config, pluginDto), compiler_flags=settings.compilerFlags)
             info.punkteIst = float(grade * result.score())
             info.status = result.status()
