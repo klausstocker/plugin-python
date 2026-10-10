@@ -42,7 +42,7 @@ class TestCatch2Submissions(unittest.TestCase):
         files = JobeWrapper.createFiles({
             name: b'stale' for name in (
                 'answer.c', 'answer.cpp', 'answer.o', 'test.cpp', 'test.cpp.exe',
-                'catch2-tests.o', 'catch2-results.xml', 'input.txt')
+                'catch2-tests.o', 'catch2-results.xml', 'helpers.c', 'input.txt')
         })
         report = ('__catch2_report__\n<Catch2TestRun>'
                   '<OverallResultsCases successes="1" failures="0"/></Catch2TestRun>')
@@ -59,7 +59,8 @@ class TestCatch2Submissions(unittest.TestCase):
                 uploaded = {name: content for _, name, content in args.kwargs['files']}
                 self.assertEqual(uploaded[filename], b'student code')
                 self.assertEqual(uploaded['input.txt'], b'stale')
-                self.assertEqual(set(uploaded), {filename, 'input.txt', 'helpers.h', 'dataset.h'})
+                self.assertEqual(set(uploaded), {filename, 'input.txt', 'helpers.h', 'helpers.c', 'dataset.h'})
+                self.assertNotEqual(uploaded['helpers.c'], b'stale')
 
     def test_jobe_failure_becomes_a_check_error(self):
         for outcome in (11, 12, 13, 99):

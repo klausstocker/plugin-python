@@ -1,6 +1,6 @@
 #include <stdio.h>
 void print_message(void) {
-    puts("Hello!");
+    puts("hello world");
 }
 
 #ifndef LETTO_UNIT_TEST

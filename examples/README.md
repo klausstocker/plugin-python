@@ -5,3 +5,5 @@
 
 Each example has its own folder. The configuration dropdowns use a two-digit
 number followed by that folder's name, in the same order as the example loader.
+The C/C++ dropdown lists both languages, with a `C` or `C++` prefix before the
+number. Applying an example also selects its answer language.

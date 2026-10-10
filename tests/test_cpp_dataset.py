@@ -40,11 +40,13 @@ class TestCppDataset(unittest.TestCase):
                         cpp, 'check_catch2', return_value=CheckResult({'count': 1})) as check:
                     response = self.client.post('/plugincpp/' + operation, headers=self.headers, json={
                         'code': 'answer', 'testcode': 'tests', 'questionConfigDto': {
-                            'language': language, 'files': {'dataset.h': 'stale', 'helpers.h': 'stale'},
+                            'language': language, 'files': {'dataset.h': 'stale', 'helpers.h': 'stale',
+                                                          'helpers.c': 'stale'},
                             'datasetVariables': [{'name': 'speed', 'value': 12.5, 'unit': 'm/s'}]}})
                     self.assertEqual(response.status_code, 200, response.text)
                     files = {name: contents for _, name, contents in check.call_args.kwargs['files']}
                     self.assertNotIn(b'stale', files['helpers.h'])
+                    self.assertNotIn(b'stale', files['helpers.c'])
                     self.assertIn(b'12.5f', files['dataset.h'])
                     self.assertIn(b'"speed"', files['dataset.h'])
                     self.assertIn(b'"m/s"', files['dataset.h'])
@@ -54,7 +56,7 @@ class TestCppDataset(unittest.TestCase):
         for language in ('c', 'cpp'):
             config = json.dumps({'language': language, 'validation': 'tests',
                                  'datasetVariables': [{'name': 'speed', 'value': 999}],
-                                 'files': {'dataset.h': 'stale', 'helpers.h': 'stale'}})
+                                 'files': {'dataset.h': 'stale', 'helpers.h': 'stale', 'helpers.c': 'stale'}})
             for current in (main.VarHashDto.model_validate({
                     'vars': {'speed': {'calcErgebnisDto': {'json': '{"d":14}'}}}}), None):
                 with self.subTest(language=language, current=current), patch.object(
@@ -65,13 +67,44 @@ class TestCppDataset(unittest.TestCase):
                     files = {name: contents for _, name, contents in check.call_args.kwargs['files']}
                     self.assertNotIn(b'999', files['dataset.h'])
                     self.assertNotIn(b'stale', files['dataset.h'])
+                    self.assertNotIn(b'stale', files['helpers.c'])
                     if current is not None:
                         self.assertIn(b'14.0f', files['dataset.h'])
                     else:
                         self.assertNotIn(b'"speed"', files['dataset.h'])
 
-    def test_invalid_numeric_data_is_reported_before_jobe(self):
-        for value in ('text', None, 1e100):
+    def test_non_numeric_variables_do_not_block_checks_or_grading(self):
+        for language in ('c', 'cpp'):
+            for metadata in ('question text', None, ['choice'], {'answer': 'text'}):
+                variables = [{'name': 'a', 'value': 3}, {'name': 'n', 'value': 4},
+                             {'name': 'Q0', 'value': metadata}]
+                config = {'language': language, 'validation': 'tests', 'datasetVariables': variables}
+                for operation in ('check', 'scorePlugin'):
+                    with self.subTest(language=language, operation=operation, metadata=metadata), patch.object(
+                            cpp, 'check_catch2', return_value=CheckResult({'count': 1})) as check:
+                        response = self.client.post('/plugincpp/' + operation, headers=self.headers, json={
+                            'code': 'answer', 'testcode': 'tests', 'questionConfigDto': config})
+                        self.assertEqual(response.status_code, 200, response.text)
+                        self.assertEqual(response.json()['score'], 1, response.text)
+                        files = {name: contents for _, name, contents in check.call_args.kwargs['files']}
+                        self.assertIn(b'{"a", {3.0f, ""}}', files['dataset.h'])
+                        self.assertIn(b'{"n", {4.0f, ""}}', files['dataset.h'])
+                        self.assertNotIn(b'"Q0"', files['dataset.h'])
+                        self.assertIn(b'DATASET_VARIABLE_COUNT = 2', files['dataset.h'])
+                current = main.VarHashDto.model_validate({'vars': {
+                    item['name']: {'calcErgebnisDto': {'json': json.dumps({'d': item['value']})}}
+                    for item in variables}})
+                with self.subTest(language=language, metadata=metadata), patch.object(
+                        main, 'check_catch2', return_value=CheckResult({'count': 1})) as check:
+                    score = main.PluginCpp('', '').score('answer', None, None, 2,
+                                                        config=json.dumps(config), varsQuestion=current)
+                    self.assertEqual(score.punkteIst, 2, score.feedback)
+                    files = {name: contents for _, name, contents in check.call_args.kwargs['files']}
+                    self.assertNotIn(b'"Q0"', files['dataset.h'])
+                    self.assertIn(b'DATASET_VARIABLE_COUNT = 2', files['dataset.h'])
+
+    def test_out_of_range_numeric_data_is_reported_before_jobe(self):
+        for value in (1e100, -1e100):
             with self.subTest(value=value), patch.object(cpp, 'check_catch2') as check:
                 response = self.client.post('/plugincpp/check', headers=self.headers, json={
                     'code': 'answer', 'testcode': 'tests',
@@ -88,17 +121,38 @@ class TestCppDataset(unittest.TestCase):
         with patch.dict(os.environ, {'RESOURCE_DIR': str(resources)}):
             app = FastAPI()
             install_static_resources(app, '/custom/cpp', 'Cpp', root_alias=False)
-            response = TestClient(app).get('/custom/cpp/static/helpers.h')
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.content, (resources / 'plugins/Cpp/helpers.h').read_bytes())
             help_text = self.client.get('/plugincpp/help').text
-            self.assertIn('data-plugin-help-file="helpers.h"', help_text)
-            self.assertIn('download="helpers.h"', help_text)
+            for filename in ('helpers.h', 'helpers.c'):
+                response = TestClient(app).get('/custom/cpp/static/' + filename)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.content, (resources / 'plugins/Cpp' / filename).read_bytes())
+                self.assertIn(f'data-plugin-help-file="{filename}"', help_text)
+                self.assertIn(f'download="{filename}"', help_text)
 
 
 class TestCppDatasetIntegration(unittest.TestCase):
     def setUp(self):
         self.server = os.environ.get('JOBE_TEST_SERVER', 'localhost:4000')
+
+    def test_dataset_numbers_scores_with_non_numeric_question_variables(self):
+        from pathlib import Path
+        from shared.cpp_examples import cpp_examples
+
+        folder = Path(__file__).resolve().parents[1] / 'examples/CPP/dataset_numbers'
+        for language in ('c', 'cpp'):
+            config = next(entry for entry in cpp_examples(language) if entry['title'] == 'dataset_numbers')
+            solution = (folder / ('answer.c' if language == 'c' else 'answer.cpp')).read_text(encoding='utf-8')
+            for a, n in ((3, 4), (-3, 2)):
+                current = main.VarHashDto.model_validate({'vars': {
+                    'a': {'calcErgebnisDto': {'json': json.dumps({'d': a})}},
+                    'n': {'calcErgebnisDto': {'json': json.dumps({'d': n})}},
+                    'Q0': {'calcErgebnisDto': {'string': 'Question text'}},
+                    'empty': {'calcErgebnisDto': {'json': '{"d":null}'}}}})
+                with self.subTest(language=language, a=a, n=n), patch.dict(
+                        os.environ, {'JOBE_SERVER': self.server}):
+                    score = main.PluginCpp('', '').score(solution, None, None, 2,
+                                                        config=json.dumps(config), varsQuestion=current)
+                    self.assertEqual(score.punkteIst, 2, score.feedback)
 
     def test_teacher_checks_and_grading_use_each_students_dataset(self):
         client = TestClient(main.app)

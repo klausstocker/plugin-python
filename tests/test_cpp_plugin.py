@@ -165,19 +165,26 @@ class TestCppPlugin(unittest.TestCase):
         for language in ('c', 'cpp'):
             entries = cpp_examples(language)
             for index, entry in enumerate(entries):
+                dropdown_index = index + (len(EXAMPLE_NAMES) if language == 'cpp' else 0)
                 response = self.client.post('/plugincpp/example', headers=self.headers,
-                                            json={'index': index, 'questionConfigDto': {'language': language}})
-                self.assertEqual(response.json()['names'], list(EXAMPLE_NAMES))
-                self.assertEqual(response.json()['count'], len(EXAMPLE_NAMES))
+                                            json={'index': dropdown_index, 'questionConfigDto': {'language': 'cpp' if language == 'c' else 'c'}})
+                self.assertEqual(response.json()['names'], list(EXAMPLE_NAMES) * 2)
+                self.assertEqual(response.json()['languages'], ['c'] * len(EXAMPLE_NAMES) + ['cpp'] * len(EXAMPLE_NAMES))
+                self.assertEqual(response.json()['count'], 2 * len(EXAMPLE_NAMES))
                 self.assertEqual(response.json()['output'], entry)
                 folder = RESOURCES.parent / 'examples/CPP' / EXAMPLE_NAMES[index]
                 self.assertEqual(entry['title'], folder.name)
-                self.assertEqual(entry['indication'], (folder / 'template.cpp').read_text(encoding='utf-8'))
+                template = folder / ('template.c' if language == 'c' else 'template.cpp')
+                if not template.exists():
+                    template = folder / 'template.cpp'
+                self.assertEqual(entry['indication'], template.read_text(encoding='utf-8'))
                 self.assertEqual(entry['validation'], (folder / 'test_answer.cpp').read_text(encoding='utf-8'))
                 self.assertIn('catch2/catch_test_macros.hpp', entry['validation'])
                 self.assertIn('#if __has_include("answer.c")', entry['validation'])
-                self.assertIn('#define ANSWER_LINKAGE extern "C"', entry['validation'])
+                self.assertFalse({'template.c', 'template.cpp', 'answer.c', 'answer.cpp'} & entry['files'].keys())
             self.assertEqual(entries[2]['files']['number.txt'], '42\n')
+            self.assertIn('counter.h', entries[EXAMPLE_NAMES.index('counter')]['files'])
+            self.assertEqual(entries[EXAMPLE_NAMES.index('read_text')]['files']['names.txt'], 'Ada\nRenée\nLin\n')
         self.assertEqual([entry['validation'] for entry in cpp_examples('c')],
                          [entry['validation'] for entry in cpp_examples('cpp')])
 
@@ -208,18 +215,80 @@ class TestCppPluginIntegration(unittest.TestCase):
     def test_examples_grade_completed_c_and_cpp_answers_through_endpoints(self):
         client = TestClient(main.app)
         headers = {'Authorization': 'Bearer ' + common.get_exec_token()}
-        solutions = [(RESOURCES.parent / 'examples/CPP' / name / 'answer.cpp').read_text(encoding='utf-8')
-                     for name in EXAMPLE_NAMES]
         with patch.object(cpp, 'JOBE_SERVER', '127.0.0.1:4000'):
             for language in ('c', 'cpp'):
-                # Reuse the same tests after switching language, without reloading.
-                for original_config, solution in zip(cpp_examples('cpp'), solutions):
-                    config = dict(original_config, language=language)
+                for config in cpp_examples(language):
+                    if config['title'] == 'dataset_numbers':
+                        config['datasetVariables'] = [
+                            {'name': 'a', 'value': 3}, {'name': 'n', 'value': 4}]
+                    folder = RESOURCES.parent / 'examples/CPP' / config['title']
+                    answer = folder / ('answer.c' if language == 'c' else 'answer.cpp')
+                    if not answer.exists():
+                        answer = folder / 'answer.cpp'
+                    solution = answer.read_text(encoding='utf-8')
                     with self.subTest(language=language, example=config['title']):
                         response = client.post('/plugincpp/check', headers=headers, json={
                             'code': solution, 'testcode': config['validation'], 'questionConfigDto': config})
                         self.assertEqual(response.status_code, 200, response.text)
                         self.assertEqual(response.json()['score'], 1.0, response.text)
+
+    def test_unfinished_examples_compile_but_fail_behavior_checks(self):
+        from shared.check_catch2 import check_catch2
+        from shared.jobe_wrapper import JobeWrapper
+        for language in ('c', 'cpp'):
+            for config in cpp_examples(language):
+                with self.subTest(language=language, example=config['title']):
+                    files = JobeWrapper.createFiles({name: content.encode('utf-8')
+                                                    for name, content in config['files'].items()})
+                    if config['title'] == 'dataset_numbers':
+                        from app.dataset_helper import DatasetVariable
+                        from shared.cpp_dataset import cpp_dataset_files
+                        files += JobeWrapper.createFiles(cpp_dataset_files([
+                            DatasetVariable('a', 3), DatasetVariable('n', 4)], language))
+                    result = check_catch2('127.0.0.1:4000', config['indication'],
+                                          config['validation'], language=language, files=files)
+                    self.assertGreater(result.count, 0, repr(result))
+                    self.assertFalse(result.wasSuccessful(), repr(result))
+
+    def test_dataset_numbers_uses_current_values_and_exact_output(self):
+        from shared.check_catch2 import check_catch2
+        from shared.cpp_dataset import cpp_dataset_files
+        from shared.jobe_wrapper import JobeWrapper
+        from app.dataset_helper import DatasetVariable
+
+        for language in ('c', 'cpp'):
+            config = cpp_examples(language)[EXAMPLE_NAMES.index('dataset_numbers')]
+            folder = RESOURCES.parent / 'examples/CPP/dataset_numbers'
+            solution = (folder / ('answer.c' if language == 'c' else 'answer.cpp')).read_text(encoding='utf-8')
+            self.assertNotIn('dataset.h', config['files'])
+            self.assertEqual(config['datasetVariables'], [])
+            for a, n in ((3, 4), (-3, 2), (7, 0), (0, 100)):
+                with self.subTest(language=language, a=a, n=n):
+                    files = JobeWrapper.createFiles(cpp_dataset_files([
+                        DatasetVariable('a', a), DatasetVariable('n', n)], language))
+                    result = check_catch2('127.0.0.1:4000', solution,
+                                          config['validation'], language=language, files=files)
+                    self.assertEqual(result.count, 1, repr(result))
+                    self.assertTrue(result.wasSuccessful(), repr(result))
+
+            files = JobeWrapper.createFiles(cpp_dataset_files([
+                DatasetVariable('a', -3), DatasetVariable('n', 2)], language))
+            for wrong in (
+                '#include <stdio.h>\nvoid print_numbers(int a, int b) { '
+                'for (int i = a; i < b; ++i) printf("%d\\n", i); }',
+                '#include <stdio.h>\nvoid print_numbers(int a, int b) { '
+                '(void)a; (void)b; printf("3\\n4\\n5\\n6\\n7\\n"); }',
+                '#include <stdio.h>\nvoid print_numbers(int a, int b) { '
+                'for (int i = a; i <= b; ++i) printf("%d ", i); }',
+                '#include <stdio.h>\nvoid print_numbers(int a, int n) { '
+                'for (int i = 0; i <= n; ++i) printf("%d\\n", a + i); }',
+            ):
+                with self.subTest(language=language, wrong=wrong):
+                    result = check_catch2('127.0.0.1:4000', wrong,
+                                          config['validation'], language=language, files=files)
+                    self.assertEqual(result.count, 1, repr(result))
+                    self.assertFalse(result.wasSuccessful(), repr(result))
+                    self.assertEqual(result.score(), 0, repr(result))
 
     def test_run_returns_stdout_for_both_languages(self):
         client = TestClient(main.app)

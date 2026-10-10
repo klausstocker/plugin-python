@@ -44,7 +44,7 @@ class TestExampleSubmissions(unittest.TestCase):
                 self.assertEqual(result.count, 1, repr(result))
                 self.assertFalse(result.wasSuccessful(), repr(result))
 
-    def run_example(self, example, code, dataset_value=7):
+    def run_example(self, example, code, dataset_values=None):
         def run_submission(language, source, filename, submitted_files, cputime=None):
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
@@ -64,27 +64,39 @@ class TestExampleSubmissions(unittest.TestCase):
         file_data = {
             name: content.encode("utf-8") for name, content in example.files.items()
         }
+        if dataset_values is None:
+            dataset_values = {"a": 3, "n": 4}
         file_data.update(dataset_file_from_variables([
-            DatasetVariable(name="number", value=dataset_value),
+            DatasetVariable(name=name, value=value)
+            for name, value in dataset_values.items()
         ]))
         files = JobeWrapper.createFiles(file_data)
         with patch.object(JobeWrapper, "run_test", side_effect=run_submission):
             return checkCode("unused", code, example.validation, files=files)
 
-    def test_dataset_example_uses_current_value(self):
-        index = EXAMPLE_NAMES.index("dataset_double")
-        example = QuestionConfigDtoExamples()[index]
-        # Test-only submission; the published example has no standalone solution.
-        submission = "def double(value): return 2 * value"
+    def test_dataset_numbers_uses_current_values_and_exact_output(self):
+        example = QuestionConfigDtoExamples()[EXAMPLE_NAMES.index("dataset_numbers")]
+        root = Path(__file__).resolve().parents[1]
+        solution = (root / "examples/Python/dataset_numbers/answer.py").read_text(encoding="utf-8")
         self.assertNotIn("dataset.py", example.files)
         self.assertEqual(example.datasetVariables, [])
-        for value in (7, -3.5, 0):
-            with self.subTest(value=value):
-                result = self.run_example(example, submission, dataset_value=value)
-                self.assertEqual(result.count, 2, repr(result))
+        for a, n in ((3, 4), (-3, 2), (7, 0), (0, 100)):
+            with self.subTest(a=a, n=n):
+                result = self.run_example(example, solution, {"a": a, "n": n})
+                self.assertEqual(result.count, 1, repr(result))
                 self.assertTrue(result.wasSuccessful(), repr(result))
-        result = self.run_example(example, "def double(value): return 14", dataset_value=3)
-        self.assertFalse(result.wasSuccessful(), repr(result))
+        for submission in (
+            "def print_numbers(a, b):\n    for value in range(a, b): print(value)",
+            'def print_numbers(a, b): print("3\\n4\\n5\\n6\\n7")',
+            'def print_numbers(a, b):\n    for value in range(a, b + 1): print(value, end=" ")',
+            'def print_numbers(a, b):\n    for value in range(a, b + 1): print(value)\n    print("extra")',
+            "def print_numbers(a, n):\n    for value in range(a, a + n + 1): print(value)",
+        ):
+            with self.subTest(submission=submission):
+                result = self.run_example(example, submission, {"a": -3, "n": 2})
+                self.assertEqual(result.count, 1, repr(result))
+                self.assertFalse(result.wasSuccessful(), repr(result))
+                self.assertEqual(result.score(), 0, repr(result))
 
     def test_all_reference_solutions_pass(self):
         examples = QuestionConfigDtoExamplesWorkingIndication()
@@ -92,14 +104,14 @@ class TestExampleSubmissions(unittest.TestCase):
         for name, example in zip(REFERENCE_EXAMPLE_NAMES, examples):
             with self.subTest(example=name):
                 result = self.run_example(example, example.indication)
-                self.assertGreaterEqual(result.count, 1 if name == "printed_output" else 2, repr(result))
+                self.assertGreaterEqual(result.count, 1 if name in {"printed_output", "dataset_numbers"} else 2, repr(result))
                 self.assertTrue(result.wasSuccessful(), repr(result))
 
     def test_student_templates_need_implementation(self):
         for name, example in zip(EXAMPLE_NAMES, QuestionConfigDtoExamples()):
             with self.subTest(example=name):
                 result = self.run_example(example, example.indication)
-                self.assertGreaterEqual(result.count, 1 if name == "printed_output" else 2, repr(result))
+                self.assertGreaterEqual(result.count, 1 if name in {"printed_output", "dataset_numbers"} else 2, repr(result))
                 self.assertFalse(result.wasSuccessful(), repr(result))
 
     def test_html_guide_contains_solutions_and_matches_help_link(self):
@@ -116,8 +128,11 @@ class TestExampleSubmissions(unittest.TestCase):
             self.assertIn(solution.rstrip(), unescape(html))
         self.assertIn('print("hello world")', unescape(html))
         self.assertIn("SELECT name FROM products WHERE price &lt; ?", html)
-        self.assertIn("LeTTo dataset variable named <code>number</code> must exist", html)
-        self.assertNotIn("dataset_double/answer.py", html)
+        self.assertIn("LeTTo dataset variables named <code>a</code> and <code>n</code>", html)
+        self.assertIn("dataset.a.value", html)
+        self.assertIn("dataset.n.value", html)
+        self.assertNotIn("dataset_double", html)
+        self.assertNotIn("Celsius", html)
         self.assertNotIn("Build the HTML guide", html)
         self.assertNotIn("Run locally", html)
         self.assertNotIn("Teacher checker", html)

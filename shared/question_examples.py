@@ -1,4 +1,4 @@
-"""Small examples, from printed output to LeTTo dataset variables."""
+"""Python examples, from printed output to libraries and LeTTo datasets."""
 
 from pathlib import Path
 
@@ -8,7 +8,6 @@ _EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples" / "Python"
 EXAMPLE_NAMES = (
     "printed_output",
     "calculate_sum",
-    "temperature",
     "even_numbers",
     "validate_age",
     "counter",
@@ -16,9 +15,9 @@ EXAMPLE_NAMES = (
     "write_text",
     "numpy_means",
     "sqlite_products",
-    "dataset_double",
+    "dataset_numbers",
 )
-REFERENCE_EXAMPLE_NAMES = tuple(name for name in EXAMPLE_NAMES if name != "dataset_double")
+REFERENCE_EXAMPLE_NAMES = EXAMPLE_NAMES
 
 
 def _example_file(example_name: str, filename: str) -> str:

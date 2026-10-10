@@ -24,5 +24,5 @@ TEST_CASE("printed message") {
     char buffer[128] = {};
     size_t length = fread(buffer, 1, sizeof(buffer), captured);
     fclose(captured);
-    REQUIRE(std::string(buffer, length) == "Hello!\n");
+    REQUIRE(std::string(buffer, length) == "hello world\n");
 }

@@ -40,7 +40,7 @@ def check_catch2(server, code, test_code, language='cpp', files=None, cputime=No
     if language not in {'c', 'cpp'}:
         raise ValueError('Catch2 answer language must be c or cpp')
     answer_name = 'answer.c' if language == 'c' else 'answer.cpp'
-    reserved = {'answer.c', 'answer.cpp', 'answer.o', 'test.cpp', 'test.cpp.exe', 'helpers.h',
+    reserved = {'answer.c', 'answer.cpp', 'answer.o', 'test.cpp', 'test.cpp.exe', 'helpers.h', 'helpers.c',
                 'catch2-tests.o', 'catch2-results.xml'}
     auxiliary_files = [spec for spec in files or [] if spec[1] not in reserved]
     support = cpp_dataset_files([], language)

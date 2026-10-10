@@ -140,6 +140,12 @@ int main(void) {
       <code>const char *unit</code> fuer C und C++. Beide Header werden automatisch bereitgestellt.
       Download fuer die lokale Vorbereitung der Lehrertests:
       <a href="static/helpers.h" data-plugin-help-file="helpers.h" download="helpers.h">helpers.h (C und C++)</a>.</p>
+    <p>Die Catch2-Lehrertests erhalten auch <code>helpers.c</code>. Mit
+      <code>#include "helpers.c"</code> stehen die Klassen <code>StdoutBuffer</code> und
+      <code>CaptureStdout</code> bereit, um Ausgaben von <code>printf</code> und
+      <code>std::cout</code> abzufangen. Die Datei wird in die als C++ kompilierten Tests eingebunden.
+      Download fuer lokale Lehrertests:
+      <a href="static/helpers.c" data-plugin-help-file="helpers.c" download="helpers.c">helpers.c</a>.</p>
     <p>In beiden Sprachen gibt es eine Tabelle <code>DATASET_VARIABLES</code> und
       <code>DATASET_VARIABLE_COUNT</code>. <code>dataset_get("name")</code> liefert einen Zeiger
       auf <code>variable</code> oder <code>NULL</code> fuer einen fehlenden Namen.
@@ -158,7 +164,9 @@ TEST_CASE("dataset") {
     REQUIRE(double_value(number-&gt;value) == number-&gt;value * 2);
 }</pre>
     <p>Einheit ueber <code>number-&gt;unit</code> lesen. Strings mit <code>strcmp</code> vergleichen.
-      Dataset-Werte muessen numerisch sein und in den Wertebereich von <code>float</code> passen;
+      Nur numerische Dataset-Werte werden exportiert; Text und leere Werte werden ausgelassen.
+      <code>dataset_get</code> liefert fuer ausgelassene Variablen <code>NULL</code>.
+      Numerische Werte muessen in den Wertebereich von <code>float</code> passen;
       eine fehlende Einheit ist ein leerer String. Ohne Dataset ist die Tabelle leer.
       Die Bewertung verwendet immer das aktuelle studentische Dataset, keine gespeicherten Vorschauwerte.</p>
 

@@ -1,5 +1,5 @@
 #include <stdio.h>
-void print_message(void) { /* print Hello! */
+void print_message(void) { /* print hello world followed by a newline */
 }
 
 #ifndef LETTO_UNIT_TEST

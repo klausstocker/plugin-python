@@ -16,15 +16,7 @@
 
 [Possible solution](calculate_sum/answer.py)
 
-## 3. Floating-point result
-
-**Feature:** Check floating-point results with a tolerance.
-
-**Task:** Convert Celsius to Fahrenheit using celsius * 9 / 5 + 32.
-
-[Possible solution](temperature/answer.py)
-
-## 4. Lists
+## 3. Lists
 
 **Feature:** Check returned lists, including order and duplicates.
 
@@ -32,7 +24,7 @@
 
 [Possible solution](even_numbers/answer.py)
 
-## 5. Exceptions
+## 4. Exceptions
 
 **Feature:** Check that invalid input raises an exception.
 
@@ -40,7 +32,7 @@
 
 [Possible solution](validate_age/answer.py)
 
-## 6. Student class
+## 5. Student class
 
 **Feature:** Check methods and state of student-written classes.
 
@@ -48,7 +40,7 @@
 
 [Possible solution](counter/answer.py)
 
-## 7. Read a text file
+## 6. Read a text file
 
 **Feature:** Provide a text file through the plugin and check its contents are read correctly.
 
@@ -56,7 +48,7 @@
 
 [Possible solution](read_text/answer.py)
 
-## 8. Write a text file
+## 7. Write a text file
 
 **Feature:** Check text files written by the student's program.
 
@@ -64,7 +56,7 @@
 
 [Possible solution](write_text/answer.py)
 
-## 9. NumPy
+## 8. NumPy
 
 **Feature:** Use NumPy and check array results.
 
@@ -72,7 +64,7 @@
 
 [Possible solution](numpy_means/answer.py)
 
-## 10. SQLite
+## 9. SQLite
 
 **Feature:** Use SQLite and check query results.
 
@@ -80,24 +72,31 @@
 
 [Possible solution](sqlite_products/answer.py)
 
-## 11. LeTTo dataset variable
+## 10. LeTTo dataset loop
 
-**Feature:** Use the current LeTTo dataset as input to the unit tests.
+**Feature:** Read the current LeTTo dataset in the teacher tests and capture printed output.
 
-**Required setup:** A numeric LeTTo dataset variable named `number` must exist
-in the question, without a unit (for example, value `7`). Create it in LeTTo
-before using **check** or **score**. Applying the example does not create it.
-It must appear under **Available dataset variables** in the configuration.
+**Required setup:** Create integer LeTTo dataset variables named `a` and `n`,
+without units; `n` must be nonnegative. For example, use `a = 3`, `n = 4`.
+Both must appear under **Available dataset variables**. Applying the example
+does not create them.
 
-**Task:** Implement `double(value)` to return twice the supplied value.
-Import the runtime-provided `dataset` module to access the current LeTTo dataset.
-For example, a dataset variable named `i` is available as:
+**Task:** Implement `print_numbers(a, b)` using a loop. Print each integer from
+`a` through `b` inclusive, one per line. The unit test calculates `b = a + n`
+from the dataset, so print `n + 1` lines.
+For `a = 3`, `n = 4`, the output is:
 
-```python
-import dataset
-
-value = dataset.i.value
+```text
+3
+4
+5
+6
+7
 ```
 
-In this example, the unit tests use `dataset.number.value` and pass it to the
-student function.
+The teacher tests read `dataset.a.value` and `dataset.n.value` from the
+runtime-provided `dataset` module, calculate `b = a + n`, and pass the endpoints
+`a` and `b` to the student function.
+See [the example details](dataset_numbers/README.md).
+
+[Possible solution](dataset_numbers/answer.py)

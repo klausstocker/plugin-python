@@ -1160,16 +1160,22 @@ function configPluginCpp(dtoString) {
         }
 
         select.innerHTML = "";
+        const languageCounts = { c: 0, cpp: 0 };
         for (let i = 0; i < initial.count; i += 1) {
             const option = document.createElement("option");
             option.value = String(i);
             const folderName = initial.names && initial.names[i] ? initial.names[i] : "";
-            option.textContent = `${String(i + 1).padStart(2, "0")} ${folderName}`.trim();
+            option.dataset.exampleName = folderName;
+            const language = initial.languages && initial.languages[i] === "c" ? "c" : "cpp";
+            option.dataset.exampleLanguage = language;
+            option.dataset.exampleNumber = String(++languageCounts[language]);
             select.appendChild(option);
         }
+        updateExampleLabels();
         select.disabled = initial.count === 0;
         applyBtn.disabled = initial.count === 0;
-        select.value = "0";
+        const firstForLanguage = Array.from(select.options).find(option => option.dataset.exampleLanguage === state.language);
+        select.value = firstForLanguage ? firstForLanguage.value : "0";
 
         applyBtn.addEventListener("click", async () => {
             const index = Number(select.value);
@@ -1178,6 +1184,15 @@ function configPluginCpp(dtoString) {
                 if (hasUserCodeToOverwrite(exampleData.output) && !(await confirmExampleOverwrite())) return;
                 applyExample(exampleData.output);
             }
+        });
+    }
+
+    function updateExampleLabels() {
+        const select = document.getElementById(ids.exampleSelectId);
+        if (!select) return;
+        Array.from(select.options).forEach(option => {
+            const language = option.dataset.exampleLanguage === "c" ? "C" : "C++";
+            option.textContent = `${language} ${option.dataset.exampleNumber.padStart(2, "0")} ${option.dataset.exampleName || ""}`.trim();
         });
     }
 
@@ -1259,6 +1274,7 @@ function configPluginCpp(dtoString) {
         Object.assign(state, next);
         setupFileTab();
         setupOptionsTab();
+        updateExampleLabels();
         saveConfig();
     }
 

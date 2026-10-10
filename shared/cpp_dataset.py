@@ -18,11 +18,14 @@ def _string_literal(value: str) -> str:
     return '"' + escaped + '"'
 
 
-def _float_literal(variable: DatasetVariable) -> str:
+def _float_literal(variable: DatasetVariable) -> str | None:
+    """Return a C float literal, or None for nonnumeric LeTTo variables."""
     try:
         value = float(variable.value)
-    except (ValueError, TypeError, OverflowError) as error:
-        raise ValueError(f'Dataset variable {variable.name!r} must have a numeric value') from error
+    except (ValueError, TypeError):
+        return None
+    except OverflowError as error:
+        raise ValueError(f'Dataset variable {variable.name!r} exceeds the float range') from error
     if math.isnan(value):
         return 'NAN'
     if math.isinf(value):
@@ -44,13 +47,20 @@ def cpp_helper_files(language: str = 'cpp') -> dict[str, bytes]:
 
 
 def cpp_dataset_files(variables: list[DatasetVariable], language: str = 'cpp') -> dict[str, bytes]:
-    """Supply teacher-test helpers.h and a student-specific dataset.h."""
+    """Supply teacher-test helpers.h, helpers.c, and a student-specific dataset.h."""
     files = cpp_helper_files(language)
+    helper_path = Path(__file__).resolve().parents[1] / 'resources/plugins/Cpp/helpers.c'
+    files['helpers.c'] = helper_path.read_bytes()
     # Match Python's name-keyed mapping when a payload repeats a name.
     values = {variable.name: variable for variable in variables}
-    entries = [(_string_literal(name), _float_literal(variable),
-                _string_literal(variable.unit or '')) for name, variable in values.items()]
-    lines = ['// Generated for this submission; do not edit.', '#pragma once',
+    entries = []
+    for name, variable in values.items():
+        literal = _float_literal(variable)
+        if literal is None:
+            continue
+        entries.append((_string_literal(name), literal, _string_literal(variable.unit or '')))
+    lines = ['// Generated for this submission; do not edit.',
+             '// Only numeric LeTTo dataset variables are exported.', '#pragma once',
              '#include "helpers.h"', '#include <math.h>',
              '#include <stddef.h>', '#include <string.h>',
              'static const dataset_entry DATASET_VARIABLES[] = {']

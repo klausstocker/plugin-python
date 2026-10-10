@@ -91,12 +91,15 @@ async def example(request: Request):
         body = await request.json()
         if not isinstance(body, dict):
             raise ValueError('Request must be a JSON object')
-        config = CppQuestionConfigDto.model_validate(body.get('questionConfigDto') or {})
-        entries = cpp_examples(config.language)
+        CppQuestionConfigDto.model_validate(body.get('questionConfigDto') or {})
+        entries = cpp_examples('c') + cpp_examples('cpp')
         index = body.get('index', 0)
         if type(index) is not int or not 0 <= index < len(entries):
             raise ValueError('Invalid example index')
-        return JSONResponse({'count': len(entries), 'names': [entry['title'] for entry in entries], 'output': entries[index]})
+        return JSONResponse({'count': len(entries),
+                             'names': [entry['title'] for entry in entries],
+                             'languages': [entry['language'] for entry in entries],
+                             'output': entries[index]})
     except (ValueError, TypeError) as error:
         return JSONResponse({'count': 0, 'output': None, 'error': str(error)}, status_code=400)
 
