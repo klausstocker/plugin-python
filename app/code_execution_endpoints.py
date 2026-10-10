@@ -142,7 +142,7 @@ def _ensure_authorized(request: Request) -> None:
         return
     presented_token = _extract_exec_token(request)
     token_matches = bool(EXEC_TOKEN) and hmac.compare_digest(presented_token, EXEC_TOKEN)
-    logger.info(
+    logger.debug(
         "Compared plugin execution token: presented=%r expected=%r matches=%s",
         presented_token,
         EXEC_TOKEN,
