@@ -23,6 +23,7 @@ class CppRequest(BaseModel):
 
 
 @router.post('/run')
+@router.post('/compile')
 @router.post('/check')
 @router.post('/scorePlugin')
 async def execute(request: Request):
@@ -37,14 +38,23 @@ async def execute(request: Request):
         data = CppRequest.model_validate(body)
         config = data.questionConfigDto
         files = common._jobe_files_from_body(body, include_dataset=False)
-        if operation == 'run':
+        if operation in ('run', 'compile'):
             standard = '-std=c17' if config.language == 'c' else '-std=c++17'
             filename = 'answer.c' if config.language == 'c' else 'answer.cpp'
             files = [spec for spec in files if spec[1] != filename]
             result = JobeWrapper(JOBE_SERVER).run_test(
-                config.language, data.code, filename, files=files,
+                ('compile' + config.language) if operation == 'compile' else config.language,
+                data.code, filename, files=files,
                 cputime=common._cputime_from_question_config(config.model_dump()),
                 parameters={'compileargs': [standard, '-Wall', '-Werror']})
+            if operation == 'compile':
+                compiler_output = result.cmpinfo or ''
+                summary = 'Compilation successful.' if result.success() else f'Compilation failed: {result.outcome()[1]}.'
+                output = summary + '\nCompiler output:\n' + (compiler_output or '(no compiler diagnostics)')
+                if result.stderr:
+                    output += '\nstderr:\n' + result.stderr
+                return JSONResponse({'output': output, 'compilerOutput': compiler_output,
+                                     'success': result.success(), 'timings': result.timings})
             return JSONResponse({'output': repr(result), 'timings': result.timings})
         if not data.testcode.strip():
             return JSONResponse({'output': 'Catch2 test code is required.', 'score': 0.0}, status_code=400)

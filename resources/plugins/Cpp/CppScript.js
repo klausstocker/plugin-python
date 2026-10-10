@@ -45,6 +45,7 @@ function initPluginCpp(dtoString, active) {
     const toggleLayoutButtonId = `toggleLayout_${plugin.name}`;
     const buildInfoId = `buildInfo_${plugin.name}`;
     const runButtonId = `runButton_${plugin.name}`;
+    const compileButtonId = `compileButton_${plugin.name}`;
     const defaultRatio = 2 / 3;
     let orientation = "horizontal";
     let splitRatio = defaultRatio;
@@ -56,6 +57,7 @@ function initPluginCpp(dtoString, active) {
     const files = dtoData.files || {};
     const evalConfig = dtoData.evalConfig || {};
     const enableRun = evalConfig.runAtTest !== false;
+    const enableCompile = evalConfig.lintAtTest !== false;
 
     // Let LeTTo score the initially rendered question by submitting the visible starter code.
     if (plugin.active && answerField && !answerField.value) {
@@ -97,7 +99,17 @@ Server build: loading...">?</span>
 
                 <div class="btn-container">
                     ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}">Run Code</button>` : ""}
+                    ${plugin.active && enableCompile ? `<button class="black-button" id="${compileButtonId}">compile</button>` : ""}
                 </div>
+                <details><summary>Use your own main for Run</summary>
+                    <p>Run starts your main function. Wrap it as below to exclude it from unit tests, which use Catch2's main:</p>
+                    <pre>#ifndef LETTO_UNIT_TEST
+int main(void) {
+    // Call your functions here.
+    return 0;
+}
+#endif</pre>
+                </details>
             </div>
         `);
     }
@@ -323,6 +335,7 @@ Server build: loading...">?</span>
         const out = document.getElementById(outputId);
 
         bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files, language: dtoData.language || "cpp", cpuTime: dtoData.cpuTime || 5 } }), out);
+        bindRequest(compileButtonId, "/compile", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files, language: dtoData.language || "cpp", cpuTime: dtoData.cpuTime || 5 } }), out);
     }
 
     async function setupBuildInfo() {

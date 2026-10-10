@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 
-TEST_FLAGS = ['-std=c++17', '-Wall', '-Werror', '-I/opt/catch2/include']
+TEST_FLAGS = ['-std=c++17', '-Wall', '-Werror', '-DLETTO_UNIT_TEST=1', '-I/opt/catch2/include']
 
 
 def test_cache_key(source):
@@ -52,7 +52,8 @@ def main():
     standard = '-std=c17' if language == 'c' else '-std=c++17'
     answer = 'answer.c' if language == 'c' else 'answer.cpp'
     commands = [
-        ('answer_compile', [compiler, standard, '-Wall', '-Werror', '-c', answer, '-o', 'answer.o']),
+        ('answer_compile', [compiler, standard, '-Wall', '-Werror', '-DLETTO_UNIT_TEST=1',
+                            '-c', answer, '-o', 'answer.o']),
     ] if mode == 'prepare' else [
         ('test_compile', ['g++', *TEST_FLAGS, '-c', source, '-o', 'catch2-tests.o']),
         ('link', ['g++', 'catch2-tests.o', 'answer.o', '/opt/catch2/lib/letto-catch2-runner.o',

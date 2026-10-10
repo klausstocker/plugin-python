@@ -21,5 +21,5 @@ class QuestionConfigDto(BaseModel):
 
 class CppQuestionConfigDto(QuestionConfigDto):
     language: Literal['c', 'cpp'] = 'cpp'
-    evalConfig: EvalConfigDto = Field(default_factory=lambda: EvalConfigDto(lintAtTest=False))
+    evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterWeight: float = 0.0

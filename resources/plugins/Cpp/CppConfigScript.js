@@ -15,16 +15,19 @@ async function configPluginCpp(dtoString) {
     }
     try { config = decode(field.value && field.value !== "{}" ? field.value : (dto.jsonData || params.config)); }
     catch (_) { config = {}; }
-    config = Object.assign({language: "cpp", indication: "", validation: "", files: {}, cpuTime: 5, evalConfig: {runAtTest: true, lintAtTest: false}}, config);
+    config = Object.assign({language: "cpp", indication: "", validation: "", files: {}, cpuTime: 5, evalConfig: {runAtTest: true, lintAtTest: true}}, config);
     root.innerHTML = `<div class="cpp-config">
       <h2>C/C++ configuration</h2>
       <label>Answer language <select data-cpp="language"><option value="cpp">C++17</option><option value="c">C17</option></select></label>
       <p data-cpp="language-warning" role="status" hidden style="color:#8a4b00"></p>
       <label>CPU time (seconds) <input data-cpp="cpu" type="number" min="1" step="1"></label>
       <label><input data-cpp="run" type="checkbox"> Allow students to run their program</label>
+      <label><input data-cpp="compile" type="checkbox"> Allow students to compile their code</label>
       <p>Template</p><textarea data-cpp="indication" rows="12" spellcheck="false" style="width:100%;font-family:monospace"></textarea>
       <p>Catch2 tests (C++17, also for C answers)</p><textarea data-cpp="validation" rows="16" spellcheck="false" style="width:100%;font-family:monospace"></textarea>
-      <p><button data-cpp="check" type="button">Test template</button></p>
+      <p><button data-cpp="run-template" type="button">Run</button> <button data-cpp="compile-template" type="button">compile</button> <button data-cpp="check" type="button">Test template</button></p>
+      <pre data-cpp="run-output" role="status" aria-live="polite" hidden style="white-space:pre-wrap"></pre>
+      <pre data-cpp="compile-output" role="status" aria-live="polite" hidden style="white-space:pre-wrap"></pre>
       <p>Files available to the submitted program</p><input data-cpp="upload" type="file" multiple><ul data-cpp="files"></ul>
       <p><select data-cpp="example"><option value="0">Function test</option><option value="1">stdout</option><option value="2">Read a file</option></select> <button data-cpp="load" type="button">Load example</button></p>
       <p data-cpp="build"></p><pre data-cpp="output" style="white-space:pre-wrap"></pre>
@@ -53,7 +56,7 @@ async function configPluginCpp(dtoString) {
         config.indication = element("indication").value;
         config.validation = element("validation").value;
         config.cpuTime = Math.max(1, Math.floor(Number(element("cpu").value) || 5));
-        config.evalConfig = {runAtTest: element("run").checked, lintAtTest: false};
+        config.evalConfig = {runAtTest: element("run").checked, lintAtTest: element("compile").checked};
         config.linterWeight = 0;
         field.value = JSON.stringify(config);
         field.dispatchEvent(new Event("input", {bubbles: true}));
@@ -77,16 +80,49 @@ async function configPluginCpp(dtoString) {
         element("language").value = config.language;
         element("cpu").value = config.cpuTime;
         element("run").checked = config.evalConfig.runAtTest !== false;
+        element("compile").checked = config.evalConfig.lintAtTest !== false;
         element("indication").value = config.indication;
         element("validation").value = config.validation;
         showFiles();
         save();
     }
-    ["language", "cpu", "run", "indication", "validation"].forEach(name => element(name).addEventListener("input", save));
+    ["language", "cpu", "run", "compile", "indication", "validation"].forEach(name => element(name).addEventListener("input", save));
     async function action(callback) {
         try { await callback(); }
         catch (error) { element("output").textContent = error.message; }
     }
+    element("run-template").onclick = async () => {
+        const button = element("run-template");
+        const feedback = element("run-output");
+        feedback.hidden = false;
+        feedback.textContent = "Running...";
+        button.disabled = true;
+        try {
+            save();
+            const data = await request("/run", {code: config.indication, questionConfigDto: config});
+            feedback.textContent = data.output || "Run completed without output.";
+        } catch (error) {
+            feedback.textContent = "Run request failed: " + error.message;
+        } finally {
+            button.disabled = false;
+        }
+    };
+    element("compile-template").onclick = async () => {
+        const button = element("compile-template");
+        const feedback = element("compile-output");
+        feedback.hidden = false;
+        feedback.textContent = "Compiling…";
+        button.disabled = true;
+        try {
+            save();
+            const data = await request("/compile", {code: config.indication, questionConfigDto: config});
+            feedback.textContent = data.output || "Compilation completed without feedback.";
+        } catch (error) {
+            feedback.textContent = "Compilation request failed: " + error.message;
+        } finally {
+            button.disabled = false;
+        }
+    };
     element("check").onclick = () => action(async () => {
         save();
         const data = await request("/check", {code: config.indication, testcode: config.validation, questionConfigDto: config});

@@ -16,6 +16,16 @@ TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }</pre>
 <p>Changing C17 to C++17, or C++17 to C17, does not rewrite your template or tests. Check that the student code supports the selected language and adapt its forward declarations in the Catch2 tests. A mismatch can cause an undefined reference linker error.</p>
 <p>The bundled examples use the preprocessor pattern above so their declarations work with both answer languages. Use <code>ANSWER_LINKAGE</code> before each tested function declaration. Jobe supplies <code>answer.c</code> for C answers and <code>answer.cpp</code> for C++ answers; <code>__has_include</code> detects the C answer without including its implementation. Keep the student implementation compiled separately. Do not use <code>__cplusplus</code> to select the answer's linkage: Catch2 tests themselves are always C++.</p>
 <h3>Running and testing</h3>
+<p>Run compiles the student's entire answer and starts its main function. It does not automatically call student functions. Unit tests instead start the main defined in jobe/catch2_runner.cpp, which runs the Catch2 test cases. During unit test compilation, LETTO_UNIT_TEST is defined for both the student answer and teacher tests. It is not defined for Run or compile. Students can include a main for manual experiments in the same answer by wrapping it as follows:</p>
+<pre>int calculate_sum(int a, int b) { return a + b; }
+
+#ifndef LETTO_UNIT_TEST
+int main(void) {
+    return calculate_sum(2, 3) == 5 ? 0 : 1;
+}
+#endif</pre>
+<p>Keep the functions being tested outside the guard. Put helpers and includes used only by main inside the guard too. An unguarded main conflicts with Catch2's main during linking.</p>
+<p>The compile button checks student code using C17 or C++17 with warnings treated as errors, without linking or executing it. It supports function answers without main and reports compiler diagnostics in the output panel. Teachers can enable it independently of Run Code. Successful compilation does not check unresolved references or Catch2 tests.</p>
 <p>Run Code executes the student's program, which needs a main function. Test template compiles the template against the teacher's Catch2 tests. Function answers can omit main when evaluated through Catch2. Choose a positive CPU time limit and whether students can run their program.</p>
 <h3>Files and examples</h3>
 <p>Uploaded files and example files are available in the working directory. The examples cover functions, stdout and reading number.txt. Templates intentionally need completing. Removing a file from a question does not delete shared stored content used by other questions.</p>

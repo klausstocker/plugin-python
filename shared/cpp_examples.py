@@ -36,12 +36,18 @@ TEST_CASE("printed message") {
 }
 '''
     entries = [
-        ("Function test", 'int calculate_sum(int a, int b) { return 0; }\n',
+        ("Function test", 'int calculate_sum(int a, int b) { return 0; }\n'
+         '\n#ifndef LETTO_UNIT_TEST\n#include <stdio.h>\n'
+         'int main(void) { printf("Sum: %d\\n", calculate_sum(2, 3)); return 0; }\n#endif\n',
          common + 'ANSWER_LINKAGE int calculate_sum(int, int);\n'
          'TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }\n'
          'TEST_CASE("negative") { REQUIRE(calculate_sum(-2, 1) == -1); }\n', {}),
-        ("stdout", '#include <stdio.h>\nvoid print_message(void) { /* print Hello! */ }\n', stdout_test, {}),
-        ("Read a file", '#include <stdio.h>\nint read_number(void) { return 0; }\n',
+        ("stdout", '#include <stdio.h>\nvoid print_message(void) { /* print Hello! */ }\n'
+         '\n#ifndef LETTO_UNIT_TEST\n'
+         'int main(void) { print_message(); return 0; }\n#endif\n', stdout_test, {}),
+        ("Read a file", '#include <stdio.h>\nint read_number(void) { return 0; }\n'
+         '\n#ifndef LETTO_UNIT_TEST\n'
+         'int main(void) { printf("Number: %d\\n", read_number()); return 0; }\n#endif\n',
          common + 'ANSWER_LINKAGE int read_number(void);\n'
          'TEST_CASE("number from file") { REQUIRE(read_number() == 42); }\n', {'number.txt': '42\n'}),
     ]

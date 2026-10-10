@@ -109,6 +109,7 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     rm -rf /var/lib/apt/lists/*
 
 COPY jobe/Catch2cTask.php jobe/Catch2cppTask.php /var/www/html/jobe/app/Libraries/
+COPY jobe/CompilecTask.php jobe/CompilecppTask.php /var/www/html/jobe/app/Libraries/
 COPY jobe/catch2_compile.py /usr/local/libexec/letto-catch2-compile.py
 COPY jobe/start-jobe.sh /usr/local/bin/start-jobe
 # Catch2 is required in every final image, not an optional runtime download.
@@ -120,6 +121,8 @@ RUN test -s /opt/catch2/VERSION && \
     python3 -m py_compile /usr/local/libexec/letto-catch2-compile.py && \
     php -l /var/www/html/jobe/app/Libraries/Catch2cTask.php && \
     php -l /var/www/html/jobe/app/Libraries/Catch2cppTask.php && \
+    php -l /var/www/html/jobe/app/Libraries/CompilecTask.php && \
+    php -l /var/www/html/jobe/app/Libraries/CompilecppTask.php && \
     sed -i 's/\r$//' /usr/local/bin/start-jobe && \
     chmod 755 /usr/local/bin/start-jobe && \
     rm -f /tmp/jobe_language_cache_file

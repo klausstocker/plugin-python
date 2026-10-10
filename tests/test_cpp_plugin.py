@@ -72,7 +72,7 @@ class TestCppPlugin(unittest.TestCase):
             main.CONFIG_STATES.pop('cpp-test-state', None)
 
     def test_execution_requires_authentication(self):
-        for endpoint in ('run', 'check', 'scorePlugin', 'example'):
+        for endpoint in ('run', 'compile', 'check', 'scorePlugin', 'example'):
             self.assertEqual(self.client.post('/plugincpp/' + endpoint, json={'code': ''}).status_code, 401)
 
     def test_run_uses_correct_language_flags_files_and_cpu_time(self):
@@ -86,8 +86,39 @@ class TestCppPlugin(unittest.TestCase):
                 self.assertEqual(response.status_code, 200, response.text)
                 args, kwargs = wrapper.return_value.run_test.call_args
                 self.assertEqual(args[0], language)
+                self.assertEqual(args[1], 'int main() { return 0; }')
                 self.assertEqual(kwargs['cputime'], 9)
                 self.assertIn(standard, kwargs['parameters']['compileargs'])
+
+    def test_compile_supports_function_answers_and_reports_diagnostics(self):
+        from shared.jobe_wrapper import RunResult
+        for language in ('c', 'cpp'):
+            for outcome in (15, 11):
+                with self.subTest(language=language, outcome=outcome), patch.object(cpp, 'JobeWrapper') as wrapper:
+                    wrapper.return_value.run_test.return_value = RunResult({
+                        'outcome': outcome, 'cmpinfo': 'answer: invalid syntax' if outcome == 11 else ''})
+                    response = self.client.post('/plugincpp/compile', headers=self.headers, json={
+                        'code': 'int answer(void) { return 42; }',
+                        'questionConfigDto': {'language': language, 'cpuTime': 9,
+                                              'files': {'numbers.h': 'int number;'}}})
+                    self.assertEqual(response.status_code, 200, response.text)
+                    self.assertEqual(response.json()['success'], outcome == 15)
+                    self.assertIn('Compilation successful.' if outcome == 15 else 'invalid syntax',
+                                  response.json()['output'])
+                    self.assertIn('Compiler output:', response.json()['output'])
+                    self.assertEqual(response.json()['compilerOutput'],
+                                     'answer: invalid syntax' if outcome == 11 else '')
+                    if outcome == 15:
+                        self.assertIn('(no compiler diagnostics)', response.json()['output'])
+                    args, kwargs = wrapper.return_value.run_test.call_args
+                    self.assertEqual(args[:2], ('compile' + language, 'int answer(void) { return 42; }'))
+                    self.assertEqual(kwargs['cputime'], 9)
+                    self.assertEqual(kwargs['files'][0][1:], ('numbers.h', b'int number;'))
+
+    def test_compile_rejects_invalid_requests(self):
+        for body in ([], {}, {'code': '', 'questionConfigDto': {'language': 'python'}}):
+            response = self.client.post('/plugincpp/compile', headers=self.headers, json=body)
+            self.assertEqual(response.status_code, 400, response.text)
 
     def test_check_and_score_use_catch2(self):
         with patch.object(cpp, 'check_catch2', return_value=CheckResult({'count': 2, 'failure_count': 1})) as check:
@@ -129,6 +160,26 @@ class TestCppPlugin(unittest.TestCase):
 
 class TestCppPluginIntegration(unittest.TestCase):
     """Requires the development Jobe service at localhost:4000."""
+
+    def test_compile_checks_code_without_linking_or_running(self):
+        client = TestClient(main.app)
+        headers = {'Authorization': 'Bearer ' + common.get_exec_token()}
+        cases = [
+            ('int answer(void) { return 42; }', True),
+            ('#include "number.h"\nint answer(void) { return NUMBER; }', True),
+            ('int main(void) { for (;;) {} }', True),
+            ('int main(void) { return 1; }', True),
+            ('int answer(void) { return ; }', False),
+        ]
+        with patch.object(cpp, 'JOBE_SERVER', '127.0.0.1:4000'):
+            for language in ('c', 'cpp'):
+                for code, success in cases:
+                    with self.subTest(language=language, code=code):
+                        response = client.post('/plugincpp/compile', headers=headers, json={
+                            'code': code, 'questionConfigDto': {'language': language,
+                                'files': {'number.h': '#define NUMBER 42\n'}}})
+                        self.assertEqual(response.status_code, 200, response.text)
+                        self.assertEqual(response.json()['success'], success, response.text)
 
     def test_examples_grade_completed_c_and_cpp_answers_through_endpoints(self):
         client = TestClient(main.app)
