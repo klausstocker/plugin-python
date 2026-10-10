@@ -20,7 +20,7 @@ function configPluginPython(dtoString) {
 
     const configField = $(config_form_config)[0];
     const pluginTag = dto.tagName || "pluginpython";
-    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "");
+    const serviceBase = ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || dtoParams.serviceBase || "/pluginpython").replace(/\/$/, "");
     const pluginTokenPromise = requestExecutionToken();
 
     const ids = {
@@ -1443,7 +1443,7 @@ function configPluginPython(dtoString) {
                     credentials: "include",
                     body: JSON.stringify(payload)
                 });
-                const data = await response.json();
+                const data = await readExecutionResponse(response);
                 const responseText = data && data.output ? data.output : JSON.stringify(data);
                 const limitExceeded = /Error while running code: Time limit exceeded/.test(responseText);
                 outputEl.textContent = showTiming ? `${responseText}\n\n${timingText(limitExceeded)}` : responseText;
@@ -1595,6 +1595,20 @@ function configPluginPython(dtoString) {
             .replace(/"/g, "&quot;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+    }
+
+    async function readExecutionResponse(response) {
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            throw new Error(`HTTP ${response.status} from ${response.url}: expected JSON, received ${response.headers.get("content-type") || "an unknown content type"}. ${text.replace(/\s+/g, " ").slice(0, 160)}`);
+        }
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} from ${response.url}: ${data.output || data.detail || data.error || JSON.stringify(data)}`);
+        }
+        return data;
     }
 
     async function requestExecutionToken() {
