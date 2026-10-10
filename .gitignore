@@ -1,6 +1,7 @@
 /.idea/
 /.idea/*
 *.pyc
+*.log
 /.venv/
 /build/
 /tmp/
