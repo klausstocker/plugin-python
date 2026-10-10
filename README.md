@@ -1,4 +1,49 @@
-# plugin-python 
+# PythonCppPlugin
+
+One application container registers two independent LeTTo plugin types:
+`Python` and `Cpp`. Both use the same Jobe container. The Docker container and
+service registration name is `PythonCppPlugin`; image repositories use lowercase
+`klausstocker/python-cpp-plugin` and `klausstocker/python-cpp-plugin-jobe`.
+
+The Python execution URLs remain under `/pluginpython`. The C/C++ plugin uses
+`/plugincpp/run`, `/plugincpp/check`, `/plugincpp/scorePlugin` and
+`/plugincpp/example`, with its own `CppScript.js` and `CppConfigScript.js`.
+The shared `/open/pluginlist` and `/open/generalinfolist` advertise both types.
+Execution endpoints use the same token authentication and uploaded-file storage.
+
+Open `http://localhost:8209/plugincpp/dev/config` for the C/C++ development dialog.
+Select C17 or C++17 for answers; teacher tests always use Catch2 and C++17.
+The three C/C++ examples cover functions, stdout and file access. Their starter
+code intentionally needs completing. Each Catch2 TEST_CASE contributes one
+equally weighted case to the grade. Student Run Code needs a main function;
+function answers evaluated through Catch2 can omit main.
+
+Switching the answer language shows a reminder to check the template and test
+forward declarations. C answers need C linkage (`extern "C"`); C++ answers use
+C++ linkage. The bundled tests use `__has_include("answer.c")` to define
+`ANSWER_LINKAGE` automatically, so the same tests work after switching languages.
+The C/C++ help includes this pattern for custom tests. The tests themselves are
+always C++, so `__cplusplus` cannot distinguish the answer language.
+
+C/C++ overview help is in `resources/plugins/Cpp/Cpp.html`; detailed help is in
+`resources/help/Cpp.html` and served at `/plugincpp/help`. Its static resources
+are served at `/plugincpp/static/`. Python help remains separate.
+
+For the first deployment after the Docker rename, stop the previous Compose
+project before starting the new one, because both use ports 8209 and 4000:
+
+```powershell
+docker compose -p letto-plugin-python --env-file .env.docker-local -f yml/docker-service-pluginpython.yml down --remove-orphans
+.\build.bat --no-push
+.\start_development.bat
+```
+
+This stops the previous containers without deleting their persistent volumes.
+Compose now uses project `python-cpp-plugin`, service `pythoncppplugin`, and
+containers `PythonCppPlugin` and `PythonCppPlugin-jobe`. Jobe retains its network
+alias `jobe`. Existing file-storage and log-volume paths are retained. The proxy
+configuration includes both URL prefixes. Compose uses locally built `latest`
+images by default; set `PLUGIN_IMAGE_TAG` to deploy another published tag.
 
 ## Standalone development dialog
 
@@ -50,8 +95,8 @@ links to it.
 Run `build.bat` on Windows or `bash build.sh` on Linux (Bash 4+), from any
 working directory. By default, both scripts build these images for the local Docker platform:
 
-- `klausstocker/letto-plugin-python:latest`
-- `klausstocker/letto-plugin-python-jobe:latest`
+- `klausstocker/python-cpp-plugin:latest`
+- `klausstocker/python-cpp-plugin-jobe:latest`
 
 Pass `plugin` or `jobe` to build and push only that image, for example
 `build.bat plugin` or `bash build.sh jobe`. The optional `--no-push` flag can
@@ -150,8 +195,8 @@ cd C:\Pfad\zu\plugin-python
 docker version
 docker compose version
 
-docker pull klausstocker/letto-plugin-python:latest
-docker pull klausstocker/letto-plugin-python-jobe:latest
+docker pull klausstocker/python-cpp-plugin:latest
+docker pull klausstocker/python-cpp-plugin-jobe:latest
 
 New-Item -ItemType Directory -Force .docker-test\log | Out-Null
 New-Item -ItemType Directory -Force .docker-test\images | Out-Null
@@ -179,13 +224,13 @@ docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.y
 curl.exe http://localhost:8209/ping
 curl.exe http://localhost:4000/
 
-docker inspect letto-pluginpython --format '{{.Config.Image}}'
-docker inspect letto-jobe --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}}'
 ```
 
 Der erste Aufruf sollte `pong` liefern. Die beiden `docker inspect`-Befehle
-sollten `klausstocker/letto-plugin-python:latest` beziehungsweise
-`klausstocker/letto-plugin-python-jobe:latest` ausgeben. Der Plugin-Healthcheck
+sollten `klausstocker/python-cpp-plugin:latest` beziehungsweise
+`klausstocker/python-cpp-plugin-jobe:latest` ausgeben. Der Plugin-Healthcheck
 hat eine Startphase von 90 Sekunden; direkt nach dem Start kann der Status daher
 zunächst `starting` sein.
 
@@ -257,8 +302,8 @@ Status, verwendete Images und Logs prüfen:
 
 ```bash
 docker compose --env-file .env -f docker-service-pluginpython.yml ps
-docker inspect letto-pluginpython --format '{{.Config.Image}}'
-docker inspect letto-jobe --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}}'
 docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
 ```
 
@@ -292,7 +337,7 @@ cd /opt/letto/docker/compose/letto
 docker compose --env-file .env -f docker-service-pluginpython.yml down --remove-orphans
 
 for image_id in $(docker image ls \
-  --filter 'reference=klausstocker/letto-plugin-python*' \
+  --filter 'reference=klausstocker/python-cpp-plugin*' \
   --quiet | sort -u); do
   docker image rm "$image_id"
 done
@@ -308,8 +353,8 @@ und erfolgreich antworten:
 
 ```bash
 docker compose --env-file .env -f docker-service-pluginpython.yml ps
-docker inspect letto-pluginpython --format '{{.Config.Image}} {{.Image}}'
-docker inspect letto-jobe --format '{{.Config.Image}} {{.Image}}'
+docker inspect PythonCppPlugin --format '{{.Config.Image}} {{.Image}}'
+docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}} {{.Image}}'
 docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
 curl --fail http://localhost:8209/ping
 curl --fail http://localhost:4000/
@@ -373,7 +418,7 @@ Catch2 und der Test-Runner werden beim Image-Build vorkompiliert; Compiler und
 CMake fuer den Catch2-Build bleiben im separaten Build-Stage.
 
 ```powershell
-docker build -f jobe/Dockerfile -t klausstocker/letto-plugin-python-jobe:1.0.0 .
+docker build -f jobe/Dockerfile -t klausstocker/python-cpp-plugin-jobe:1.0.0 .
 ```
 
 Nach dem Neuaufsetzen des Jobe-Containers mit diesem Image bietet Jobe

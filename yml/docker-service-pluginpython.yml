@@ -3,16 +3,16 @@ networks:
     external: true
 
 # Der Name bestimmt das Projekt und sollte bei jeder yml-Datei unterschiedlich sein - er kann mit -p bei docker-compose überschrieben werden
-name: letto-plugin-python
+name: python-cpp-plugin
 
 services:
-  pluginpython:
-    image: "klausstocker/letto-plugin-python:1.0.0"
+  pythoncppplugin:
+    image: "klausstocker/python-cpp-plugin:${PLUGIN_IMAGE_TAG:-latest}"
     restart: always
     networks:
       - nw-letto
-    hostname: letto-pluginpython
-    container_name: letto-pluginpython
+    hostname: PythonCppPlugin
+    container_name: PythonCppPlugin
     deploy:
       resources:
         limits:
@@ -33,12 +33,13 @@ services:
       TZ: ${TIMEZONE:-Europe/Berlin}
       LC_ALL: ${LOCALE:-de_DE.UTF-8}
       SERVICEPATH: "/pluginpython"
+      CPP_SERVICEPATH: "/plugincpp"
       RESOURCE_DIR: "/app/resources"
-      network_letto_address: letto-pluginpython
-      docker_container_name: letto-pluginpython
+      network_letto_address: PythonCppPlugin
+      docker_container_name: PythonCppPlugin
       letto_user_user_password: ${SERVICE_USER_PASSWORD}
       letto_setup_uri: ${LETTO_SETUP_URI:-http://letto-setup.nw-letto:8096}
-      letto_plugin_uri_intern: ${LETTO_PLUGIN_URI_INTERN:-http://letto-pluginpython.nw-letto:8080}
+      letto_plugin_uri_intern: ${LETTO_PLUGIN_URI_INTERN:-http://PythonCppPlugin.nw-letto:8080}
       letto_plugin_uri_extern: ${LETTO_PLUGIN_URI_EXTERN:-https://${SERVER_NAME}/pluginpython}
       letto_pathImages: /opt/letto/images
       letto_pathPlugins: /opt/letto/plugins
@@ -47,9 +48,9 @@ services:
       PLUGIN_REGISTER_ON_READY: ${PLUGIN_REGISTER_ON_READY:-true}
 
   jobe:
-    image: "klausstocker/letto-plugin-python-jobe:1.0.0"
-    container_name: letto-jobe
-    hostname: letto-jobe
+    image: "klausstocker/python-cpp-plugin-jobe:${PLUGIN_IMAGE_TAG:-latest}"
+    container_name: PythonCppPlugin-jobe
+    hostname: PythonCppPlugin-jobe
     restart: always
     ports:
       - "4000:80"

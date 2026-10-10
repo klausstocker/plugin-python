@@ -54,8 +54,8 @@ rem Clear the tag lookup status before checking the file write.
 ver >nul
 >"%SCRIPT_DIR%revision.txt" echo !REVISION!
 if errorlevel 1 goto failed
-set "PLUGIN_IMAGE=klausstocker/letto-plugin-python"
-set "JOBE_IMAGE=klausstocker/letto-plugin-python-jobe"
+set "PLUGIN_IMAGE=klausstocker/python-cpp-plugin"
+set "JOBE_IMAGE=klausstocker/python-cpp-plugin-jobe"
 set "IMAGES=!PLUGIN_IMAGE! !JOBE_IMAGE!"
 if /i "!TARGET!"=="plugin" set "IMAGES=!PLUGIN_IMAGE!"
 if /i "!TARGET!"=="jobe" set "IMAGES=!JOBE_IMAGE!"

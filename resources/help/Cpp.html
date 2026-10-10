@@ -1,0 +1,24 @@
+<article>
+<h2>C/C++ programming questions</h2>
+<p>Choose C17 or C++17 for the student answer. Catch2 validation tests are always written in C++17. The teacher tests and student answer are compiled separately and linked with the installed Catch2 runner. Do not define a Catch2 main function.</p>
+<h3>Function tests</h3>
+<pre>#include &lt;catch2/catch_test_macros.hpp&gt;
+// Select linkage using the answer file supplied by Jobe.
+#if __has_include("answer.c")
+#define ANSWER_LINKAGE extern "C"
+#else
+#define ANSWER_LINKAGE
+#endif
+ANSWER_LINKAGE int calculate_sum(int, int);
+TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }</pre>
+<p>For C answers, declare tested functions using C linkage, for example <code>extern "C" int calculate_sum(int, int);</code>. Use one TEST_CASE per scored case; assertions within a case do not receive separate points. A compilation error receives zero points.</p>
+<h3>Switching the answer language</h3>
+<p>Changing C17 to C++17, or C++17 to C17, does not rewrite your template or tests. Check that the student code supports the selected language and adapt its forward declarations in the Catch2 tests. A mismatch can cause an undefined reference linker error.</p>
+<p>The bundled examples use the preprocessor pattern above so their declarations work with both answer languages. Use <code>ANSWER_LINKAGE</code> before each tested function declaration. Jobe supplies <code>answer.c</code> for C answers and <code>answer.cpp</code> for C++ answers; <code>__has_include</code> detects the C answer without including its implementation. Keep the student implementation compiled separately. Do not use <code>__cplusplus</code> to select the answer's linkage: Catch2 tests themselves are always C++.</p>
+<h3>Running and testing</h3>
+<p>Run Code executes the student's program, which needs a main function. Test template compiles the template against the teacher's Catch2 tests. Function answers can omit main when evaluated through Catch2. Choose a positive CPU time limit and whether students can run their program.</p>
+<h3>Files and examples</h3>
+<p>Uploaded files and example files are available in the working directory. The examples cover functions, stdout and reading number.txt. Templates intentionally need completing. Removing a file from a question does not delete shared stored content used by other questions.</p>
+<h3>Compilation cache</h3>
+<p>Jobe caches teacher test objects using the test source, included headers and compilation flags. Student submissions can populate the cache. The cache is cleared on container startup.</p>
+</article>

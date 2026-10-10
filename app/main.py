@@ -24,6 +24,9 @@ from fastapi import FastAPI, APIRouter, Body, UploadFile, File, Request
 from app.code_execution_endpoints import _file_specs_from_config, get_exec_token, router as code_execution_router
 from app.dev_ui import install_dev_ui
 from app.static_resources import install_static_resources
+from app.cpp_execution_endpoints import CPP_SERVICEPATH, router as cpp_execution_router
+from shared.check_catch2 import check_catch2
+from shared.question_config import CppQuestionConfigDto
 from app.dataset_helper import (
     dataset_file_from_variables,
     extract_dataset_variables,
@@ -50,9 +53,9 @@ logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 # Der Servicepath muss in der nginx-Konfiguration auf den Docker-Container des Plugins gesetzt werden -> siehe proxy/pluginpython.conf
 CONF_STANDARD_SERVICEPATH = "/pluginpython"
 # Name des Plugin-Service
-CONF_APPLICATION_NAME = "pluginpython"
+CONF_APPLICATION_NAME = "PythonCppPlugin"
 # Name des Services wie es am Setup registriert wird
-CONF_PLUGIN_NAME = "letto-pluginpython"
+CONF_PLUGIN_NAME = "PythonCppPlugin"
 # Author des Plugins
 CONF_PLUGIN_AUTHOR = "Klaus Stocker"
 # Lizenz des Plugins
@@ -126,8 +129,8 @@ PLUGIN_ENDPOINT_NAME = os.getenv("PLUGIN_ENDPOINT_NAME", "pluginpython")
 PLUGIN_REGISTER_ON_READY = os.getenv("PLUGIN_REGISTER_ON_READY", "true").lower() == "true"
 PLUGIN_REGISTER_RETRIES = int(os.getenv("PLUGIN_REGISTER_RETRIES", "30"))
 PLUGIN_REGISTER_DELAY_SECONDS = float(os.getenv("PLUGIN_REGISTER_DELAY_SECONDS", "1.0"))
-NW_LETTO_ADDRESS = os.getenv("network_letto_address", os.getenv("NETWORK_LETTO_ADDRESS", "letto-pluginpython"))
-DOCKER_CONTAINER_NAME = os.getenv("docker_container_name", os.getenv("DOCKER_CONTAINER_NAME", "letto-pluginpython"))
+NW_LETTO_ADDRESS = os.getenv("network_letto_address", os.getenv("NETWORK_LETTO_ADDRESS", "PythonCppPlugin"))
+DOCKER_CONTAINER_NAME = os.getenv("docker_container_name", os.getenv("DOCKER_CONTAINER_NAME", "PythonCppPlugin"))
 LETTO_PLUGIN_URI_INTERN = os.getenv("letto_plugin_uri_intern",
                                     os.getenv("LETTO_PLUGIN_URI_INTERN", f"http://{NW_LETTO_ADDRESS}.nw-letto:8080"))
 LETTO_PLUGIN_URI_EXTERN = os.getenv("letto_plugin_uri_extern", os.getenv("LETTO_PLUGIN_URI_EXTERN", ""))
@@ -226,14 +229,14 @@ def log_external_uri_configuration() -> None:
     )
 
 
-def encode_question_config_base64(config_raw: Optional[str]) -> str:
+def encode_question_config_base64(config_raw: Optional[str], config_model=QuestionConfigDto) -> str:
     if not config_raw:
-        question_config = QuestionConfigDto()
+        question_config = config_model()
     else:
         try:
-            question_config = QuestionConfigDto.model_validate_json(config_raw)
+            question_config = config_model.model_validate_json(config_raw)
         except (ValidationError, ValueError):
-            question_config = QuestionConfigDto(indication=config_raw)
+            question_config = config_model(indication=config_raw)
 
     json_payload = question_config.model_dump_json()
     return base64.b64encode(json_payload.encode("utf-8")).decode("ascii")
@@ -864,6 +867,9 @@ def log_dataset_transfer(
 # Plugin: die eigentliche Pluginklasse
 # --------------------------
 class PluginPython:
+    PLUGIN_TYPE = "python.PluginPython"
+    SERVICEPATH = SERVICEPATH
+    DETAILED_HELPFILE = CONF_DETAILED_HELPFILE
     VERSION = CONF_VERSION
     HELPFILES = CONF_HELPFILES
     JSLIBS = CONF_JSLIBS
@@ -938,7 +944,7 @@ class PluginPython:
             version=self.VERSION,
             wikiHelp="Plugins",
             help=help_text,
-            pluginType="python.PluginPython",
+            pluginType=self.PLUGIN_TYPE,
             initPluginJS=self.INIT_JS,
             javaScript=True,
             javascriptLibrariesLocal=libs_local
@@ -1024,13 +1030,53 @@ class PluginPython:
 # --------------------------
 # Plugin registry (like StartupConfiguration.registerPlugin)
 # --------------------------
+class PluginCpp(PluginPython):
+    PLUGIN_TYPE = "cpp.PluginCpp"
+    SERVICEPATH = CPP_SERVICEPATH
+    DETAILED_HELPFILE = "help/Cpp.html"
+    HELPFILES = ["plugins/Cpp/Cpp.html"]
+    JSLIBS = ["plugins/Cpp/CppScript.js", "plugins/Cpp/CppConfigScript.js"]
+    INIT_JS = "initPluginCpp"
+    CONFIG_JS = "configPluginCpp"
+
+    def get_html(self, params, q):
+        return '<div class="letto-plugin-cpp">Write your program in C or C++</div>'
+
+    def score(self, antwort, toleranz, answerDto, grade, config="", pluginDto=None, varsQuestion=None):
+        info = PluginScoreInfoDto(
+            schuelerErgebnis=CalcErgebnisDto(string=""), zielEinheit=answerDto.ze if answerDto else "",
+            punkteIst=0.0, punkteSoll=float(grade), status="FALSCH", htmlScoreInfo="", feedback="")
+        try:
+            raw = config or "{}"
+            if pluginDto and pluginDto.jsonData:
+                raw = base64.b64decode(pluginDto.jsonData).decode("utf-8")
+            settings = CppQuestionConfigDto.model_validate_json(raw)
+            result = check_catch2(
+                os.getenv("JOBE_SERVER", "jobe:80"), antwort or "",
+                _extract_validation_code(answerDto, config, pluginDto), language=settings.language,
+                files=JobeWrapper.createFiles(_extract_file_specs_from_config(config, pluginDto)),
+                cputime=_extract_cputime(config, pluginDto))
+            info.punkteIst = float(grade * result.score())
+            info.status = result.status()
+            info.feedback = repr(result)
+        except Exception as error:
+            logger.exception("C/C++ scoring failed")
+            info.feedback = f"Error scoring C/C++ code: {error}"
+        info.schuelerErgebnis = CalcErgebnisDto(string=info.feedback)
+        info.htmlScoreInfo = f"<pre>{html.escape(info.feedback)}</pre>"
+        return info
+
+
 REGISTERED_PLUGINS: Dict[str, str] = {
     CONF_PLUGIN: "Plugin Python",
+    "Cpp": "Plugin C/C++",
 }
 
 def create_plugin(typ: str, name: str, params: str) -> Optional[PluginPython]:
     if typ == CONF_PLUGIN:
         return PluginPython(name, params)
+    if typ == "Cpp":
+        return PluginCpp(name, params)
     return None
 
 
@@ -1047,7 +1093,7 @@ def _build_service_base_urls() -> dict:
         "pluginlist": f"{base}/open/pluginlist",
         "generalinfolist": f"{base}/open/generalinfolist",
         "generalinfo": f"{base}/open/generalinfo",
-        "reloadplugindto": f"{base}{CONF_STANDARD_SERVICEPATH}/api/open/reloadplugindto",
+        "reloadplugindto": f"{base}{SERVICEPATH}/api/open/reloadplugindto",
         "info": f"{base}/info",
     }
 
@@ -1068,8 +1114,7 @@ async def _wait_until_service_is_ready() -> dict:
                 generalinfo_ok = (
                                      await client.post(
                                          urls["generalinfo"],
-                                         content="Python - Plugin",
-                                         headers={"Content-Type": "text/plain; charset=utf-8"},
+                                         json=CONF_PLUGIN,
                                      )
                                  ).status_code == 200
 
@@ -1302,7 +1347,8 @@ def create_or_update_configuration_state(
     state.pluginConfigDto.params.pop("pluginToken", None)
 
     if state.pluginPython is not None:
-        state.pluginConfigDto.params["help"] = read_resource_text(CONF_DETAILED_HELPFILE)
+        state.pluginConfigDto.params["help"] = read_resource_text(state.pluginPython.DETAILED_HELPFILE)
+        state.pluginConfigDto.params["serviceBase"] = state.pluginPython.SERVICEPATH
 
         state.pluginConfigurationInfoDto = PluginConfigurationInfoDto(
             configurationID=configuration_id,
@@ -1315,7 +1361,7 @@ def create_or_update_configuration_state(
             addDataSet=CONF_addDataSet,
             calcMaxima=CONF_calcMaxima,
             externUrl=CONF_externUrl,
-            javaScriptMethode="configPlugin",
+            javaScriptMethode=state.pluginPython.CONFIG_JS,
             configurationUrl=LETTO_PLUGIN_URI_EXTERN or "",
         )
 
@@ -1355,12 +1401,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="LeTTo Plugin Python",
+    title="PythonCppPlugin",
     version=CONF_VERSION,
     lifespan=lifespan,
 )
 
 install_static_resources(app, SERVICEPATH)
+install_static_resources(app, CPP_SERVICEPATH, "Cpp", root_alias=False)
 
 
 @app.middleware("http")
@@ -1476,8 +1523,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={},
-            jsonData=encode_question_config_base64(req.config)
+            params={"serviceBase": pi.SERVICEPATH},
+            jsonData=encode_question_config_base64(req.config, CppQuestionConfigDto if req.typ == "Cpp" else QuestionConfigDto)
         )
         log_dataset_transfer("/open loadplugindto response", question=req.q, plugin_dto=plugin_dto)
         return plugin_dto
@@ -1611,8 +1658,8 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             imageUrl="",
             width=CONF_width,
             height=CONF_height,
-            params={"config": effective_config},
-            jsonData=encode_question_config_base64(effective_config),
+            params={"config": effective_config, "serviceBase": pi.SERVICEPATH},
+            jsonData=encode_question_config_base64(effective_config, CppQuestionConfigDto if effective_typ == "Cpp" else QuestionConfigDto),
         )
         log_dataset_transfer("/open reloadplugindto response", question=effective_question, plugin_dto=plugin_dto)
         return plugin_dto
@@ -1647,11 +1694,11 @@ def ping_open() -> str:
 @app.get(INFO, response_model=ServiceInfoDTO)
 def info():
     return ServiceInfoDTO(
-        serviceName="pluginpython",
+        serviceName=CONF_APPLICATION_NAME,
         version="0.1",
         author="Klaus Stocker",
         starttime=datetime.now().isoformat(),
-        adminInfoDto=AdminInfoDto(applicationname="pluginpython"),
+        adminInfoDto=AdminInfoDto(applicationname=CONF_APPLICATION_NAME),
     )
 
 
@@ -1664,7 +1711,9 @@ def version():
     return CONF_VERSION
 
 app.include_router(code_execution_router)
+app.include_router(cpp_execution_router)
 install_dev_ui(app, SERVICEPATH)
+install_dev_ui(app, CPP_SERVICEPATH, "Cpp")
 
 # Mount internal open API at /open and (for proxy setups) also under /pluginpython/open
 app.include_router(mount_internal_open(LOCAL_API))

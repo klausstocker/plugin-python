@@ -91,7 +91,7 @@ class JobeWrapper():
         connect.request(method, resource, data, headers)
         return connect
 
-    def run_test(self, language, code, sourceFilename, files=None, cputime=None):
+    def run_test(self, language, code, sourceFilename, files=None, cputime=None, parameters=None):
         '''Execute the given code in the given language.
         Return the result object.'''
         started = perf_counter()
@@ -102,8 +102,11 @@ class JobeWrapper():
             'sourcecode': code,
             'file_list': []
         }
+        run_parameters = dict(parameters or {})
         if cputime is not None:
-            runspec['parameters'] = {'cputime': cputime}
+            run_parameters['cputime'] = cputime
+        if run_parameters:
+            runspec['parameters'] = run_parameters
         
         for fileId, name, content in files or []:
             if self.put_file(fileId, content):

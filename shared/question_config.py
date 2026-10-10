@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,3 +17,9 @@ class QuestionConfigDto(BaseModel):
     linterWeight: float = 0.0
     cpuTime: int = 5
     datasetVariables: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class CppQuestionConfigDto(QuestionConfigDto):
+    language: Literal['c', 'cpp'] = 'cpp'
+    evalConfig: EvalConfigDto = Field(default_factory=lambda: EvalConfigDto(lintAtTest=False))
+    linterWeight: float = 0.0

@@ -231,7 +231,7 @@ function configPluginPython(dtoString) {
 
     function parseConfig(rawValue, fallbackData) {
         const defaults = {
-            indication: fallbackData && typeof fallbackData.indication === "string" ? fallbackData.indication : "# Preview code\n",
+            indication: fallbackData && typeof fallbackData.indication === "string" ? fallbackData.indication : "# Template code\n",
             validation: fallbackData && typeof fallbackData.validation === "string" ? fallbackData.validation : "# Unit test code\n",
             files: (fallbackData && fallbackData.files) || extractFilesFromConfigValue(rawValue) || {},
             evalConfig: {
@@ -300,7 +300,7 @@ function configPluginPython(dtoString) {
                     <div class="tab-head-row">
                         <div class="tab-buttons">
                             <button type="button" class="tab-btn active" data-tab="tab-unittest">UnitTest</button>
-                            <button type="button" class="tab-btn" data-tab="tab-preview">Preview</button>
+                            <button type="button" class="tab-btn" data-tab="tab-preview">Template</button>
                             <button type="button" class="tab-btn" data-tab="tab-files">Files</button>
                             <button type="button" class="tab-btn" data-tab="tab-options">Configuration</button>
                         </div>
@@ -321,7 +321,7 @@ function configPluginPython(dtoString) {
                             </div>
 
                             <div class="tab-panel" id="tab-preview">
-                                <h3>Preview editor</h3>
+                                <h3>Template editor</h3>
                                 <div id="${ids.previewEditorId}" class="editor-box"></div>
                             </div>
 
@@ -389,9 +389,9 @@ function configPluginPython(dtoString) {
                         <div class="shared-actions">
                             <div class="shared-head-row">
                                 <div class="btn-row">
-                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Preview-Code aus. Nur im Preview-Tab verfügbar; UnitTests mit check ausführen." disabled>run</button>
-                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn" title="Prüft den Stil des UnitTest-Codes im UnitTest-Tab, sonst den Preview-Code.">lint</button>
-                                    <button type="button" id="${ids.btnCheckId}" class="cfg-btn" title="Führt die UnitTests mit dem Preview-Code aus.">check</button>
+                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Template-Code aus. Nur im Template-Tab verfügbar; UnitTests mit check ausführen." disabled>run</button>
+                                    <button type="button" id="${ids.btnLintId}" class="cfg-btn" title="Prüft den Stil des UnitTest-Codes im UnitTest-Tab, sonst den Template-Code.">lint</button>
+                                    <button type="button" id="${ids.btnCheckId}" class="cfg-btn" title="Führt die UnitTests mit dem Template-Code aus.">check</button>
                                     <button type="button" id="${ids.btnScoreId}" class="cfg-btn" title="Berechnet die Punkte aus UnitTests und Linter-Ergebnis.">score</button>
                                 </div>
                                 <button type="button" id="${ids.outputToggleId}" class="icon-btn" title="Hide output">▾</button>
@@ -1307,7 +1307,7 @@ function configPluginPython(dtoString) {
 
     function hasUserCodeToOverwrite(example) {
         const placeholderUnitCode = "# Unit test code";
-        const placeholderPreviewCode = "# Preview code";
+        const placeholderPreviewCode = "# Template code";
         const currentUnitCode = getUnitCode().trim();
         const currentPreviewCode = getPreviewCode().trim();
         const exampleUnitCode = String((example && example.validation) || "").trim();
@@ -1318,6 +1318,7 @@ function configPluginPython(dtoString) {
             && currentUnitCode !== exampleUnitCode;
         const previewWouldBeOverwritten = currentPreviewCode
             && currentPreviewCode !== placeholderPreviewCode
+            && currentPreviewCode !== "# Preview code"
             && currentPreviewCode !== examplePreviewCode;
         return !!(unitWouldBeOverwritten || previewWouldBeOverwritten);
     }
