@@ -11,7 +11,7 @@ from app import main, cpp_execution_endpoints as cpp, code_execution_endpoints a
 from app.static_resources import install_static_resources
 from app.dev_ui import install_dev_ui
 from shared.check_result import CheckResult
-from shared.cpp_examples import cpp_examples
+from shared.cpp_examples import EXAMPLE_NAMES, cpp_examples
 
 RESOURCES = Path(__file__).resolve().parents[1] / 'resources'
 
@@ -57,6 +57,17 @@ class TestCppPlugin(unittest.TestCase):
                 self.assertEqual(response.content, (RESOURCES / 'plugins/Cpp' / name).read_bytes())
             self.assertEqual((RESOURCES / 'plugins/Cpp/unittest-logo.png').read_bytes(),
                              (RESOURCES / 'plugins/Python/unittest-logo.png').read_bytes())
+
+    def test_shared_formatter_assets_support_service_prefixes(self):
+        with patch.dict(os.environ, {'RESOURCE_DIR': str(RESOURCES)}):
+            app = FastAPI()
+            install_static_resources(app, '/custom/python')
+            install_static_resources(app, '/custom/cpp', 'Cpp', root_alias=False)
+            client = TestClient(app)
+            for prefix in ('/custom/python', '/custom/cpp', ''):
+                response = client.get(prefix + '/static/formatting/client.js')
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.content, (RESOURCES / 'formatting/client.js').read_bytes())
 
     def test_cpp_development_dialog(self):
         with patch.dict(os.environ, {'RESOURCE_DIR': str(RESOURCES), 'PLUGIN_DEV_UI': 'true'}):
@@ -156,7 +167,13 @@ class TestCppPlugin(unittest.TestCase):
             for index, entry in enumerate(entries):
                 response = self.client.post('/plugincpp/example', headers=self.headers,
                                             json={'index': index, 'questionConfigDto': {'language': language}})
+                self.assertEqual(response.json()['names'], list(EXAMPLE_NAMES))
+                self.assertEqual(response.json()['count'], len(EXAMPLE_NAMES))
                 self.assertEqual(response.json()['output'], entry)
+                folder = RESOURCES.parent / 'examples/CPP' / EXAMPLE_NAMES[index]
+                self.assertEqual(entry['title'], folder.name)
+                self.assertEqual(entry['indication'], (folder / 'template.cpp').read_text(encoding='utf-8'))
+                self.assertEqual(entry['validation'], (folder / 'test_answer.cpp').read_text(encoding='utf-8'))
                 self.assertIn('catch2/catch_test_macros.hpp', entry['validation'])
                 self.assertIn('#if __has_include("answer.c")', entry['validation'])
                 self.assertIn('#define ANSWER_LINKAGE extern "C"', entry['validation'])
@@ -191,12 +208,8 @@ class TestCppPluginIntegration(unittest.TestCase):
     def test_examples_grade_completed_c_and_cpp_answers_through_endpoints(self):
         client = TestClient(main.app)
         headers = {'Authorization': 'Bearer ' + common.get_exec_token()}
-        solutions = [
-            'int calculate_sum(int a, int b) { return a + b; }',
-            '#include <stdio.h>\nvoid print_message(void) { puts("Hello!"); }',
-            '#include <stdio.h>\nint read_number(void) { FILE* f = fopen("number.txt", "r"); '
-            'if (!f) return -1; int value = 0; fscanf(f, "%d", &value); fclose(f); return value; }',
-        ]
+        solutions = [(RESOURCES.parent / 'examples/CPP' / name / 'answer.cpp').read_text(encoding='utf-8')
+                     for name in EXAMPLE_NAMES]
         with patch.object(cpp, 'JOBE_SERVER', '127.0.0.1:4000'):
             for language in ('c', 'cpp'):
                 # Reuse the same tests after switching language, without reloading.

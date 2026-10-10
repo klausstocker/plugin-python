@@ -40,7 +40,7 @@
     <h2>Kurz erklärt</h2>
     <ul>
       <li><strong>UnitTest:</strong> Enthält die Catch2-Tests, mit denen die eingereichte Lösung geprüft wird.
-        Diese Tests werden immer als C++17 kompiliert.</li>
+        Diese Tests werden als C++ kompiliert (Standard: C++17).</li>
       <li><strong>Template:</strong> Code, der den Studierenden als Angabe vorgegeben wird.</li>
       <li><strong>Files:</strong> Zusätzliche Dateien hochladen, herunterladen oder aus der Aufgabe entfernen.</li>
       <li><strong>Configuration:</strong> Sprache der Antwort, CPU-Limit und verfügbare Studentenbuttons festlegen.</li>
@@ -48,6 +48,8 @@
 
     <h2>Buttons</h2>
     <ul>
+      <li><strong>Format:</strong> Formatiert den aktiven Code-Editor mit clang-format und speichert das Ergebnis.
+        Die Änderung lässt sich im Ace-Editor rückgängig machen. Studierende verwenden <strong>Format Code</strong>.</li>
       <li><strong>run:</strong> Kompiliert das Template und führt dessen <code>main</code>-Funktion aus.
         Nur im Tab <strong>Template</strong> verfügbar.</li>
       <li><strong>compile:</strong> Prüft das Template mit C17 oder C++17; Warnungen werden als Fehler behandelt.
@@ -69,6 +71,14 @@
       <li><strong>enable run:</strong> Zeigt den Button <strong>Run Code</strong> in der Aufgabe an.</li>
       <li><strong>enable compile:</strong> Zeigt den Button <strong>Compile Code</strong> in der Aufgabe an.</li>
       <li><strong>CPU time limit (seconds):</strong> Begrenzt die Prozessorzeit (Standard: 5 Sekunden).</li>
+      <li><strong>clang-format configuration (YAML):</strong> Formatierungsoptionen dieser Aufgabe, z. B.
+        <code>BasedOnStyle: LLVM</code> und <code>IndentWidth: 4</code>. Eine leere Konfiguration verwendet die Vorgaben.
+        Die Einstellungen werden mit der Aufgabe gespeichert und von den Format-Buttons für Lehrende und
+        Studierende verwendet; sie gelten für Lehrertests, Template und Studentenlösung.</li>
+      <li><strong>Additional compiler flags:</strong> Zusätzliche Optionen für run, compile, check und Bewertung,
+        z. B. <code>-O2 -Wextra -DNUMBER=42</code>. <code>-std=c++20</code> ändert den C++-Standard;
+        Die Vorgaben sind C17/C++17 und <code>-Wall -Werror</code>; <code>-Wno-error</code> erlaubt Warnungen.
+        C-Standardoptionen ändern den C++17-Teststandard nicht.</li>
     </ul>
 
     <h2>C/C++ programming questions</h2>

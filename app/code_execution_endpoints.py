@@ -11,11 +11,12 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.dataset_helper import dataset_file_from_payload
+from app.formatting_endpoints import format_request
 from shared.check import checkCode
 from shared.jobe_wrapper import JobeWrapper
 from shared.lint import lintCode
 from shared.score import scoreCode
-from shared.question_examples import QuestionConfigDtoExamples
+from shared.question_examples import EXAMPLE_NAMES, QuestionConfigDtoExamples
 
 SERVICEPATH = os.getenv("SERVICEPATH", "/pluginpython").rstrip("/")
 FILE_STORAGE_ROOT = Path(os.getenv("PLUGIN_FILE_STORAGE_DIR", "/opt/letto/images/pluginpython/files"))
@@ -27,6 +28,11 @@ logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 
 router = APIRouter()
 logger = logging.getLogger("plugin-python.endpoints")
+
+
+@router.post(f"{SERVICEPATH}/format")
+async def format_python(request: Request):
+    return await format_request(request)
 
 
 def _dataset_variable_summary(value: Any) -> dict[str, Any]:
@@ -498,4 +504,4 @@ async def get_example(request: Request):
     if not isinstance(index, int) or index < 0 or index >= count:
         return JSONResponse({'count': count, 'output': None, 'error': 'Invalid example index'})
 
-    return JSONResponse({'count': count, 'output': examples[index].model_dump()})
+    return JSONResponse({'count': count, 'names': list(EXAMPLE_NAMES), 'output': examples[index].model_dump()})

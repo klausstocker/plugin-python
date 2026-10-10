@@ -47,6 +47,8 @@
     <h2>Buttons</h2>
     <ul>
       <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
+      <li><strong>Format:</strong> Formatiert den aktiven Code-Editor mit Ruff und speichert das Ergebnis.
+        Die Änderung lässt sich im Ace-Editor rückgängig machen. Studierende verwenden <strong>Format Code</strong>.</li>
       <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
       <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
       <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten
@@ -54,9 +56,16 @@
     </ul>
 
     <h2>Configuration</h2>
+    <p>Die Reiter <strong>Linter</strong> und <strong>Ruff</strong> zeigen jeweils eine Konfiguration an.
+      Beim Wechsel bleiben beide Einstellungen erhalten.</p>
     <ul>
       <li><strong>enable run:</strong> Zeigt den Button "Run Code" in der Aufgabe an.</li>
       <li><strong>enable lint:</strong> Zeigt den Button "Lint Code" in der Aufgabe an.</li>
+      <li><strong>Ruff configuration (TOML):</strong> Speichert die Formatierungsoptionen mit der Aufgabe,
+        z. B. <code>line-length = 88</code> und <code>indent-width = 4</code> sowie Optionen im Abschnitt
+        <code>[format]</code>. Eine leere Konfiguration verwendet die Ruff-Vorgaben. Die Einstellungen gelten
+        für die Format-Buttons der Lehrenden und Studierenden, also für Lehrertests, Template und Studentenlösung;
+        die Pylint-Bewertung bleibt separat konfiguriert.</li>
       <li><strong>Linter configuration:</strong> Hier können zusätzliche Linter-Optionen angegeben werden, beispielsweise
         Regeln, die nicht geprüft werden sollen.</li>
       <li><strong>Weight:</strong> Legt fest, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis (1.0) in die
@@ -64,6 +73,12 @@
       <li><strong>Dataset variables:</strong> Zeigt die verfügbaren Aufgabenvariablen mit Wert und Einheit. Im UnitTest
         können sie aus <code>dataset</code> importiert werden.</li>
     </ul>
+
+    <h3>Ruff configuration example</h3>
+    <pre><code>line-length = 88
+indent-width = 4
+[format]
+quote-style = "double"</code></pre>
 
     <h3>Linter presets</h3>
     <p>Die Auswahl einer Vorgabe ersetzt den Text in <strong>Linter configuration</strong>.

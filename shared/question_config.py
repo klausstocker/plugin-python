@@ -14,6 +14,7 @@ class QuestionConfigDto(BaseModel):
     files: dict[str, Any] = Field(default_factory=dict)
     evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterConfig: str = ""
+    formatterConfig: str = ""
     linterWeight: float = 0.0
     cpuTime: int = 5
     datasetVariables: list[dict[str, Any]] = Field(default_factory=list)
@@ -23,3 +24,4 @@ class CppQuestionConfigDto(QuestionConfigDto):
     language: Literal['c', 'cpp'] = 'cpp'
     evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterWeight: float = 0.0
+    compilerFlags: str = ""

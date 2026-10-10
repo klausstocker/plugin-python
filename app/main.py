@@ -1055,7 +1055,7 @@ class PluginCpp(PluginPython):
                 os.getenv("JOBE_SERVER", "jobe:80"), antwort or "",
                 _extract_validation_code(answerDto, config, pluginDto), language=settings.language,
                 files=JobeWrapper.createFiles(_extract_file_specs_from_config(config, pluginDto)),
-                cputime=_extract_cputime(config, pluginDto))
+                cputime=_extract_cputime(config, pluginDto), compiler_flags=settings.compilerFlags)
             info.punkteIst = float(grade * result.score())
             info.status = result.status()
             info.feedback = repr(result)

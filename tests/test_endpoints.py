@@ -16,6 +16,22 @@ BASE_PATH = "/pluginpython"
 
 
 class TestEndpoints(unittest.TestCase):
+    def test_example_names_match_python_folders_and_selected_content(self):
+        from shared.question_examples import EXAMPLE_NAMES
+
+        examples_dir = Path(__file__).resolve().parents[1] / "examples" / "Python"
+        headers = {"Authorization": f"Bearer {code_execution_endpoints.get_exec_token()}"}
+        for index, name in enumerate(EXAMPLE_NAMES):
+            with self.subTest(example=name):
+                response = self.client.post(f"{BASE_PATH}/example", headers=headers,
+                                            json={"index": index})
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertEqual(body["names"], list(EXAMPLE_NAMES))
+                self.assertEqual(body["count"], len(body["names"]))
+                self.assertEqual(body["output"]["indication"],
+                                 (examples_dir / name / "template.py").read_text(encoding="utf-8"))
+
     def test_cpu_time_survives_question_config_serialization(self):
         import base64
         import json

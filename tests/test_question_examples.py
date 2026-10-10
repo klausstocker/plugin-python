@@ -112,7 +112,7 @@ class TestExampleSubmissions(unittest.TestCase):
             html = output.read_text(encoding="utf-8")
         root = Path(__file__).resolve().parents[1]
         for name in REFERENCE_EXAMPLE_NAMES:
-            solution = (root / "examples" / name / "answer.py").read_text(encoding="utf-8")
+            solution = (root / "examples" / "Python" / name / "answer.py").read_text(encoding="utf-8")
             self.assertIn(solution.rstrip(), unescape(html))
         self.assertIn('print("hello world")', unescape(html))
         self.assertIn("SELECT name FROM products WHERE price &lt; ?", html)

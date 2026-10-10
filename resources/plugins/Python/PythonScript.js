@@ -44,6 +44,8 @@ function initPluginPython(dtoString, active) {
     const outputPanelId = `outputPanel_${plugin.name}`;
     const toggleLayoutButtonId = `toggleLayout_${plugin.name}`;
     const buildInfoId = `buildInfo_${plugin.name}`;
+    const formatButtonId = `formatButton_${plugin.name}`;
+    let refreshFormat = () => {};
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
     const defaultRatio = 2 / 3;
@@ -100,8 +102,10 @@ Server build: loading...">?</span>
                 </div>
 
                 <div class="btn-container">
-                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}">Run Code</button>` : ""}
-                    ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}">Lint Code</button>` : ""}
+                    ${plugin.active ? `<button class="black-button" id="${formatButtonId}" type="button" title="Format code" disabled>Format Code</button>` : ""}
+                    ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}" type="button">Lint Code</button>` : ""}
+                    ${plugin.active && enableRun ? `<span class="action-divider" aria-hidden="true"></span>` : ""}
+                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}" type="button">Run Code</button>` : ""}
                 </div>
             </div>
         `);
@@ -253,6 +257,15 @@ Server build: loading...">?</span>
             }
             .code-runner-root .btn-container {
                 margin-top: 8px;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .code-runner-root .action-divider {
+                height: 28px;
+                border-left: 1px solid #b8b8b8;
+                margin: 0 12px 0 4px;
+                flex-shrink: 0;
             }
         `;
         document.head.appendChild(style);
@@ -294,6 +307,7 @@ Server build: loading...">?</span>
         }
 
         plugin.getMainCode = () => editor.getValue();
+        refreshFormat();
     }
 
     function fallbackTextareas(initialMainCode) {
@@ -309,9 +323,40 @@ Server build: loading...">?</span>
             });
         }
         plugin.getMainCode = () => mainTextArea.value;
+        refreshFormat();
+    }
+
+    async function setupFormatting() {
+        const button = document.getElementById(formatButtonId);
+        if (!button) return;
+        try {
+            const { bindFormatButton } = await import(`${plugin.serviceBase}/static/formatting/client.js`);
+            if (!button.isConnected) return;
+            refreshFormat = bindFormatButton({
+                button,
+                output: document.getElementById(outputId),
+                requestFormat: async (code, filename) => {
+                    const response = await fetch(`${plugin.serviceBase}/format`, {
+                        method: "POST", headers: await buildHeaders(), credentials: "include",
+                        body: JSON.stringify({ code, filename, questionConfigDto: { formatterConfig: dtoData.formatterConfig || "" } })
+                    });
+                    const data = await readExecutionResponse(response);
+                    if (typeof data.code !== "string") throw new Error("Formatter returned no code");
+                    return data.code;
+                },
+                getTarget: () => {
+                    const textarea = document.getElementById(mainEditorId).querySelector("textarea");
+                    return aceEditor || textarea ? { editor: aceEditor, textarea, filename: "main.py" } : null;
+                },
+                onChange: () => { if (answerField) answerField.value = plugin.getMainCode(); }
+            });
+        } catch (error) {
+            button.title = "Formatter could not be loaded: " + (error.message || error);
+        }
     }
 
     function bindActions() {
+        setupFormatting();
         const editorContainer = document.getElementById(mainEditorId);
         const stopEnterPropagation = (event) => {
             if (event.key === "Enter" || event.keyCode === 13) {

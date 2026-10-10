@@ -15,7 +15,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg62-turbo zlib1g \
-    nano less dos2unix curl \
+    nano less dos2unix curl clang-format \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 
 from shared.check_result import CheckResult
 from shared.jobe_wrapper import JobeWrapper
+from shared.compiler_flags import parse_compiler_flags
 
 REPORT_MARKER = '__catch2_report__\n'
 
@@ -34,7 +35,7 @@ def parse_catch2_report(stdout):
         return CheckResult({'count': 0, 'errors': [f'Could not read Catch2 result: {error}']})
 
 
-def check_catch2(server, code, test_code, language='cpp', files=None, cputime=None):
+def check_catch2(server, code, test_code, language='cpp', files=None, cputime=None, compiler_flags=''):
     if language not in {'c', 'cpp'}:
         raise ValueError('Catch2 answer language must be c or cpp')
     answer_name = 'answer.c' if language == 'c' else 'answer.cpp'
@@ -44,7 +45,8 @@ def check_catch2(server, code, test_code, language='cpp', files=None, cputime=No
     answer_files = JobeWrapper.createFiles({answer_name: code.encode('utf-8')})
     result = JobeWrapper(server).run_test(
         'catch2' + language, test_code, 'test.cpp',
-        files=answer_files + auxiliary_files, cputime=cputime)
+        files=answer_files + auxiliary_files, cputime=cputime,
+        parameters={'compileargs': parse_compiler_flags(compiler_flags)})
     if not result.success():
         return CheckResult({'count': 0, 'errors': [
             f'Error running Jobe Catch2 tests. {repr(result).strip()}',

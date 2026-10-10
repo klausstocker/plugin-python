@@ -22,8 +22,9 @@ class Catch2cppTask extends CppTask
         $cmd = '/usr/local/bin/letto-catch2-compile ' .
             escapeshellarg($this->answerLanguage()) . ' ' .
             escapeshellarg($src) . ' ' . escapeshellarg($this->executableFileName);
+        $flags = ' flags ' . escapeshellarg(json_encode($this->getParam('compileargs')));
         $started = hrtime(true);
-        list($output, $this->cmpinfo) = $this->runInSandbox($cmd . ' prepare');
+        list($output, $this->cmpinfo) = $this->runInSandbox($cmd . ' prepare' . $flags);
         $this->timings = json_decode($output, true) ?: array();
         $key = $this->timings['test_cache_key'] ?? null;
         unset($this->timings['test_cache_key']);
@@ -45,12 +46,12 @@ class Catch2cppTask extends CppTask
             }
             if (!$this->cmpinfo) {
                 $hit = $this->timings['test_cache_hit'];
-                list($output, $this->cmpinfo) = $this->runInSandbox($cmd . ' finish' . ($hit ? ' hit' : ''));
+                list($output, $this->cmpinfo) = $this->runInSandbox($cmd . ' finish' . ($hit ? ' hit' : '') . $flags);
                 $this->timings = array_merge($this->timings, json_decode($output, true) ?: array());
                 if ($hit && $this->cmpinfo) {
                     // A doubtful cached object must never prevent a fresh build.
                     $retryStarted = hrtime(true);
-                    list($output, $this->cmpinfo) = $this->runInSandbox($cmd . ' finish');
+                    list($output, $this->cmpinfo) = $this->runInSandbox($cmd . ' finish' . $flags);
                     $this->timings = array_merge($this->timings, json_decode($output, true) ?: array());
                     $this->timings['test_cache_retry_wall_seconds'] = (hrtime(true) - $retryStarted) / 1e9;
                     $this->timings['test_cache_hit'] = false;

@@ -29,6 +29,7 @@ function configPluginPython(dtoString) {
         unitEditorId: `unitEditor_${pluginTag}`,
         previewEditorId: `previewEditor_${pluginTag}`,
         outputId: `sharedOutput_${pluginTag}`,
+        btnFormatId: `sharedFormat_${pluginTag}`,
         btnRunId: `sharedRun_${pluginTag}`,
         btnLintId: `sharedLint_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
@@ -42,6 +43,12 @@ function configPluginPython(dtoString) {
         linterConfigId: `linterConfig_${pluginTag}`,
         linterPresetName: `linterPreset_${pluginTag}`,
         linterWeightId: `linterWeight_${pluginTag}`,
+        formatterConfigId: `formatterConfig_${pluginTag}`,
+        settingsTabsId: `settingsTabs_${pluginTag}`,
+        linterTabId: `linterTab_${pluginTag}`,
+        formatterTabId: `formatterTab_${pluginTag}`,
+        linterPanelId: `linterPanel_${pluginTag}`,
+        formatterPanelId: `formatterPanel_${pluginTag}`,
         cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
         datasetVariablesId: `datasetVariables_${pluginTag}`,
@@ -71,10 +78,12 @@ function configPluginPython(dtoString) {
     const editorAccess = {};
     let unitEditor = null;
     let previewEditor = null;
+    let refreshFormat = () => {};
 
     drawForm();
     ensureStyles();
     setupTabs();
+    setupSettingsTabs();
     setupResizableSections();
     setupEditors(state.validation, state.indication);
     setupFileTab();
@@ -238,6 +247,7 @@ function configPluginPython(dtoString) {
                 runAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.runAtTest : true,
                 lintAtTest: fallbackData && fallbackData.evalConfig ? !!fallbackData.evalConfig.lintAtTest : true
             },
+            formatterConfig: (fallbackData && fallbackData.formatterConfig) || "",
             linterConfig: (fallbackData && fallbackData.linterConfig) || "",
             linterWeight: parseWeightValue(fallbackData && fallbackData.linterWeight),
             cpuTime: parseCpuTimeValue(fallbackData && fallbackData.cpuTime)
@@ -255,6 +265,7 @@ function configPluginPython(dtoString) {
                     runAtTest: parsed.evalConfig && typeof parsed.evalConfig.runAtTest === "boolean" ? parsed.evalConfig.runAtTest : defaults.evalConfig.runAtTest,
                     lintAtTest: parsed.evalConfig && typeof parsed.evalConfig.lintAtTest === "boolean" ? parsed.evalConfig.lintAtTest : defaults.evalConfig.lintAtTest
                 },
+                formatterConfig: typeof parsed.formatterConfig === "string" ? parsed.formatterConfig : defaults.formatterConfig,
                 linterConfig: typeof parsed.linterConfig === "string" ? parsed.linterConfig : defaults.linterConfig,
                 linterWeight: parseWeightValue(parsed.linterWeight != null ? parsed.linterWeight : defaults.linterWeight),
                 cpuTime: parseCpuTimeValue(parsed.cpuTime != null ? parsed.cpuTime : defaults.cpuTime)
@@ -265,6 +276,7 @@ function configPluginPython(dtoString) {
                 validation: defaults.validation,
                 files: defaults.files,
                 evalConfig: defaults.evalConfig,
+                formatterConfig: defaults.formatterConfig,
                 linterConfig: defaults.linterConfig,
                 linterWeight: defaults.linterWeight,
                 cpuTime: defaults.cpuTime
@@ -360,17 +372,27 @@ function configPluginPython(dtoString) {
                                     <label class="checkbox-row"><input id="${ids.optLintAtTestId}" type="checkbox" /> enable lint</label>
                                 </div>
                                 <div class="config-horizontal-row">
-                                    <div class="linter-config-section">
-                                        <div class="linter-head-row">
-                                            <label for="${ids.linterConfigId}">Linter configuration</label>
-                                            <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
-                                            <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
+                                    <div class="settings-section">
+                                        <div id="${ids.settingsTabsId}" class="settings-tabs" role="tablist" aria-label="Code settings">
+                                            <button type="button" id="${ids.linterTabId}" class="settings-tab" role="tab" aria-selected="true" aria-controls="${ids.linterPanelId}">Linter</button>
+                                            <button type="button" id="${ids.formatterTabId}" class="settings-tab" role="tab" aria-selected="false" aria-controls="${ids.formatterPanelId}" tabindex="-1">Ruff</button>
                                         </div>
-                                        <div class="linter-config-body">
-                                            <div class="linter-presets" role="radiogroup" aria-label="Linter presets">
-                                                ${linterPresets.map((preset) => `<label class="checkbox-row"><input type="radio" name="${ids.linterPresetName}" value="${preset.id}" /> ${preset.label}</label>`).join("")}
+                                        <div id="${ids.linterPanelId}" class="settings-panel linter-config-section" role="tabpanel" aria-labelledby="${ids.linterTabId}">
+                                            <div class="linter-head-row">
+                                                <label for="${ids.linterConfigId}">Linter configuration</label>
+                                                <label for="${ids.linterWeightId}" title="unit test scores is weighted with 1.0, choose linter weight">Weight</label>
+                                                <input id="${ids.linterWeightId}" type="text" inputmode="decimal" class="text-input linter-weight-input" placeholder="0.0" />
                                             </div>
-                                            <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                                            <div class="linter-config-body">
+                                                <div class="linter-presets" role="radiogroup" aria-label="Linter presets">
+                                                    ${linterPresets.map((preset) => `<label class="checkbox-row"><input type="radio" name="${ids.linterPresetName}" value="${preset.id}" /> ${preset.label}</label>`).join("")}
+                                                </div>
+                                                <textarea id="${ids.linterConfigId}" class="text-input" rows="4" placeholder="e.g. --disable=C0114,C0116"></textarea>
+                                            </div>
+                                        </div>
+                                        <div id="${ids.formatterPanelId}" class="settings-panel formatter-config-section" role="tabpanel" aria-labelledby="${ids.formatterTabId}" hidden>
+                                            <label for="${ids.formatterConfigId}">Ruff configuration (TOML)</label>
+                                            <textarea id="${ids.formatterConfigId}" class="text-input" rows="6" spellcheck="false" style="width:100%;box-sizing:border-box;font-family:monospace"></textarea>
                                         </div>
                                     </div>
                                     <div class="dataset-variable-section" title="Dataset variables are provided to UnitTest as a generated dataset.py file. Use from dataset import DATASET_VARIABLES and then DATASET_VARIABLES[&quot;name&quot;].value or .unit. Valid Python identifiers can also be imported directly, e.g. from dataset import myVar.">
@@ -388,9 +410,11 @@ function configPluginPython(dtoString) {
 
                         <div class="shared-actions">
                             <div class="shared-head-row">
-                                <div class="btn-row">
-                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Template-Code aus. Nur im Template-Tab verfügbar; UnitTests mit check ausführen." disabled>run</button>
+                                <div class="btn-row action-toolbar">
+                                    <button type="button" id="${ids.btnFormatId}" class="cfg-btn" title="Format the active code editor" disabled>Format</button>
                                     <button type="button" id="${ids.btnLintId}" class="cfg-btn" title="Prüft den Stil des UnitTest-Codes im UnitTest-Tab, sonst den Template-Code.">lint</button>
+                                    <span class="action-divider" aria-hidden="true"></span>
+                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Führt den Template-Code aus. Nur im Template-Tab verfügbar; UnitTests mit check ausführen." disabled>run</button>
                                     <button type="button" id="${ids.btnCheckId}" class="cfg-btn" title="Führt die UnitTests mit dem Template-Code aus.">check</button>
                                     <button type="button" id="${ids.btnScoreId}" class="cfg-btn" title="Berechnet die Punkte aus UnitTests und Linter-Ergebnis.">score</button>
                                 </div>
@@ -520,7 +544,20 @@ function configPluginPython(dtoString) {
             .pluginPythonConfigForm .help-head-row h3 {
                 margin: 0;
             }
+            .pluginPythonConfigForm .action-toolbar {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .pluginPythonConfigForm .action-divider {
+                height: 24px;
+                border-left: 1px solid #b8b8b8;
+                margin: 0 4px;
+                flex-shrink: 0;
+            }
             .pluginPythonConfigForm .tab-btn,
+            .pluginPythonConfigForm .settings-tab,
             .pluginPythonConfigForm .cfg-btn {
                 border: 1px solid #b8b8b8;
                 background: #f0f0f0;
@@ -528,7 +565,8 @@ function configPluginPython(dtoString) {
                 border-radius: 4px;
                 cursor: pointer;
             }
-            .pluginPythonConfigForm .tab-btn.active {
+            .pluginPythonConfigForm .tab-btn.active,
+            .pluginPythonConfigForm .settings-tab[aria-selected="true"] {
                 background: #dce9ff;
             }
             .pluginPythonConfigForm .main-split {
@@ -743,7 +781,7 @@ function configPluginPython(dtoString) {
                 align-items: stretch;
                 min-height: 0;
             }
-            .pluginPythonConfigForm .linter-config-section,
+            .pluginPythonConfigForm .settings-section,
             .pluginPythonConfigForm .dataset-variable-section {
                 flex: 1 1 0;
                 min-width: 0;
@@ -752,9 +790,22 @@ function configPluginPython(dtoString) {
                 padding: 8px;
                 background: #fafafa;
             }
-            .pluginPythonConfigForm .linter-config-section {
+            .pluginPythonConfigForm .settings-section,
+            .pluginPythonConfigForm .settings-panel {
                 display: flex;
                 flex-direction: column;
+            }
+            .pluginPythonConfigForm .settings-tabs {
+                display: flex;
+                gap: 4px;
+                margin-bottom: 8px;
+            }
+            .pluginPythonConfigForm .settings-panel {
+                flex: 1;
+                min-width: 0;
+            }
+            .pluginPythonConfigForm .settings-panel[hidden] {
+                display: none;
             }
             .pluginPythonConfigForm .linter-head-row {
                 display: flex;
@@ -929,7 +980,34 @@ function configPluginPython(dtoString) {
         updateRunButtonState();
     }
 
+    function setupSettingsTabs() {
+        const tabs = [...document.getElementById(ids.settingsTabsId).querySelectorAll(".settings-tab")];
+        function selectTab(selected) {
+            tabs.forEach((tab) => {
+                const active = tab === selected;
+                tab.setAttribute("aria-selected", String(active));
+                tab.tabIndex = active ? 0 : -1;
+                document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+            });
+        }
+        tabs.forEach((tab, index) => {
+            tab.addEventListener("click", () => selectTab(tab));
+            tab.addEventListener("keydown", (event) => {
+                let target;
+                if (event.key === "ArrowRight") target = tabs[(index + 1) % tabs.length];
+                else if (event.key === "ArrowLeft") target = tabs[(index + tabs.length - 1) % tabs.length];
+                else if (event.key === "Home") target = tabs[0];
+                else if (event.key === "End") target = tabs[tabs.length - 1];
+                else return;
+                event.preventDefault();
+                selectTab(target);
+                target.focus();
+            });
+        });
+    }
+
     function updateRunButtonState() {
+        refreshFormat();
         const button = document.getElementById(ids.btnRunId);
         const previewPanel = document.getElementById("tab-preview");
         if (button) {
@@ -979,6 +1057,7 @@ function configPluginPython(dtoString) {
             fallbackTextAreaSetter(ids.unitEditorId, "_setUnitCode");
             fallbackTextAreaSetter(ids.previewEditorId, "_setPreviewCode");
         }
+        refreshFormat();
     }
 
     function fallbackTextArea(targetId, value, key) {
@@ -1208,7 +1287,9 @@ function configPluginPython(dtoString) {
             };
         });
 
-        [runAtTest, lintAtTest, linterConfig, linterWeight, cpuTime].forEach((el) => {
+        const formatterConfig = document.getElementById(ids.formatterConfigId);
+        formatterConfig.value = state.formatterConfig;
+        [runAtTest, lintAtTest, linterConfig, linterWeight, cpuTime, formatterConfig].forEach((el) => {
             if (!el) return;
             const onOptionChanged = (event) => {
                 if (el === linterConfig) selectPreset("custom");
@@ -1236,6 +1317,7 @@ function configPluginPython(dtoString) {
         state.evalConfig.runAtTest = !!(runAtTest && runAtTest.checked);
         state.evalConfig.lintAtTest = !!(lintAtTest && lintAtTest.checked);
         state.linterConfig = linterConfig ? linterConfig.value : "";
+        state.formatterConfig = document.getElementById(ids.formatterConfigId).value;
 
         const parsedWeight = linterWeight ? parseWeightValue(linterWeight.value) : 0.0;
         state.linterWeight = Number.isFinite(parsedWeight) ? parsedWeight : 0.0;
@@ -1264,7 +1346,41 @@ function configPluginPython(dtoString) {
         return String(parseCpuTimeValue(value));
     }
 
+    async function setupFormatting() {
+        const button = document.getElementById(ids.btnFormatId);
+        const output = document.getElementById(ids.outputId);
+        try {
+            const { bindFormatButton } = await import(`${serviceBase}/static/formatting/client.js`);
+            if (!button.isConnected) return;
+            refreshFormat = bindFormatButton({
+                button, output,
+                requestFormat: async (code, filename) => {
+                    const response = await fetch(`${serviceBase}/format`, {
+                        method: "POST", headers: await buildHeaders(), credentials: "include",
+                        body: JSON.stringify({ code, filename, questionConfigDto: { formatterConfig: state.formatterConfig || "" } })
+                    });
+                    const data = await readExecutionResponse(response);
+                    if (typeof data.code !== "string") throw new Error("Formatter returned no code");
+                    return data.code;
+                },
+                getTarget: () => {
+                    const isUnit = document.getElementById("tab-unittest").classList.contains("active");
+                    const isPreview = document.getElementById("tab-preview").classList.contains("active");
+                    if (!isUnit && !isPreview) return null;
+                    const editor = isUnit ? unitEditor : previewEditor;
+                    const element = document.getElementById(isUnit ? ids.unitEditorId : ids.previewEditorId);
+                    const textarea = element && element.querySelector("textarea");
+                    return editor || textarea ? { editor, textarea, filename: "main.py" } : null;
+                },
+                onChange: saveConfig
+            });
+        } catch (error) {
+            button.title = "Formatter could not be loaded: " + (error.message || error);
+        }
+    }
+
     function bindSharedButtons() {
+        setupFormatting();
         const outputEl = document.getElementById(ids.outputId);
 
         bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload({ includeDataset: false }) }), outputEl, { showTiming: true, label: "Run" });
@@ -1288,7 +1404,8 @@ function configPluginPython(dtoString) {
         for (let i = 0; i < initial.count; i += 1) {
             const option = document.createElement("option");
             option.value = String(i);
-            option.textContent = `Example ${i + 1}`;
+            const folderName = initial.names && initial.names[i] ? initial.names[i] : "";
+            option.textContent = `${String(i + 1).padStart(2, "0")} ${folderName}`.trim();
             select.appendChild(option);
         }
         select.disabled = initial.count === 0;
@@ -1466,6 +1583,7 @@ function configPluginPython(dtoString) {
         syncOptionsStateFromInputs();
         const includeDataset = !options || options.includeDataset !== false;
         const payload = {
+            formatterConfig: state.formatterConfig,
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
             cpuTime: parseCpuTimeValue(state.cpuTime),
@@ -1486,6 +1604,7 @@ function configPluginPython(dtoString) {
             validation: getUnitCode(),
             files: currentStoredFiles(),
             evalConfig: state.evalConfig || {},
+            formatterConfig: state.formatterConfig,
             linterConfig: state.linterConfig || "",
             linterWeight: Number(state.linterWeight || 0.0),
             cpuTime: parseCpuTimeValue(state.cpuTime),
@@ -1496,6 +1615,7 @@ function configPluginPython(dtoString) {
         questionConfigDto.indication = pluginConfig.indication;
         questionConfigDto.files = pluginConfig.files;
         questionConfigDto.evalConfig = pluginConfig.evalConfig;
+        questionConfigDto.formatterConfig = pluginConfig.formatterConfig;
         questionConfigDto.linterConfig = pluginConfig.linterConfig;
         questionConfigDto.linterWeight = pluginConfig.linterWeight;
         questionConfigDto.cpuTime = pluginConfig.cpuTime;

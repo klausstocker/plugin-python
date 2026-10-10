@@ -12,7 +12,8 @@ class CompilecppTask extends CppTask
     public function compile()
     {
         $this->executableFileName = 'answer.o';
-        $cmd = $this->compilerCommand() . ' -Wall -Werror -c ' .
+        $flags = array_map('escapeshellarg', $this->getParam('compileargs'));
+        $cmd = $this->compilerCommand() . ' ' . implode(' ', $flags) . ' -c ' .
             escapeshellarg(basename($this->sourceFileName)) . ' -o answer.o';
         list($output, $this->cmpinfo) = $this->runInSandbox($cmd);
     }

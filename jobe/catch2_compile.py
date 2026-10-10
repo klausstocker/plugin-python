@@ -11,10 +11,11 @@ import time
 TEST_FLAGS = ['-std=c++17', '-Wall', '-Werror', '-DLETTO_UNIT_TEST=1', '-I/opt/catch2/include']
 
 
-def test_cache_key(source):
+def test_cache_key(source, test_flags=None):
     """Ask the compiler for actual includes; also hash all auxiliary inputs."""
+    test_flags = TEST_FLAGS if test_flags is None else test_flags
     dependency_run = subprocess.run(
-        ['g++', *TEST_FLAGS, '-MM', '-MT', 'cache', source],
+        ['g++', *test_flags, '-MM', '-MT', 'cache', source],
         capture_output=True, text=True)
     if dependency_run.returncode:
         return None  # Let normal compilation report diagnostics.
@@ -36,7 +37,7 @@ def test_cache_key(source):
     # Presence matters for __has_include even if a file is never #included.
     names = sorted(path.name for path in Path('.').iterdir()
                    if path.is_file() and (path.name not in generated or path.name in {'answer.c', 'answer.cpp'}))
-    digest = hashlib.sha256(json.dumps([source, TEST_FLAGS, names]).encode())
+    digest = hashlib.sha256(json.dumps([source, test_flags, names]).encode())
     for path in sorted(inputs, key=lambda item: str(item)):
         contents = path.read_bytes()
         if any(token in contents for token in (b'__TIME__', b'__DATE__', b'__TIMESTAMP__')):
@@ -48,14 +49,25 @@ def test_cache_key(source):
 
 def main():
     language, source, executable, mode, *options = sys.argv[1:]
+    extra_flags = []
+    if 'flags' in options:
+        index = options.index('flags')
+        extra_flags = json.loads(options[index + 1])
+        options = options[:index]
+        if not isinstance(extra_flags, list) or not all(isinstance(flag, str) for flag in extra_flags):
+            raise ValueError('Compiler flags must be a list of strings')
+    # C standard overrides apply only to the answer; the harness remains C++.
+    test_flags = TEST_FLAGS + [flag for flag in extra_flags
+                              if language != 'c' or not flag.startswith('-std=')]
     compiler = 'gcc' if language == 'c' else 'g++'
     standard = '-std=c17' if language == 'c' else '-std=c++17'
     answer = 'answer.c' if language == 'c' else 'answer.cpp'
     commands = [
         ('answer_compile', [compiler, standard, '-Wall', '-Werror', '-DLETTO_UNIT_TEST=1',
+                            *extra_flags,
                             '-c', answer, '-o', 'answer.o']),
     ] if mode == 'prepare' else [
-        ('test_compile', ['g++', *TEST_FLAGS, '-c', source, '-o', 'catch2-tests.o']),
+        ('test_compile', ['g++', *test_flags, '-c', source, '-o', 'catch2-tests.o']),
         ('link', ['g++', 'catch2-tests.o', 'answer.o', '/opt/catch2/lib/letto-catch2-runner.o',
                   '/opt/catch2/lib/libCatch2.a', '-pthread', '-o', executable]),
     ]
@@ -81,7 +93,7 @@ def main():
         if mode == 'prepare' and status == 0:
             started = time.perf_counter()
             try:
-                timings['test_cache_key'] = test_cache_key(source)
+                timings['test_cache_key'] = test_cache_key(source, test_flags)
             except (OSError, ValueError, IndexError):
                 timings['test_cache_key'] = None
             timings['test_cache_key_wall_seconds'] = time.perf_counter() - started

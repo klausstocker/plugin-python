@@ -13,9 +13,10 @@ from shared.question_examples import REFERENCE_EXAMPLE_NAMES
 
 
 def build(output: Path) -> None:
-    guide = (ROOT / "examples" / "README.md").read_text(encoding="utf-8")
+    examples_dir = ROOT / "examples" / "Python"
+    guide = (examples_dir / "README.md").read_text(encoding="utf-8")
     for name in REFERENCE_EXAMPLE_NAMES:
-        solution = (ROOT / "examples" / name / "answer.py").read_text(encoding="utf-8")
+        solution = (examples_dir / name / "answer.py").read_text(encoding="utf-8")
         guide = guide.replace(
             f"[Possible solution]({name}/answer.py)",
             "**Possible solution**\n\n```python\n" + solution.rstrip() + "\n```",

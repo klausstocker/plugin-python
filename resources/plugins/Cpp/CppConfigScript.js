@@ -30,6 +30,7 @@ function configPluginCpp(dtoString) {
         unitEditorId: `unitEditor_${pluginTag}`,
         previewEditorId: `previewEditor_${pluginTag}`,
         outputId: `sharedOutput_${pluginTag}`,
+        btnFormatId: `sharedFormat_${pluginTag}`,
         btnRunId: `sharedRun_${pluginTag}`,
         btnCompileId: `sharedCompile_${pluginTag}`,
         btnCheckId: `sharedCheck_${pluginTag}`,
@@ -40,8 +41,10 @@ function configPluginCpp(dtoString) {
         fileUploadId: `fileUpload_${pluginTag}`,
         optRunAtTestId: `optRunAtTest_${pluginTag}`,
         optCompileAtTestId: `optCompileAtTest_${pluginTag}`,
+        compilerFlagsId: `compilerFlags_${pluginTag}`,
         languageId: `language_${pluginTag}`,
         languageWarningId: `languageWarning_${pluginTag}`,
+        formatterConfigId: `formatterConfig_${pluginTag}`,
         cpuTimeId: `cpuTime_${pluginTag}`,
         buildInfoId: `buildInfo_${pluginTag}`,
         helpToggleId: `helpToggle_${pluginTag}`,
@@ -59,6 +62,7 @@ function configPluginCpp(dtoString) {
     const editorAccess = {};
     let unitEditor = null;
     let previewEditor = null;
+    let refreshFormat = () => {};
 
     drawForm();
     ensureStyles();
@@ -113,6 +117,8 @@ function configPluginCpp(dtoString) {
             validation: typeof data.validation === "string" ? data.validation : "// Catch2 unit test code\n",
             files: data.files && typeof data.files === "object" ? data.files : {},
             evalConfig: { runAtTest: flags.runAtTest !== false, lintAtTest: flags.lintAtTest !== false },
+            formatterConfig: typeof data.formatterConfig === "string" ? data.formatterConfig : "",
+            compilerFlags: typeof data.compilerFlags === "string" ? data.compilerFlags : "",
             cpuTime: parseCpuTimeValue(data.cpuTime)
         };
     }
@@ -198,6 +204,14 @@ function configPluginCpp(dtoString) {
                                         <option value="cpp">C++17</option><option value="c">C17</option>
                                     </select>
                                 </div>
+                                <div class="formatter-config-section">
+                                    <label for="${ids.formatterConfigId}">clang-format configuration (YAML)</label>
+                                    <textarea id="${ids.formatterConfigId}" class="text-input" rows="6" spellcheck="false" style="width:100%;box-sizing:border-box;font-family:monospace" placeholder="BasedOnStyle: LLVM&#10;IndentWidth: 4&#10;ColumnLimit: 100&#10;SortIncludes: Never&#10;AllowShortFunctionsOnASingleLine: None"></textarea>
+                                </div>
+                                <div class="compiler-flags-section">
+                                    <label for="${ids.compilerFlagsId}">Additional compiler flags</label>
+                                    <input id="${ids.compilerFlagsId}" type="text" class="text-input" style="width:100%;box-sizing:border-box;font-family:monospace" placeholder="e.g. -O2 -Wextra -DNUMBER=42" />
+                                </div>
                                 <p id="${ids.languageWarningId}" class="language-warning" role="status" hidden></p>
                             </div>
                         </div>
@@ -206,9 +220,11 @@ function configPluginCpp(dtoString) {
 
                         <div class="shared-actions">
                             <div class="shared-head-row">
-                                <div class="btn-row">
-                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Runs the template program. Available in the Template tab; use check for unit tests." disabled>run</button>
+                                <div class="btn-row action-toolbar">
+                                    <button type="button" id="${ids.btnFormatId}" class="cfg-btn" title="Format the active code editor" disabled>Format</button>
+                                    <span class="action-divider" aria-hidden="true"></span>
                                     <button type="button" id="${ids.btnCompileId}" class="cfg-btn" title="Compiles the template without linking or executing it. Available in the Template tab." disabled>compile</button>
+                                    <button type="button" id="${ids.btnRunId}" class="cfg-btn" title="Runs the template program. Available in the Template tab; use check for unit tests." disabled>run</button>
                                     <button type="button" id="${ids.btnCheckId}" class="cfg-btn" title="Runs the Catch2 unit tests against the template code.">check</button>
                                     <button type="button" id="${ids.btnScoreId}" class="cfg-btn" title="Calculates the score from the Catch2 test cases.">score</button>
                                 </div>
@@ -337,6 +353,18 @@ function configPluginCpp(dtoString) {
             }
             .pluginCppConfigForm .help-head-row h3 {
                 margin: 0;
+            }
+            .pluginCppConfigForm .action-toolbar {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .pluginCppConfigForm .action-divider {
+                height: 24px;
+                border-left: 1px solid #b8b8b8;
+                margin: 0 4px;
+                flex-shrink: 0;
             }
             .pluginCppConfigForm .tab-btn,
             .pluginCppConfigForm .cfg-btn {
@@ -658,6 +686,7 @@ function configPluginCpp(dtoString) {
     }
 
     function updateRunButtonState() {
+        refreshFormat();
         const previewPanel = document.getElementById("tab-preview");
         for (const buttonId of [ids.btnRunId, ids.btnCompileId]) {
             const button = document.getElementById(buttonId);
@@ -709,6 +738,7 @@ function configPluginCpp(dtoString) {
             fallbackTextAreaSetter(ids.unitEditorId, "_setUnitCode");
             fallbackTextAreaSetter(ids.previewEditorId, "_setPreviewCode");
         }
+        refreshFormat();
     }
 
     function fallbackTextArea(targetId, value, key) {
@@ -908,7 +938,11 @@ function configPluginCpp(dtoString) {
         compileAtTest.checked = state.evalConfig.lintAtTest;
         cpuTime.value = formatCpuTimeValue(state.cpuTime);
         language.value = state.language;
-        [runAtTest, compileAtTest, cpuTime, language].forEach((element) => {
+        const formatterConfig = document.getElementById(ids.formatterConfigId);
+        const compilerFlags = document.getElementById(ids.compilerFlagsId);
+        formatterConfig.value = state.formatterConfig;
+        compilerFlags.value = state.compilerFlags;
+        [runAtTest, compileAtTest, cpuTime, language, formatterConfig, compilerFlags].forEach((element) => {
             element.oninput = element.onchange = (event) => {
                 if (element === language && state.language !== language.value) {
                     const warning = document.getElementById(ids.languageWarningId);
@@ -930,6 +964,8 @@ function configPluginCpp(dtoString) {
         state.evalConfig.lintAtTest = !!(compileAtTest && compileAtTest.checked);
         state.cpuTime = parseCpuTimeValue(cpuTime ? cpuTime.value : state.cpuTime);
         state.language = language && language.value === "c" ? "c" : "cpp";
+        state.formatterConfig = document.getElementById(ids.formatterConfigId).value;
+        state.compilerFlags = document.getElementById(ids.compilerFlagsId).value;
     }
 
     function parseCpuTimeValue(rawValue) {
@@ -941,11 +977,45 @@ function configPluginCpp(dtoString) {
         return String(parseCpuTimeValue(value));
     }
 
+    async function setupFormatting() {
+        const button = document.getElementById(ids.btnFormatId);
+        const output = document.getElementById(ids.outputId);
+        try {
+            const { bindFormatButton } = await import(`${serviceBase}/static/formatting/client.js`);
+            if (!button.isConnected) return;
+            refreshFormat = bindFormatButton({
+                button, output,
+                requestFormat: async (code, filename) => {
+                    const response = await fetch(`${serviceBase}/format`, {
+                        method: "POST", headers: await buildHeaders(), credentials: "include",
+                        body: JSON.stringify({ code, filename, questionConfigDto: { formatterConfig: state.formatterConfig || "" } })
+                    });
+                    const data = await readExecutionResponse(response);
+                    if (typeof data.code !== "string") throw new Error("Formatter returned no code");
+                    return data.code;
+                },
+                getTarget: () => {
+                    const isUnit = document.getElementById("tab-unittest").classList.contains("active");
+                    const isPreview = document.getElementById("tab-preview").classList.contains("active");
+                    if (!isUnit && !isPreview) return null;
+                    const editor = isUnit ? unitEditor : previewEditor;
+                    const element = document.getElementById(isUnit ? ids.unitEditorId : ids.previewEditorId);
+                    const textarea = element && element.querySelector("textarea");
+                    return editor || textarea ? { editor, textarea, filename: (state.language === "c" && !isUnit ? "main.c" : "main.cpp") } : null;
+                },
+                onChange: saveConfig
+            });
+        } catch (error) {
+            button.title = "Formatter could not be loaded: " + (error.message || error);
+        }
+    }
+
     function bindSharedButtons() {
+        setupFormatting();
         const outputEl = document.getElementById(ids.outputId);
 
         bindRequest(ids.btnRunId, "/run", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Run" });
-        bindRequest(ids.btnCompileId, "/compile", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl);
+        bindRequest(ids.btnCompileId, "/compile", () => ({ code: getPreviewCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Compile" });
         bindRequest(ids.btnCheckId, "/check", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Check" });
         bindRequest(ids.btnScoreId, "/scorePlugin", () => ({ code: getPreviewCode(), testcode: getUnitCode(), questionConfigDto: buildQuestionConfigDtoPayload() }), outputEl, { showTiming: true, label: "Score" });
     }
@@ -965,7 +1035,8 @@ function configPluginCpp(dtoString) {
         for (let i = 0; i < initial.count; i += 1) {
             const option = document.createElement("option");
             option.value = String(i);
-            option.textContent = `Example ${i + 1}`;
+            const folderName = initial.names && initial.names[i] ? initial.names[i] : "";
+            option.textContent = `${String(i + 1).padStart(2, "0")} ${folderName}`.trim();
             select.appendChild(option);
         }
         select.disabled = initial.count === 0;
@@ -1136,6 +1207,8 @@ function configPluginCpp(dtoString) {
     function buildQuestionConfigDtoPayload() {
         syncOptionsStateFromInputs();
         return {
+            formatterConfig: state.formatterConfig,
+            compilerFlags: state.compilerFlags,
             language: state.language,
             cpuTime: parseCpuTimeValue(state.cpuTime),
             files: currentStoredFiles()
@@ -1148,6 +1221,8 @@ function configPluginCpp(dtoString) {
         state.indication = getPreviewCode();
         state.validation = getUnitCode();
         Object.assign(questionConfigDto, {
+            formatterConfig: state.formatterConfig,
+            compilerFlags: state.compilerFlags,
             language: state.language,
             indication: state.indication,
             validation: state.validation,

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from shared.question_config import QuestionConfigDto
 
-_EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
+_EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples" / "Python"
 EXAMPLE_NAMES = (
     "printed_output",
     "calculate_sum",

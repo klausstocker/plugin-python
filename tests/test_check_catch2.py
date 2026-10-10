@@ -70,7 +70,7 @@ class TestCatch2Submissions(unittest.TestCase):
 
 
 class TestCatch2Jobe(unittest.TestCase):
-    """Requires the Catch2-enabled Jobe image on localhost:4000."""
+    """Uses the project's Jobe service at localhost:4000."""
 
     server = os.environ.get('JOBE_TEST_SERVER', 'localhost:4000')
 

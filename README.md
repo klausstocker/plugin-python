@@ -11,8 +11,13 @@ The Python execution URLs remain under `/pluginpython`. The C/C++ plugin uses
 The shared `/open/pluginlist` and `/open/generalinfolist` advertise both types.
 Execution endpoints use the same token authentication and uploaded-file storage.
 
+The student and teacher Format buttons call `/pluginpython/format` (Ruff) and
+`/plugincpp/format` (clang-format). Formatter configuration is saved with each
+question. C/C++ questions also support additional compiler flags for run,
+compile, tests, and grading. See [formatting configuration](resources/formatting/README.md).
+
 Open `http://localhost:8209/plugincpp/dev/config` for the C/C++ development dialog.
-Select C17 or C++17 for answers; teacher tests always use Catch2 and C++17.
+Select C17 or C++17 for answers; teacher tests use Catch2 and default to C++17.
 The three C/C++ examples cover functions, stdout and file access. Their starter
 code intentionally needs completing. Each Catch2 TEST_CASE contributes one
 equally weighted case to the grade. Student Run Code needs a main function;
@@ -99,10 +104,13 @@ resolves these links using its `serviceBase`; no Letto `/images/` mount is requi
 
 ## Teaching examples
 
-See [the examples guide](examples/README.md) for ten small examples, from printed
-output to SQLite, with typed student templates and working reference solutions.
-The Docker build generates an HTML version in the plugin resources and the help
-links to it.
+See [the examples index](examples/README.md) for separate Python and C/C++ examples.
+The [Python guide](examples/Python/README.md) covers eleven templates, from printed
+output to LeTTo dataset variables, with ten standalone reference solutions.
+The Docker build generates an HTML version in the Python plugin resources and the help
+links to it. The [C/C++ guide](examples/CPP/README.md) covers functions, stdout and files
+with portable student templates, Catch2 tests and reference solutions.
+Both configuration dialogs label examples with their folder names and a two-digit number.
 
 
 
@@ -403,6 +411,35 @@ Sind die Docker-Hub-Repositories nicht öffentlich, muss vor `pull` einmal
     * `${letto_pathPlugins}` (z. B. `/opt/letto/plugins`)
     * `${letto_pathImages}/plugins` (z. B. `/opt/letto/images/plugins`)
 
+## Tests ausfuehren
+
+Die Tests laufen vom Projektverzeichnis mit den Abhaengigkeiten aus
+`requirements.txt`. Es werden keine Testimages gebaut und keine zusaetzlichen
+Docker-Container gestartet. Fuer die Jobe-Integrationstests muss der regulaere
+Projekt-Jobe auf `localhost:4000` laufen. Die Formatter-Integrationstests nutzen
+die Endpunkte des regulaeren Plugins auf `http://localhost:8209`;
+`PLUGIN_TEST_SERVER` kann dessen Basis-URL anpassen.
+
+| Tests | Zweck | Voraussetzung |
+| --- | --- | --- |
+| `test_formatting` | Authentifizierung, Format-Konfiguration, Fehlerbehandlung und Compiler-Flags | Python; Integrationstests nutzen regulaeres Plugin und Projekt-Jobe |
+| `test_cpp_entrypoint` | Studentisches `main` beim Run ausfuehren, bei Catch2 ausschliessen | Projekt-Jobe per HTTP |
+| `test_check_catch2` | Bewertung, Compilerfehler, Zeitlimits und Testobjekt-Cache | Python; Integrationstests nutzen Projekt-Jobe |
+| `test_cpp_plugin` | C/C++-Endpunkte, Beispiele, Registrierung und statische Ressourcen | Python; Integrationstests nutzen Projekt-Jobe |
+| `test_endpoints`, `test_question_examples`, `test_score`, `test_dataset`, `test_dev_ui` | Python-Endpunkte, Beispielabgaben, Bewertung und Entwicklungsdialog | Python, kein Docker |
+| `test_jobe`, `test_jobe_compiled` | Python/C/C++-Ausfuehrung, Uploads und CPU-Zeitlimits | Projekt-Jobe |
+
+```powershell
+py -m unittest discover -s tests -v
+```
+
+Ruff und clang-format werden ueber die Plugin-Endpunkte geprueft, ohne lokale
+Formatter-Installation oder uebersprungene Tests. Die Unit-Tests fuer Endpunkte
+und Konfiguration verwenden Mocks und laufen ohne gestartetes Plugin.
+
+Die Tests benoetigen keinen Browser und keine Ace-Testdatei. UI-Verhalten wie
+Ace Undo und gleichzeitige Eingaben wird bei der Entwicklung manuell geprueft.
+
 ## Jobe-Integrationstests fuer C und C++
 
 Voraussetzung ist ein laufender Jobe-Container auf `localhost:4000`.
@@ -475,8 +512,9 @@ Die Sprachauswahl in den Plugin-Endpunkten und im Dialog folgt separat.
 py -m unittest tests.test_check_catch2 -v
 ```
 
-Zum Testen eines separaten Containers kann `JOBE_TEST_SERVER` gesetzt werden,
-zum Beispiel auf `localhost:4001`.
+Die Tests verwenden den regulaeren Projekt-Jobe auf `localhost:4000`.
+`JOBE_TEST_SERVER` kann dessen Adresse bei einem anderen Port oder Host anpassen;
+ein separater Testcontainer oder ein spezielles Testimage ist nicht erforderlich.
 
 ### Laufzeiten messen
 
