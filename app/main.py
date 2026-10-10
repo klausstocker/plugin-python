@@ -50,7 +50,7 @@ logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
 # --------------------------
 # CONFIGURATION
 # --------------------------
-# Der Servicepath muss in der nginx-Konfiguration auf den Docker-Container des Plugins gesetzt werden -> siehe proxy/pluginpython.conf
+# Der Servicepath muss in der nginx-Konfiguration auf den Docker-Container des Plugins gesetzt werden -> siehe proxy/pluginpythoncpp.conf
 CONF_STANDARD_SERVICEPATH = "/pluginpython"
 # Name des Plugin-Service
 CONF_APPLICATION_NAME = "PythonCppPlugin"

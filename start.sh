@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
     echo 'Usage: bash start.sh [deployment-directory]'
     echo 'Default directory: /opt/letto/docker/compose/letto'
-    echo 'Requires docker-service-pluginpython.yml and .env in that directory.'
+    echo 'Requires docker-service-pluginpythoncpp.yml and .env in that directory.'
 }
 case "${1:-}" in
     --help|-h) usage; exit 0 ;;
@@ -14,14 +14,14 @@ if (( $# > 1 )); then usage >&2; exit 1; fi
 
 deployment_dir="${1:-/opt/letto/docker/compose/letto}"
 cd -- "$deployment_dir"
-for file in docker-service-pluginpython.yml .env; do
+for file in docker-service-pluginpythoncpp.yml .env; do
     if [[ ! -f "$file" ]]; then
         echo "Missing $PWD/$file" >&2
         exit 1
     fi
 done
-compose=(docker compose --env-file .env -f docker-service-pluginpython.yml)
-services=(pluginpython jobe)
+compose=(docker compose --env-file .env -f docker-service-pluginpythoncpp.yml)
+services=(pythoncppplugin jobe)
 
 docker info >/dev/null
 "${compose[@]}" config --quiet
@@ -40,8 +40,8 @@ if ! "${compose[@]}" up -d --no-build --pull never --force-recreate \
     --wait --wait-timeout 180 "${services[@]}"; then
     echo 'Startup failed or timed out. No automatic rollback was performed.' >&2
     "${compose[@]}" ps --all || true
-    echo 'Inspect service logs with docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail 100' >&2
+    echo 'Inspect service logs with docker compose --env-file .env -f docker-service-pluginpythoncpp.yml logs --tail 100' >&2
     exit 1
 fi
 "${compose[@]}" ps
-echo 'Plugin Python and Jobe are running and healthy.'
+echo 'PythonCppPlugin and Jobe are running and healthy.'

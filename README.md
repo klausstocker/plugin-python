@@ -32,8 +32,24 @@ are served at `/plugincpp/static/`. Python help remains separate.
 For the first deployment after the Docker rename, stop the previous Compose
 project before starting the new one, because both use ports 8209 and 4000:
 
+On the Linux playground, run the cleanup script before installing the new files:
+
+```bash
+sudo bash migrate-old-plugin.sh --dry-run
+sudo bash migrate-old-plugin.sh
+```
+
+It stops only `letto-pluginpython` and `letto-jobe`, and removes the legacy
+`/opt/letto/docker/compose/letto/docker-service-pluginpython.yml` and
+`/opt/letto/docker/proxy/pluginpython.conf`. Already-installed replacement files
+are kept. Optional positional arguments select another Compose directory and
+proxy directory. Install the new files afterwards, start the new deployment,
+then validate and reload the proxy. Container data and volumes are retained.
+
+For local Windows development, use:
+
 ```powershell
-docker compose -p letto-plugin-python --env-file .env.docker-local -f yml/docker-service-pluginpython.yml down --remove-orphans
+docker compose -p letto-plugin-python --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml down --remove-orphans
 .\build.bat --no-push
 .\start_development.bat
 ```
@@ -145,7 +161,7 @@ ARM64 but does not publish multi-platform manifests.
 
 ## Start or update production services (Linux)
 
-Install `yml/docker-service-pluginpython.yml` in
+Install `yml/docker-service-pluginpythoncpp.yml` in
 `/opt/letto/docker/compose/letto/` and configure the server's `.env` there
 as described in the installation section below. Set the desired image tags
 directly in the Compose file. Run the startup script from the repository,
@@ -215,11 +231,11 @@ VOLUME_PLUGINS=./.docker-test/plugins
 docker network inspect nw-letto *> $null
 if ($LASTEXITCODE -ne 0) { docker network create nw-letto }
 
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml config
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml pull
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml up -d --no-build
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml ps
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml logs --tail 100
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml config
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml up -d --no-build
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml ps
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml logs --tail 100
 
 curl.exe http://localhost:8209/ping
 curl.exe http://localhost:4000/
@@ -237,14 +253,14 @@ zunächst `starting` sein.
 Status und Logs können später erneut geprüft werden:
 
 ```powershell
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml ps
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml logs --follow
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml ps
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml logs --follow
 ```
 
 Aufräumen nach dem Test:
 
 ```powershell
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml down
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml down
 docker network rm nw-letto
 Remove-Item .env.docker-local -ErrorAction SilentlyContinue
 Remove-Item .docker-test -Recurse -Force -ErrorAction SilentlyContinue
@@ -268,7 +284,7 @@ install -d /opt/letto/docker/compose/letto
 install -d /opt/letto/docker/storage/log/pluginpython
 install -d /opt/letto/docker/storage/images
 install -d /opt/letto/docker/storage/plugins
-cp yml/docker-service-pluginpython.yml /opt/letto/docker/compose/letto/
+cp yml/docker-service-pluginpythoncpp.yml /opt/letto/docker/compose/letto/
 cd /opt/letto/docker/compose/letto
 ```
 
@@ -292,19 +308,19 @@ und beide Container starten:
 ```bash
 docker network inspect nw-letto >/dev/null 2>&1 || docker network create nw-letto
 
-docker compose --env-file .env -f docker-service-pluginpython.yml config
-docker compose --env-file .env -f docker-service-pluginpython.yml config --images
-docker compose --env-file .env -f docker-service-pluginpython.yml pull
-docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml config
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml config --images
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml up -d --no-build
 ```
 
 Status, verwendete Images und Logs prüfen:
 
 ```bash
-docker compose --env-file .env -f docker-service-pluginpython.yml ps
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml ps
 docker inspect PythonCppPlugin --format '{{.Config.Image}}'
 docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}}'
-docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml logs --tail=100
 ```
 
 Die lokalen Endpunkte testen:
@@ -319,8 +335,8 @@ Images genügen folgende Befehle:
 
 ```bash
 cd /opt/letto/docker/compose/letto
-docker compose --env-file .env -f docker-service-pluginpython.yml pull
-docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml up -d --no-build
 docker image prune -f
 ```
 
@@ -334,7 +350,7 @@ verwenden. Die Befehle löschen keine Volumes und keine Daten unter
 ```bash
 cd /opt/letto/docker/compose/letto
 
-docker compose --env-file .env -f docker-service-pluginpython.yml down --remove-orphans
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml down --remove-orphans
 
 for image_id in $(docker image ls \
   --filter 'reference=klausstocker/python-cpp-plugin*' \
@@ -344,18 +360,18 @@ done
 
 docker image prune -f
 
-docker compose --env-file .env -f docker-service-pluginpython.yml pull
-docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build --force-recreate
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml up -d --no-build --force-recreate
 ```
 
 Danach prüfen, ob beide Container die neu heruntergeladenen Images verwenden
 und erfolgreich antworten:
 
 ```bash
-docker compose --env-file .env -f docker-service-pluginpython.yml ps
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml ps
 docker inspect PythonCppPlugin --format '{{.Config.Image}} {{.Image}}'
 docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}} {{.Image}}'
-docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml logs --tail=100
 curl --fail http://localhost:8209/ping
 curl --fail http://localhost:4000/
 ```
@@ -370,14 +386,17 @@ löschen:
 
 ```bash
 cd /opt/letto/docker/compose/letto
-docker compose --env-file .env -f docker-service-pluginpython.yml down
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml down
 ```
 
 Sind die Docker-Hub-Repositories nicht öffentlich, muss vor `pull` einmal
 `docker login` ausgeführt werden.
 
 * Proxy Konfiguration:
-  * kopiere proxy/pluginpython.conf in /opt/letto/docker/proxy/ am LeTTo-Server 
+  * kopiere proxy/pluginpythoncpp.conf in /opt/letto/docker/proxy/ am LeTTo-Server
+  * entferne die alte pluginpython.conf, damit die location-Blöcke nicht doppelt geladen werden
+  * falls nginx die Datei ausdrücklich per include lädt, ändere den Dateinamen dort ebenfalls; bei einem *.conf-Include ist keine Änderung nötig
+  * prüfe vor dem Reload: docker exec letto-proxy nginx -t
   * restarte den Proxy (docker restart letto-proxy)
 * Ressourcen-Synchronisierung:
   * Beim Start kopiert der Service automatisch `RESOURCE_DIR/plugins` in die gesetzten Zielpfade:

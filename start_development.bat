@@ -28,7 +28,7 @@ if errorlevel 1 (
 
 rem Resolve relative volume paths from the repository, rather than yml/.
 rem Use locally built images; do not replace them by pulling published images.
-docker compose --project-directory "%CD%" --env-file .env.docker-local -f yml/docker-service-pluginpython.yml up -d --no-build --pull never pythoncppplugin jobe
+docker compose --project-directory "%CD%" --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml up -d --no-build --pull never pythoncppplugin jobe
 if errorlevel 1 goto failed
 
 echo Development containers started.
