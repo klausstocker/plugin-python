@@ -1,9 +1,83 @@
-<article>
-<h2>C/C++ programming questions</h2>
-<p>Choose C17 or C++17 for the student answer. Catch2 validation tests are always written in C++17. The teacher tests and student answer are compiled separately and linked with the installed Catch2 runner. Do not define a Catch2 main function.</p>
-<h3>Function tests</h3>
-<pre>#include &lt;catch2/catch_test_macros.hpp&gt;
-// Select linkage using the answer file supplied by Jobe.
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  <title>C/C++ - Plugin - Help</title>
+</head>
+
+<body>
+  <style>
+    .cpp-plugin-help {
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      font-family: sans-serif;
+      line-height: 1.5;
+    }
+
+    .cpp-plugin-help pre {
+      overflow: auto;
+      padding: 0.5rem;
+      background: #f0f0f0;
+    }
+  </style>
+  <div class="cpp-plugin-help">
+    <h1 style="display: flex; align-items: center; gap: 0.4rem;"><img src="static/cpp-logo.png"
+        data-plugin-static-file="cpp-logo.png" alt="" width="40" height="40"
+        style="object-fit: contain; flex-shrink: 0;">C/C++ - Plugin<img src="static/unittest-logo.png"
+        data-plugin-static-file="unittest-logo.png" alt="" width="40" height="40"
+        style="object-fit: contain; flex-shrink: 0;"></h1>
+
+    <p>Mit diesem Plugin können C/C++-Aufgaben erstellt, ausprobiert und automatisch mit Catch2 bewertet werden.</p>
+
+    <h2>Beispiele</h2>
+    <p>Im Tab <strong>UnitTest</strong> ein Beispiel auswählen und mit <strong>Apply</strong> laden.
+      Die Beispiele zeigen Funktionstests, die Prüfung von stdout und das Lesen von <code>number.txt</code>.
+      Die Templates müssen noch vervollständigt werden. Das Laden ersetzt Template, Tests und Dateiliste;
+      bei vorhandenem Code oder Dateien erscheint eine Rückfrage.</p>
+
+    <h2>Kurz erklärt</h2>
+    <ul>
+      <li><strong>UnitTest:</strong> Enthält die Catch2-Tests, mit denen die eingereichte Lösung geprüft wird.
+        Diese Tests werden immer als C++17 kompiliert.</li>
+      <li><strong>Template:</strong> Code, der den Studierenden als Angabe vorgegeben wird.</li>
+      <li><strong>Files:</strong> Zusätzliche Dateien hochladen, herunterladen oder aus der Aufgabe entfernen.</li>
+      <li><strong>Configuration:</strong> Sprache der Antwort, CPU-Limit und verfügbare Studentenbuttons festlegen.</li>
+    </ul>
+
+    <h2>Buttons</h2>
+    <ul>
+      <li><strong>run:</strong> Kompiliert das Template und führt dessen <code>main</code>-Funktion aus.
+        Nur im Tab <strong>Template</strong> verfügbar.</li>
+      <li><strong>compile:</strong> Prüft das Template mit C17 oder C++17; Warnungen werden als Fehler behandelt.
+        Nur im Tab <strong>Template</strong> verfügbar. Der Code wird weder gelinkt noch ausgeführt.
+        Funktionstests benötigen hier keine <code>main</code>-Funktion. Compilerdiagnosen erscheinen im Ausgabefeld.</li>
+      <li><strong>check:</strong> Führt die Catch2-Tests mit dem Template-Code aus und zeigt das Prüfergebnis an.</li>
+      <li><strong>score:</strong> Berechnet die Punkte aus den Catch2-Testfällen.
+        Jeder <code>TEST_CASE</code> zählt als ein bewerteter Fall; einzelne Assertions erhalten keine eigenen Punkte.
+        Ein Kompilierungsfehler ergibt null Punkte.</li>
+    </ul>
+    <p>Erfolgreiches <strong>compile</strong> prüft weder ungelöste Referenzen noch die Catch2-Tests.
+      Dafür <strong>check</strong> oder <strong>score</strong> verwenden.
+      Das gemeinsame Ausgabefeld und die Hilfe lassen sich ein- und ausblenden;
+      der Trenner zwischen Editor und Ausgabe lässt sich verschieben.</p>
+
+    <h2>Configuration</h2>
+    <ul>
+      <li><strong>Answer language:</strong> C17 oder C++17 für Template und Studentenlösung auswählen.</li>
+      <li><strong>enable run:</strong> Zeigt den Button <strong>Run Code</strong> in der Aufgabe an.</li>
+      <li><strong>enable compile:</strong> Zeigt den Button <strong>Compile Code</strong> in der Aufgabe an.</li>
+      <li><strong>CPU time limit (seconds):</strong> Begrenzt die Prozessorzeit (Standard: 5 Sekunden).</li>
+    </ul>
+
+    <h2>C/C++ programming questions</h2>
+    <p>Studentenlösung und Lehrertests werden getrennt kompiliert und anschließend mit dem Catch2-Runner
+      verbunden. In den Lehrertests keine eigene Catch2-<code>main</code>-Funktion definieren.</p>
+
+    <h3>Funktionen testen</h3>
+    <pre>#include &lt;catch2/catch_test_macros.hpp&gt;
+// C-Antworten benötigen C-Linkage; die Tests selbst sind immer C++.
 #if __has_include("answer.c")
 #define ANSWER_LINKAGE extern "C"
 #else
@@ -11,24 +85,49 @@
 #endif
 ANSWER_LINKAGE int calculate_sum(int, int);
 TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }</pre>
-<p>For C answers, declare tested functions using C linkage, for example <code>extern "C" int calculate_sum(int, int);</code>. Use one TEST_CASE per scored case; assertions within a case do not receive separate points. A compilation error receives zero points.</p>
-<h3>Switching the answer language</h3>
-<p>Changing C17 to C++17, or C++17 to C17, does not rewrite your template or tests. Check that the student code supports the selected language and adapt its forward declarations in the Catch2 tests. A mismatch can cause an undefined reference linker error.</p>
-<p>The bundled examples use the preprocessor pattern above so their declarations work with both answer languages. Use <code>ANSWER_LINKAGE</code> before each tested function declaration. Jobe supplies <code>answer.c</code> for C answers and <code>answer.cpp</code> for C++ answers; <code>__has_include</code> detects the C answer without including its implementation. Keep the student implementation compiled separately. Do not use <code>__cplusplus</code> to select the answer's linkage: Catch2 tests themselves are always C++.</p>
-<h3>Running and testing</h3>
-<p>Run compiles the student's entire answer and starts its main function. It does not automatically call student functions. Unit tests instead start the main defined in jobe/catch2_runner.cpp, which runs the Catch2 test cases. During unit test compilation, LETTO_UNIT_TEST is defined for both the student answer and teacher tests. It is not defined for Run or compile. Students can include a main for manual experiments in the same answer by wrapping it as follows:</p>
-<pre>int calculate_sum(int a, int b) { return a + b; }
+    <p>Bei C-Antworten müssen die getesteten Funktionen mit C-Linkage deklariert werden,
+      zum Beispiel <code>extern "C" int calculate_sum(int, int);</code>.
+      Das gezeigte Muster funktioniert mit beiden Antwortsprachen, ohne die Implementierung einzubinden.</p>
+
+    <h3>Antwortsprache wechseln</h3>
+    <p>Ein Wechsel zwischen C17 und C++17 schreibt Template und Tests nicht um.
+      Prüfen Sie den Code und die Funktionsdeklarationen; unpassende Linkage kann einen
+      <code>undefined reference</code>-Linkerfehler verursachen.</p>
+    <p>Die Beispiele verwenden <code>ANSWER_LINKAGE</code> vor jeder getesteten Funktionsdeklaration.
+      Die Umgebung stellt <code>answer.c</code> für C und <code>answer.cpp</code> für C++ bereit.
+      <code>__has_include</code> erkennt die C-Antwort, ohne sie einzubinden.
+      <code>__cplusplus</code> eignet sich dafür nicht, da die Catch2-Tests immer C++ sind.</p>
+
+    <h3>Eigene main-Funktion für Run</h3>
+    <p><strong>Run Code</strong> startet die <code>main</code>-Funktion der Studentenlösung und ruft keine
+      Funktionen automatisch auf. UnitTests verwenden stattdessen die <code>main</code>-Funktion von Catch2.
+      Beim Kompilieren für UnitTests ist <code>LETTO_UNIT_TEST</code> für Antwort und Tests definiert;
+      bei <strong>run</strong> und <strong>compile</strong> ist es nicht definiert.</p>
+    <pre>int calculate_sum(int a, int b) { return a + b; }
 
 #ifndef LETTO_UNIT_TEST
+#include &lt;stdio.h&gt;
 int main(void) {
-    return calculate_sum(2, 3) == 5 ? 0 : 1;
+    printf("Sum: %d\n", calculate_sum(2, 3));
+    return 0;
 }
 #endif</pre>
-<p>Keep the functions being tested outside the guard. Put helpers and includes used only by main inside the guard too. An unguarded main conflicts with Catch2's main during linking.</p>
-<p>The compile button checks student code using C17 or C++17 with warnings treated as errors, without linking or executing it. It supports function answers without main and reports compiler diagnostics in the output panel. Teachers can enable it independently of Run Code. Successful compilation does not check unresolved references or Catch2 tests.</p>
-<p>Run Code executes the student's program, which needs a main function. Test template compiles the template against the teacher's Catch2 tests. Function answers can omit main when evaluated through Catch2. Choose a positive CPU time limit and whether students can run their program.</p>
-<h3>Files and examples</h3>
-<p>Uploaded files and example files are available in the working directory. The examples cover functions, stdout and reading number.txt. Templates intentionally need completing. Removing a file from a question does not delete shared stored content used by other questions.</p>
-<h3>Compilation cache</h3>
-<p>Jobe caches teacher test objects using the test source, included headers and compilation flags. Student submissions can populate the cache. The cache is cleared on container startup.</p>
-</article>
+    <p>Die getesteten Funktionen bleiben außerhalb des Guards. Hilfsfunktionen und Includes, die nur
+      <code>main</code> benötigt, können innerhalb stehen. Eine ungeschützte <code>main</code>-Funktion
+      kollidiert beim Linken mit Catch2. Reine Funktionsantworten dürfen <code>main</code> weglassen.</p>
+
+    <h2>Files</h2>
+    <p>Hochgeladene Dateien und Beispieldateien stehen beim Ausführen und Testen im Arbeitsverzeichnis bereit.
+      Eine Datei auswählen, um sie herunterzuladen oder mit <strong>delete selected</strong> aus der Aufgabe zu
+      entfernen. Das Entfernen löscht keine gespeicherten Inhalte, die andere Aufgaben verwenden.</p>
+
+    <h2>CPU time limit (seconds)</h2>
+    <p>Begrenzt die Prozessorzeit für Run, Check und Score (Standard: 5 Sekunden).
+      Wartezeiten und Ein-/Ausgabe verbrauchen keine CPU-Zeit. Die angezeigte verstrichene Zeit misst die
+      gesamte Anfrage und kann daher länger sein. Die Ausführungsumgebung beendet eine Ausführung zusätzlich
+      nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten. Bei 5 Sekunden CPU-Limit sind
+      daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
+  </div>
+</body>
+
+</html>

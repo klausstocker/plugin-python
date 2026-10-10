@@ -98,18 +98,9 @@ Server build: loading...">?</span>
                 </div>
 
                 <div class="btn-container">
-                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}">Run Code</button>` : ""}
-                    ${plugin.active && enableCompile ? `<button class="black-button" id="${compileButtonId}">compile</button>` : ""}
+                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}" type="button">Run Code</button>` : ""}
+                    ${plugin.active && enableCompile ? `<button class="black-button" id="${compileButtonId}" type="button">Compile Code</button>` : ""}
                 </div>
-                <details><summary>Use your own main for Run</summary>
-                    <p>Run starts your main function. Wrap it as below to exclude it from unit tests, which use Catch2's main:</p>
-                    <pre>#ifndef LETTO_UNIT_TEST
-int main(void) {
-    // Call your functions here.
-    return 0;
-}
-#endif</pre>
-                </details>
             </div>
         `);
     }
@@ -439,7 +430,7 @@ Server build: unavailable`;
                     credentials: "include",
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
+                const data = await readExecutionResponse(res);
                 targetEl.textContent = (data && data.output) ? data.output : JSON.stringify(data);
             } catch (error) {
                 targetEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
@@ -463,6 +454,20 @@ Server build: unavailable`;
             .replace(/"/g, "&quot;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+    }
+
+    async function readExecutionResponse(response) {
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            throw new Error(`HTTP ${response.status} from ${response.url}: expected JSON, received ${response.headers.get("content-type") || "an unknown content type"}. ${text.replace(/\s+/g, " ").slice(0, 160)}`);
+        }
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} from ${response.url}: ${data.output || data.detail || data.error || JSON.stringify(data)}`);
+        }
+        return data;
     }
 
     async function requestExecutionToken() {

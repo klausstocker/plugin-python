@@ -50,6 +50,13 @@ class TestCppPlugin(unittest.TestCase):
             self.assertIn('function initPluginCpp', client.get('/plugincpp/static/CppScript.js').text)
             self.assertEqual(client.get('/pluginpython/static/CppScript.js').status_code, 404)
             self.assertEqual(client.get('/plugincpp/static/PythonScript.js').status_code, 404)
+            for name in ('cpp-logo.png', 'unittest-logo.png'):
+                response = client.get('/plugincpp/static/' + name)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.headers['content-type'], 'image/png')
+                self.assertEqual(response.content, (RESOURCES / 'plugins/Cpp' / name).read_bytes())
+            self.assertEqual((RESOURCES / 'plugins/Cpp/unittest-logo.png').read_bytes(),
+                             (RESOURCES / 'plugins/Python/unittest-logo.png').read_bytes())
 
     def test_cpp_development_dialog(self):
         with patch.dict(os.environ, {'RESOURCE_DIR': str(RESOURCES), 'PLUGIN_DEV_UI': 'true'}):
