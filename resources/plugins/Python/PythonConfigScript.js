@@ -13,6 +13,8 @@ function configPluginPython(dtoString) {
     // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
+    const darkTheme = window.dark_design === true;
+    const aceTheme = darkTheme ? "ace/theme/monokai" : "ace/theme/chrome";
     const dtoParams = (dto.params && typeof dto.params === "object")
         ? dto.params
         : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
@@ -307,7 +309,7 @@ function configPluginPython(dtoString) {
         $(config_form_div).find(selector).remove();
 
         $(config_form_div).append(`
-            <div class="${ids.rootClass}">
+            <div class="${ids.rootClass}" style="--plugin-output-background: ${darkTheme ? "black" : "white"}; --plugin-output-color: ${darkTheme ? "rgb(70, 242, 70)" : "black"};">
                 <div class="config-main">
                     <div class="tab-head-row">
                         <div class="tab-buttons">
@@ -630,6 +632,10 @@ function configPluginPython(dtoString) {
                 min-width: 120px;
                 margin: 0;
             }
+            .pluginPythonConfigForm textarea {
+                resize: none;
+                overflow: auto;
+            }
             .pluginPythonConfigForm .editor-box {
                 flex: 1;
                 min-height: 0;
@@ -667,8 +673,8 @@ function configPluginPython(dtoString) {
                 flex: 1;
                 min-height: 120px;
                 border: 1px solid #d0d0d0;
-                background: #101010;
-                color: #8df58d;
+                background: var(--plugin-output-background, white);
+                color: var(--plugin-output-color, black);
                 padding: 8px;
                 overflow: auto;
                 white-space: pre-wrap;
@@ -1017,17 +1023,30 @@ function configPluginPython(dtoString) {
     }
 
     function ensureAceLoaded() {
-        return new Promise((resolve) => {
-            if (window.ace) {
-                resolve(true);
-                return;
+        const aceBase = `${serviceBase}/static/ace/1.44.0`;
+        const configureAce = () => {
+            if (!window.ace) return false;
+            for (const key of ["basePath", "modePath", "themePath", "workerPath"]) {
+                window.ace.config.set(key, aceBase);
             }
-            const script = document.createElement("script");
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js";
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.head.appendChild(script);
-        });
+            return true;
+        };
+        if (window.ace) return Promise.resolve(configureAce());
+        // Multiple questions and both plugins share one Ace runtime.
+        if (!window.pluginAceLoadPromise) {
+            window.pluginAceLoadPromise = new Promise((resolve) => {
+                const script = document.createElement("script");
+                script.src = `${aceBase}/ace.js`;
+                script.onload = () => resolve(configureAce());
+                script.onerror = () => {
+                    window.pluginAceLoadPromise = null;
+                    script.remove();
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+        return window.pluginAceLoadPromise;
     }
 
     async function setupEditors(initialUnit, initialPreview) {
@@ -1035,12 +1054,12 @@ function configPluginPython(dtoString) {
 
         if (aceAvailable && window.ace) {
             unitEditor = ace.edit(ids.unitEditorId);
-            unitEditor.setTheme("ace/theme/monokai");
+            unitEditor.setTheme(aceTheme);
             unitEditor.session.setMode("ace/mode/python");
             unitEditor.session.setValue(initialUnit || "");
 
             previewEditor = ace.edit(ids.previewEditorId);
-            previewEditor.setTheme("ace/theme/monokai");
+            previewEditor.setTheme(aceTheme);
             previewEditor.session.setMode("ace/mode/python");
             previewEditor.session.setValue(initialPreview || "");
 

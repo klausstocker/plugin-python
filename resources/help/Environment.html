@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Python und C/C++ – Ausführungsumgebung und Werkzeuge</title>
+  <style>
+    body { max-width: 960px; margin: 2rem auto; padding: 0 1rem;
+           font-family: sans-serif; line-height: 1.5; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    pre { overflow: auto; padding: 0.5rem; background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>Ausführungsumgebung und Werkzeuge</h1>
+  <p>Python- und C/C++-Aufgaben werden in Jobe ausgeführt. Linter und Autoformatter laufen
+    im Plugin-Dienst. Die folgenden Versionen wurden am <strong>11. Oktober 2026</strong>
+    in den laufenden Projektcontainern geprüft. Bei anderen Installationen oder einem Neubau
+    können sich Ubuntu-Paketversionen ändern; die Angaben sind ein geprüfter Versionsstand.</p>
+
+  <h2 id="python">Python</h2>
+  <h3>Ausführungsumgebung und Bibliotheken in Jobe</h3>
+  <table>
+    <thead><tr><th>Komponente</th><th>Version</th><th>Verwendung / Dokumentation</th></tr></thead>
+    <tbody>
+      <tr><td>Python</td><td>3.14.4 (Ubuntu: 3.14.4-1ubuntu0.2)</td>
+        <td>Studentencode und unittest-Lehrertests;
+          <a href="https://docs.python.org/3.14/" target="_blank" rel="noopener">Python 3.14</a>,
+          <a href="https://docs.python.org/3.14/library/unittest.html" target="_blank" rel="noopener">unittest</a></td></tr>
+      <tr><td>NumPy</td><td>2.5.4</td><td>Zusätzlich installierte Bibliothek für numerische Berechnungen;
+        <a href="https://numpy.org/doc/" target="_blank" rel="noopener">NumPy-Dokumentation</a></td></tr>
+      <tr><td>Pylint</td><td>4.1.2</td><td>Auch in Jobe installiert; Lint-Button und Linter-Bewertung laufen im Plugin-Dienst.
+        <a href="https://pylint.readthedocs.io/en/stable/" target="_blank" rel="noopener">Pylint-Dokumentation</a></td></tr>
+    </tbody>
+  </table>
+  <p>Zusätzlich zu NumPy und Pylint enthält die Jobe-Python-Umgebung deren Abhängigkeiten:
+    <code>astroid 4.3.4</code>, <code>dill 0.4.1</code>, <code>isort 9.0.2</code>,
+    <code>mccabe 0.7.0</code>, <code>mypy_extensions 1.1.0</code>, <code>platformdirs 4.13.0</code>
+    und <code>tomlkit 0.15.1</code>. Diese Versionen werden bei der Installation aufgelöst.</p>
+  <p>Die Python-Standardbibliothek ist verfügbar, zum Beispiel <code>math</code>,
+    <code>csv</code>, <code>json</code> und <code>sqlite3</code>. SQLite benötigt kein zusätzliches
+    Python-Paket. Das Programm <code>sqlite3</code> ist ebenfalls in Jobe installiert
+    (Ubuntu-Paket <code>3.46.1-9ubuntu0.3</code>).
+    <a href="https://docs.python.org/3.14/library/sqlite3.html" target="_blank" rel="noopener">sqlite3-Dokumentation</a>.</p>
+  <p>Jobe verwendet für Python-Antworten <code>/opt/jobe-python/bin/python3</code>.
+    Der Plugin-Dienst selbst verwendet Python <strong>3.14.8</strong>; dessen Webserver-Pakete
+    stehen Studentencode in Jobe nicht automatisch zur Verfügung. Aufgaben stellen
+    <code>answer</code>, <code>dataset</code> und <code>helpers</code> für die Lehrertests bereit.</p>
+
+  <h3>Linter und Autoformatter im Plugin-Dienst</h3>
+  <table>
+    <thead><tr><th>Werkzeug</th><th>Version</th><th>Funktion</th></tr></thead>
+    <tbody>
+      <tr><td>Pylint</td><td>4.1.2</td><td>Python-Codeanalyse und optional gewichtete Linter-Bewertung.</td></tr>
+      <tr><td>Ruff</td><td>0.17.0</td><td>Python-Autoformatter für Lehrertests, Template und Studentenlösung.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Pylint:</strong> Im Feld <strong>Linter configuration</strong> stehen Kommandozeilenoptionen,
+    beispielsweise <code>--disable=missing-module-docstring,missing-function-docstring</code>.
+    Die Vorgaben im Dialog ersetzen diese Optionen. <strong>Weight</strong> bestimmt den Anteil
+    des Linter-Ergebnisses an der Bewertung; bei 0 wird nur das UnitTest-Ergebnis bewertet.
+    <a href="https://pylint.readthedocs.io/en/stable/user_guide/usage/run.html" target="_blank" rel="noopener">Pylint-Aufruf und Optionen</a>.</p>
+  <p><strong>Ruff:</strong> Die Format-Buttons verwenden <code>ruff format</code>.
+    Im Tab <strong>Ruff</strong> sind <code>line-length</code>, <code>indent-width</code>,
+    <code>target-version</code>, <code>preview</code> und der Abschnitt <code>[format]</code> erlaubt.
+    Eine leere Konfiguration verwendet Ruff-Vorgaben. Externe Konfigurationsdateien werden nicht gelesen.
+    <a href="https://docs.astral.sh/ruff/formatter/" target="_blank" rel="noopener">Ruff-Formatter</a>,
+    <a href="https://docs.astral.sh/ruff/settings/" target="_blank" rel="noopener">Ruff-Einstellungen</a>.</p>
+  <pre><code>line-length = 88
+indent-width = 4
+[format]
+quote-style = "double"</code></pre>
+  <p>Formatierungseinstellungen werden mit der Aufgabe gespeichert. Formatieren ersetzt und
+    speichert den Code im aktiven Editor; im Ace-Editor kann die Änderung rückgängig gemacht werden.
+    Ruff führt den Code nicht aus und ändert keine Linter- oder Bewertungseinstellungen.</p>
+
+  <h2 id="cpp">C/C++</h2>
+  <h3>Compiler und Testbibliothek in Jobe</h3>
+  <table>
+    <thead><tr><th>Komponente</th><th>Exakte Version</th><th>Verwendung / Dokumentation</th></tr></thead>
+    <tbody>
+      <tr><td>GCC (gcc und g++)</td><td>15.2.0; Ubuntu 15.2.0-16ubuntu1</td>
+        <td><code>gcc</code> kompiliert C-Antworten, <code>g++</code> C++-Antworten und Catch2-Lehrertests.
+          <a href="https://gcc.gnu.org/onlinedocs/gcc-15.2.0/gcc/" target="_blank" rel="noopener">GCC 15.2-Dokumentation</a></td></tr>
+      <tr><td>Catch2</td><td>3.16.1</td><td>UnitTest-Framework für die als C++ kompilierten Lehrertests.
+        <a href="https://github.com/catchorg/Catch2/tree/v3.16.1/docs" target="_blank" rel="noopener">Catch2-Dokumentation</a></td></tr>
+    </tbody>
+  </table>
+  <p>Vorgaben: C17 oder C++17, <code>-Wall -Werror</code>. Zusätzliche Compileroptionen
+    werden pro Aufgabe im Tab <strong>Compiler</strong> gespeichert und gelten für Run,
+    Compile, Check und Bewertung. Beispiele: <code>-O2 -Wextra -DNUMBER=42</code>,
+    <code>-std=c++20</code> oder <code>-Wno-error</code>. C-Standardoptionen ändern den
+    C++17-Standard der Lehrertests nicht. Erlaubt sind unter anderem Standards,
+    Optimierung, Warnungen, Definitionen und relative Include-Pfade wie <code>-Iinclude</code>.
+    Optionen mit Shell-Syntax, Plugins, Ausgabepfaden oder absoluten bzw. übergeordneten
+    Include-Pfaden werden abgewiesen.</p>
+
+  <h3>Compilerdiagnosen und Autoformatter</h3>
+  <p><strong>Compile Code</strong> liefert die GCC-Diagnosen; eine separate
+    Linter-Bewertung gibt es bei C/C++ nicht.</p>
+  <table>
+    <thead><tr><th>Werkzeug</th><th>Version</th><th>Funktion</th></tr></thead>
+    <tbody>
+      <tr><td>clang-format</td><td>23.1.3</td><td>C/C++-Autoformatter im Plugin-Dienst für Lehrertests, Template und Studentenlösung.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>clang-format:</strong> Im Tab <strong>clang-format</strong> wird eine eigenständige
+    YAML-Konfiguration gespeichert. <code>InheritParentConfig</code> ist nicht erlaubt.
+    Eine leere Konfiguration verwendet:</p>
+  <pre><code>BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+SortIncludes: Never
+AllowShortFunctionsOnASingleLine: None</code></pre>
+  <p><a href="https://clang.llvm.org/docs/ClangFormat.html" target="_blank" rel="noopener">clang-format</a>,
+    <a href="https://clang.llvm.org/docs/ClangFormatStyleOptions.html" target="_blank" rel="noopener">clang-format-Style-Optionen</a>.</p>
+  <p>Formatierungseinstellungen werden mit der Aufgabe gespeichert. Formatieren ersetzt und
+    speichert den Code im aktiven Editor; im Ace-Editor kann die Änderung rückgängig gemacht werden.
+    clang-format führt den Code nicht aus und ändert keine Bewertungseinstellungen.</p>
+</body>
+</html>

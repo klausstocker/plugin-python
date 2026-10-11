@@ -6,6 +6,8 @@ const PYTHON_SCRIPT_COMMIT_HASH = "c70dad38cc61";
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
+    const darkTheme = window.dark_design === true;
+    const aceTheme = darkTheme ? "ace/theme/monokai" : "ace/theme/chrome";
     const dtoParams = (dto.params && typeof dto.params === "object")
         ? dto.params
         : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
@@ -82,7 +84,7 @@ function initPluginPython(dtoString, active) {
         $(pluginContainer).children(".code-runner-root").remove();
 
         $(pluginContainer).append(`
-            <div class="${escapeHtmlAttr(rootClass)} code-runner-root" data-service-base="${escapeHtmlAttr(plugin.serviceBase)}">
+            <div class="${escapeHtmlAttr(rootClass)} code-runner-root" data-service-base="${escapeHtmlAttr(plugin.serviceBase)}" style="--plugin-output-background: ${darkTheme ? "black" : "white"}; --plugin-output-color: ${darkTheme ? "rgb(70, 242, 70)" : "black"};">
                 <div class="container horizontal" id="${containerId}">
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
@@ -105,7 +107,6 @@ Server build: loading...">?</span>
                 <div class="btn-container">
                     ${plugin.active ? `<button class="black-button" id="${formatButtonId}" type="button" title="Format code" disabled>Format Code</button>` : ""}
                     ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}" type="button">Lint Code</button>` : ""}
-                    ${plugin.active && enableRun ? `<span class="action-divider" aria-hidden="true"></span>` : ""}
                     ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}" type="button">Run Code</button>` : ""}
                 </div>
             </div>
@@ -239,8 +240,8 @@ Server build: loading...">?</span>
                 font-family: monospace;
             }
             .code-runner-root .output-box {
-                background-color: black;
-                color: rgb(70, 242, 70);
+                background-color: var(--plugin-output-background, white);
+                color: var(--plugin-output-color, black);
                 overflow-y: auto;
                 padding: 8px;
                 white-space: pre-wrap;
@@ -262,28 +263,35 @@ Server build: loading...">?</span>
                 align-items: center;
                 flex-wrap: wrap;
             }
-            .code-runner-root .action-divider {
-                height: 28px;
-                border-left: 1px solid #b8b8b8;
-                margin: 0 12px 0 4px;
-                flex-shrink: 0;
-            }
         `;
         document.head.appendChild(style);
     }
 
     function ensureAceLoaded() {
-        return new Promise((resolve) => {
-            if (window.ace) {
-                resolve(true);
-                return;
+        const aceBase = `${plugin.serviceBase}/static/ace/1.44.0`;
+        const configureAce = () => {
+            if (!window.ace) return false;
+            for (const key of ["basePath", "modePath", "themePath", "workerPath"]) {
+                window.ace.config.set(key, aceBase);
             }
-            const script = document.createElement("script");
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js";
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.head.appendChild(script);
-        });
+            return true;
+        };
+        if (window.ace) return Promise.resolve(configureAce());
+        // Multiple questions and both plugins share one Ace runtime.
+        if (!window.pluginAceLoadPromise) {
+            window.pluginAceLoadPromise = new Promise((resolve) => {
+                const script = document.createElement("script");
+                script.src = `${aceBase}/ace.js`;
+                script.onload = () => resolve(configureAce());
+                script.onerror = () => {
+                    window.pluginAceLoadPromise = null;
+                    script.remove();
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+        return window.pluginAceLoadPromise;
     }
 
     async function setupEditors(initialMainCode) {
@@ -296,7 +304,7 @@ Server build: loading...">?</span>
 
         const editor = ace.edit(editorContainer);
         aceEditor = editor;
-        editor.setTheme("ace/theme/monokai");
+        editor.setTheme(aceTheme);
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
         editor.setReadOnly(!plugin.active);

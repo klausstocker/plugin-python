@@ -5,6 +5,10 @@ One application container registers two independent LeTTo plugin types:
 service registration name is `PythonCppPlugin`; image repositories use lowercase
 `klausstocker/python-cpp-plugin` and `klausstocker/python-cpp-plugin-jobe`.
 
+The plugin uses Python 3.14.8; Jobe uses Ubuntu 26.04's Python 3.14.
+See [dependencies and upgrades](DEPENDENCIES.md) for versions, runtime details,
+and the update procedure.
+
 The Python execution URLs remain under `/pluginpython`. The C/C++ plugin uses
 `/plugincpp/run`, `/plugincpp/check`, `/plugincpp/scorePlugin` and
 `/plugincpp/example`, with its own `CppScript.js` and `CppConfigScript.js`.
@@ -82,13 +86,27 @@ Open `http://localhost:8209/pluginpython/dev/config`. The dialog uses the normal
 plugin execution endpoints and the Jobe container. Bundled resources are served
 at `/pluginpython/dev/resources/`, for example
 `/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js`.
-jQuery and Ace currently require internet access to their CDN.
+Ace is bundled and served by the plugin server, including Python/C++ modes,
+the Monokai and Chrome themes and the search dialog. Editors follow LeTTo's
+`window.dark_design` at initialization: dark uses Monokai with green output on
+black; light uses Chrome with black output on white. An absent flag uses light.
+Student browsers need access only to
+your server for the editor. The standalone development dialog still loads
+jQuery from its CDN; LeTTo supplies its own jQuery.
 
 `PLUGIN_DEV_UI` defaults to `false`. Leave it unset or false in production:
 the dialog and the complete development resource mount then return 404.
 Changing the flag requires restarting the plugin process.
 
 ## Plugin help
+
+Both detailed help pages link to the shared
+[execution environment and tools](resources/help/Environment.html) page, served
+at `/pluginpython/static/help/Environment.html` and
+`/plugincpp/static/help/Environment.html` (also `/static/help/Environment.html`).
+It documents verified Jobe Python/library and GCC/G++ versions, Catch2, Pylint,
+Ruff and clang-format, with links to their official documentation. Update its
+dated version snapshot after dependency upgrades; see [dependencies](DEPENDENCIES.md).
 
 `resources/plugins/Python/Python.html` contains the short overview shown by Letto.
 Detailed help lives in `resources/help/Python.html`, is included in the plugin
@@ -491,7 +509,7 @@ Testergebnisse muessen deshalb spaeter anhand des Testreports bewertet werden.
 ## Catch2 fuer C- und C++-Funktionstests
 
 Das Jobe-Dockerfile installiert die feste stabile Version
-[Catch2 3.16.0](https://github.com/catchorg/Catch2/releases/tag/v3.16.0).
+[Catch2 3.16.1](https://github.com/catchorg/Catch2/releases/tag/v3.16.1).
 Catch2 und der Test-Runner werden beim Image-Build vorkompiliert; Compiler und
 CMake fuer den Catch2-Build bleiben im separaten Build-Stage.
 

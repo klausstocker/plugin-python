@@ -6,7 +6,7 @@ import unittest
 import uuid
 from unittest.mock import patch
 
-import httpx
+import httpx2 as httpx
 from fastapi.testclient import TestClient
 
 from app import main

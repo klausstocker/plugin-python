@@ -1,11 +1,14 @@
 # Formatting endpoints
 
+Teacher-facing documentation and official tool links are in the shared
+[environment help](../help/Environment.html), linked from both plugin help pages.
+
 The student and teacher Format buttons send source, filename, and the question's
 `formatterConfig` to the plugin. Results preserve Ace Undo and save the answer or
 configuration. Results are discarded if the source changed while formatting.
 
 - `POST /pluginpython/format`: Ruff 0.17.0 from `requirements.txt`.
-- `POST /plugincpp/format`: native clang-format from the plugin Dockerfile.
+- `POST /plugincpp/format`: clang-format 23.1.3, packaged as a binary wheel in `requirements.txt`.
 
 Both endpoints use the execution token and accept
 `{code, filename, questionConfigDto: {formatterConfig}}`, returning

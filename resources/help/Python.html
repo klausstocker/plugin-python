@@ -74,6 +74,18 @@
         können sie aus <code>dataset</code> importiert werden.</li>
     </ul>
 
+    <h3>Linter und Autoformatter</h3>
+    <p><strong>Pylint 4.1.2</strong> prüft den Code und liefert die optionale Linter-Bewertung.
+      <strong>Ruff 0.17.0</strong> formatiert den Code über <code>ruff format</code>.
+      Beide Werkzeuge laufen im Plugin-Dienst. Dokumentation:
+      <a href="https://pylint.readthedocs.io/en/stable/user_guide/usage/run.html" target="_blank" rel="noopener">Pylint-Optionen</a>,
+      <a href="https://docs.astral.sh/ruff/formatter/" target="_blank" rel="noopener">Ruff-Formatter</a>,
+      <a href="https://docs.astral.sh/ruff/settings/" target="_blank" rel="noopener">Ruff-Einstellungen</a>.
+      Linter-Optionen sind Kommandozeilenargumente, z. B.
+      <code>--disable=missing-module-docstring</code>; Formatter-Optionen sind TOML.
+      Ruff erlaubt hier zusätzlich <code>target-version</code> und <code>preview</code>;
+      externe Konfigurationsdateien werden nicht gelesen.</p>
+
     <h3>Ruff configuration example</h3>
     <pre><code>line-length = 88
 indent-width = 4
@@ -121,6 +133,11 @@ quote-style = "double"</code></pre>
       Die angezeigte verstrichene Zeit misst die gesamte Anfrage und kann daher länger sein.
       Jobe beendet eine Ausführung zusätzlich nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten.
       Bei 5 Sekunden CPU-Limit sind daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
+    <h2>Ausführungsumgebung und Werkzeuge</h2>
+    <p>Jobe verwendet Python <strong>3.14.4</strong> mit NumPy <strong>2.5.4</strong>.
+      <a href="static/help/Environment.html" data-plugin-help-file="help/Environment.html"
+        target="_blank" rel="noopener">Versionen, installierte Bibliotheken, Linter und Autoformatter</a>
+      (geprüfter Stand: 11. Oktober 2026).</p>
   </div>
 
 </body>

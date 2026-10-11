@@ -2,8 +2,8 @@
 # With thanks to David Bowes (d.h.bowes@lancaster.ac.uk) who did all the hard work
 # on this originally.
 
-FROM docker.io/ubuntu:24.04 AS catch2-build
-ARG CATCH2_VERSION=3.16.0
+FROM docker.io/ubuntu:26.04 AS catch2-build
+ARG CATCH2_VERSION=3.16.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake git ca-certificates && \
     git clone --depth 1 --branch "v${CATCH2_VERSION}" https://github.com/catchorg/Catch2.git /tmp/catch2 && \
@@ -18,7 +18,7 @@ COPY jobe/catch2_runner.cpp /tmp/catch2_runner.cpp
 RUN g++ -std=c++17 -O2 -I/opt/catch2/include -c /tmp/catch2_runner.cpp \
     -o /opt/catch2/lib/letto-catch2-runner.o
 
-FROM docker.io/ubuntu:24.04
+FROM docker.io/ubuntu:26.04
 COPY --from=catch2-build /opt/catch2 /opt/catch2
 COPY jobe/catch2-compile.sh /usr/local/bin/letto-catch2-compile
 RUN sed -i 's/\r$//' /usr/local/bin/letto-catch2-compile && \
@@ -75,15 +75,13 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     php-mbstring \
     php-intl \
     python3 \
-    python3-numpy \
     python3-pip \
-    python3-setuptools \
-    pylint \
+    python3-venv \
     sqlite3 \
     sudo \
     tzdata \
     unzip && \
-    pylint --reports=no --score=n --generate-rcfile > /etc/pylintrc && \
+    python3 -c 'import sys; assert sys.version_info[:2] == (3, 14), sys.version' && \
     ln -sf /proc/self/fd/1 /var/log/apache2/access.log && \
     ln -sf /proc/self/fd/1 /var/log/apache2/error.log && \
     sed -i "s/export LANG=C/export LANG=$LANG/" /etc/apache2/envvars && \
@@ -107,6 +105,19 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     apt-get -y autoremove --purge && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Use the same NumPy and Pylint pins as the plugin, without changing Ubuntu's
+# system Python packages. Jobe accepts an absolute interpreter path.
+COPY requirements.txt /tmp/plugin-requirements.txt
+RUN python3 -m venv /opt/jobe-python && \
+    grep -E '^(numpy|pylint)==' /tmp/plugin-requirements.txt > /tmp/jobe-requirements.txt && \
+    /opt/jobe-python/bin/python -m pip install --no-cache-dir -r /tmp/jobe-requirements.txt && \
+    /opt/jobe-python/bin/python -m pip check && \
+    /opt/jobe-python/bin/pylint --reports=no --score=n --generate-rcfile > /etc/pylintrc && \
+    sed -i "s|public string \$python3_version = .*;|public string \$python3_version = '/opt/jobe-python/bin/python3';|" \
+        /var/www/html/jobe/app/Config/Jobe.php && \
+    grep -F '/opt/jobe-python/bin/python3' /var/www/html/jobe/app/Config/Jobe.php && \
+    rm /tmp/plugin-requirements.txt /tmp/jobe-requirements.txt
 
 COPY jobe/Catch2cTask.php jobe/Catch2cppTask.php /var/www/html/jobe/app/Libraries/
 COPY jobe/CompilecTask.php jobe/CompilecppTask.php /var/www/html/jobe/app/Libraries/

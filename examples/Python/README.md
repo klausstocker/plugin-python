@@ -97,6 +97,5 @@ For `a = 3`, `n = 4`, the output is:
 The teacher tests read `dataset.a.value` and `dataset.n.value` from the
 runtime-provided `dataset` module, calculate `b = a + n`, and pass the endpoints
 `a` and `b` to the student function.
-See [the example details](dataset_numbers/README.md).
 
 [Possible solution](dataset_numbers/answer.py)

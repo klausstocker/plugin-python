@@ -27,7 +27,7 @@ def install_dev_ui(app: FastAPI, service_path: str, plugin: str = "Python") -> N
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{plugin} plugin development dialog</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
 <script src="{escape(script_url, quote=True)}"></script>
 </head>
 <body>

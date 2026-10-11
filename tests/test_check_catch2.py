@@ -169,8 +169,8 @@ class TestCatch2Jobe(unittest.TestCase):
 
     def test_catch2_version(self):
         versions = JobeWrapper(self.server).languages()
-        self.assertEqual(versions['catch2c'], '3.16.0')
-        self.assertEqual(versions['catch2cpp'], '3.16.0')
+        self.assertEqual(versions['catch2c'], '3.16.1')
+        self.assertEqual(versions['catch2cpp'], '3.16.1')
 
     def test_phase_timings_and_client_round_trip(self):
         result = JobeWrapper(self.server).run_test(

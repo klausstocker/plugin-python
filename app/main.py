@@ -9,7 +9,7 @@ import io
 import asyncio
 import logging
 import shutil
-import httpx
+import httpx2 as httpx
 import html
 import platform
 import socket
@@ -197,6 +197,7 @@ def configureLogging() -> Logger:
 
     # httpx-Request-Zeilen unterdrücken
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpx2").setLevel(logging.WARNING)
 
     return logging.getLogger("plugin-python")
 
