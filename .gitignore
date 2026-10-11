@@ -1,12 +1,16 @@
 /.idea/
 /.idea/*
 *.pyc
+*.log
 /.venv/
 /build/
 /tmp/
 /out/
 /target/
 /.docker-test/
-/.env.docker-local
+.env
+.env.*
+*.env
+*.env.*
 /revision.txt
 /resources/plugins/Python/examples.html

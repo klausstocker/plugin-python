@@ -1,4 +1,74 @@
-# plugin-python 
+# PythonCppPlugin
+
+One application container registers two independent LeTTo plugin types:
+`Python` and `Cpp`. Both use the same Jobe container. The Docker container and
+service registration name is `PythonCppPlugin`; image repositories use lowercase
+`klausstocker/python-cpp-plugin` and `klausstocker/python-cpp-plugin-jobe`.
+
+The plugin uses Python 3.14.8; Jobe uses Ubuntu 26.04's Python 3.14.
+See [dependencies and upgrades](DEPENDENCIES.md) for versions, runtime details,
+and the update procedure.
+
+The Python execution URLs remain under `/pluginpython`. The C/C++ plugin uses
+`/plugincpp/run`, `/plugincpp/check`, `/plugincpp/scorePlugin` and
+`/plugincpp/example`, with its own `CppScript.js` and `CppConfigScript.js`.
+The shared `/open/pluginlist` and `/open/generalinfolist` advertise both types.
+Execution endpoints use the same token authentication and uploaded-file storage.
+
+The student and teacher Format buttons call `/pluginpython/format` (Ruff) and
+`/plugincpp/format` (clang-format). Formatter configuration is saved with each
+question. C/C++ questions also support additional compiler flags for run,
+compile, tests, and grading. See [formatting configuration](resources/formatting/README.md).
+
+Open `http://localhost:8209/plugincpp/dev/config` for the C/C++ development dialog.
+Select C17 or C++17 for answers; teacher tests use Catch2 and default to C++17.
+The three C/C++ examples cover functions, stdout and file access. Their starter
+code intentionally needs completing. Each Catch2 TEST_CASE contributes one
+equally weighted case to the grade. Student Run Code needs a main function;
+function answers evaluated through Catch2 can omit main.
+
+Switching the answer language shows a reminder to check the template and test
+forward declarations. C answers need C linkage (`extern "C"`); C++ answers use
+C++ linkage. The bundled tests use `__has_include("answer.c")` to define
+`ANSWER_LINKAGE` automatically, so the same tests work after switching languages.
+The C/C++ help includes this pattern for custom tests. The tests themselves are
+always C++, so `__cplusplus` cannot distinguish the answer language.
+
+C/C++ overview help is in `resources/plugins/Cpp/Cpp.html`; detailed help is in
+`resources/help/Cpp.html` and served at `/plugincpp/help`. Its static resources
+are served at `/plugincpp/static/`. Python help remains separate.
+
+For the first deployment after the Docker rename, stop the previous Compose
+project before starting the new one, because both use ports 8209 and 4000:
+
+On the Linux playground, run the cleanup script before installing the new files:
+
+```bash
+sudo bash migrate-old-plugin.sh --dry-run
+sudo bash migrate-old-plugin.sh
+```
+
+It stops only `letto-pluginpython` and `letto-jobe`, and removes the legacy
+`/opt/letto/docker/compose/letto/docker-service-pluginpython.yml` and
+`/opt/letto/docker/proxy/pluginpython.conf`. Already-installed replacement files
+are kept. Optional positional arguments select another Compose directory and
+proxy directory. Install the new files afterwards, start the new deployment,
+then validate and reload the proxy. Container data and volumes are retained.
+
+For local Windows development, use:
+
+```powershell
+docker compose -p letto-plugin-python --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml down --remove-orphans
+.\build.bat --no-push
+.\start_development.bat
+```
+
+This stops the previous containers without deleting their persistent volumes.
+Compose now uses project `python-cpp-plugin`, service `pythoncppplugin`, and
+containers `PythonCppPlugin` and `PythonCppPlugin-jobe`. Jobe retains its network
+alias `jobe`. Existing file-storage and log-volume paths are retained. The proxy
+configuration includes both URL prefixes. Compose uses locally built `latest`
+images by default; set `PLUGIN_IMAGE_TAG` to deploy another published tag.
 
 ## Standalone development dialog
 
@@ -16,13 +86,27 @@ Open `http://localhost:8209/pluginpython/dev/config`. The dialog uses the normal
 plugin execution endpoints and the Jobe container. Bundled resources are served
 at `/pluginpython/dev/resources/`, for example
 `/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js`.
-jQuery and Ace currently require internet access to their CDN.
+Ace is bundled and served by the plugin server, including Python/C++ modes,
+the Monokai and Chrome themes and the search dialog. Editors follow LeTTo's
+`window.dark_design` at initialization: dark uses Monokai with green output on
+black; light uses Chrome with black output on white. An absent flag uses light.
+Student browsers need access only to
+your server for the editor. The standalone development dialog still loads
+jQuery from its CDN; LeTTo supplies its own jQuery.
 
 `PLUGIN_DEV_UI` defaults to `false`. Leave it unset or false in production:
 the dialog and the complete development resource mount then return 404.
 Changing the flag requires restarting the plugin process.
 
 ## Plugin help
+
+Both detailed help pages link to the shared
+[execution environment and tools](resources/help/Environment.html) page, served
+at `/pluginpython/static/help/Environment.html` and
+`/plugincpp/static/help/Environment.html` (also `/static/help/Environment.html`).
+It documents verified Jobe Python/library and GCC/G++ versions, Catch2, Pylint,
+Ruff and clang-format, with links to their official documentation. Update its
+dated version snapshot after dependency upgrades; see [dependencies](DEPENDENCIES.md).
 
 `resources/plugins/Python/Python.html` contains the short overview shown by Letto.
 Detailed help lives in `resources/help/Python.html`, is included in the plugin
@@ -38,10 +122,13 @@ resolves these links using its `serviceBase`; no Letto `/images/` mount is requi
 
 ## Teaching examples
 
-See [the examples guide](examples/README.md) for ten small examples, from printed
-output to SQLite, with typed student templates and working reference solutions.
-The Docker build generates an HTML version in the plugin resources and the help
-links to it.
+See [the examples index](examples/README.md) for separate Python and C/C++ examples.
+The [Python guide](examples/Python/README.md) covers eleven templates, from printed
+output to LeTTo dataset variables, with ten standalone reference solutions.
+The Docker build generates an HTML version in the Python plugin resources and the help
+links to it. The [C/C++ guide](examples/CPP/README.md) covers functions, stdout and files
+with portable student templates, Catch2 tests and reference solutions.
+Both configuration dialogs label examples with their folder names and a two-digit number.
 
 
 
@@ -50,8 +137,8 @@ links to it.
 Run `build.bat` on Windows or `bash build.sh` on Linux (Bash 4+), from any
 working directory. By default, both scripts build these images for the local Docker platform:
 
-- `klausstocker/letto-plugin-python:latest`
-- `klausstocker/letto-plugin-python-jobe:latest`
+- `klausstocker/python-cpp-plugin:latest`
+- `klausstocker/python-cpp-plugin-jobe:latest`
 
 Pass `plugin` or `jobe` to build and push only that image, for example
 `build.bat plugin` or `bash build.sh jobe`. The optional `--no-push` flag can
@@ -100,7 +187,7 @@ ARM64 but does not publish multi-platform manifests.
 
 ## Start or update production services (Linux)
 
-Install `yml/docker-service-pluginpython.yml` in
+Install `yml/docker-service-pluginpythoncpp.yml` in
 `/opt/letto/docker/compose/letto/` and configure the server's `.env` there
 as described in the installation section below. Set the desired image tags
 directly in the Compose file. Run the startup script from the repository,
@@ -150,8 +237,8 @@ cd C:\Pfad\zu\plugin-python
 docker version
 docker compose version
 
-docker pull klausstocker/letto-plugin-python:latest
-docker pull klausstocker/letto-plugin-python-jobe:latest
+docker pull klausstocker/python-cpp-plugin:latest
+docker pull klausstocker/python-cpp-plugin-jobe:latest
 
 New-Item -ItemType Directory -Force .docker-test\log | Out-Null
 New-Item -ItemType Directory -Force .docker-test\images | Out-Null
@@ -170,36 +257,36 @@ VOLUME_PLUGINS=./.docker-test/plugins
 docker network inspect nw-letto *> $null
 if ($LASTEXITCODE -ne 0) { docker network create nw-letto }
 
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml config
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml pull
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml up -d --no-build
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml ps
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml logs --tail 100
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml config
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml up -d --no-build
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml ps
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml logs --tail 100
 
 curl.exe http://localhost:8209/ping
 curl.exe http://localhost:4000/
 
-docker inspect letto-pluginpython --format '{{.Config.Image}}'
-docker inspect letto-jobe --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}}'
 ```
 
 Der erste Aufruf sollte `pong` liefern. Die beiden `docker inspect`-Befehle
-sollten `klausstocker/letto-plugin-python:latest` beziehungsweise
-`klausstocker/letto-plugin-python-jobe:latest` ausgeben. Der Plugin-Healthcheck
+sollten `klausstocker/python-cpp-plugin:latest` beziehungsweise
+`klausstocker/python-cpp-plugin-jobe:latest` ausgeben. Der Plugin-Healthcheck
 hat eine Startphase von 90 Sekunden; direkt nach dem Start kann der Status daher
 zunächst `starting` sein.
 
 Status und Logs können später erneut geprüft werden:
 
 ```powershell
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml ps
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml logs --follow
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml ps
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml logs --follow
 ```
 
 Aufräumen nach dem Test:
 
 ```powershell
-docker compose --env-file .env.docker-local -f yml/docker-service-pluginpython.yml down
+docker compose --env-file .env.docker-local -f yml/docker-service-pluginpythoncpp.yml down
 docker network rm nw-letto
 Remove-Item .env.docker-local -ErrorAction SilentlyContinue
 Remove-Item .docker-test -Recurse -Force -ErrorAction SilentlyContinue
@@ -223,7 +310,7 @@ install -d /opt/letto/docker/compose/letto
 install -d /opt/letto/docker/storage/log/pluginpython
 install -d /opt/letto/docker/storage/images
 install -d /opt/letto/docker/storage/plugins
-cp yml/docker-service-pluginpython.yml /opt/letto/docker/compose/letto/
+cp yml/docker-service-pluginpythoncpp.yml /opt/letto/docker/compose/letto/
 cd /opt/letto/docker/compose/letto
 ```
 
@@ -247,19 +334,19 @@ und beide Container starten:
 ```bash
 docker network inspect nw-letto >/dev/null 2>&1 || docker network create nw-letto
 
-docker compose --env-file .env -f docker-service-pluginpython.yml config
-docker compose --env-file .env -f docker-service-pluginpython.yml config --images
-docker compose --env-file .env -f docker-service-pluginpython.yml pull
-docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml config
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml config --images
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml up -d --no-build
 ```
 
 Status, verwendete Images und Logs prüfen:
 
 ```bash
-docker compose --env-file .env -f docker-service-pluginpython.yml ps
-docker inspect letto-pluginpython --format '{{.Config.Image}}'
-docker inspect letto-jobe --format '{{.Config.Image}}'
-docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml ps
+docker inspect PythonCppPlugin --format '{{.Config.Image}}'
+docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}}'
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml logs --tail=100
 ```
 
 Die lokalen Endpunkte testen:
@@ -274,8 +361,8 @@ Images genügen folgende Befehle:
 
 ```bash
 cd /opt/letto/docker/compose/letto
-docker compose --env-file .env -f docker-service-pluginpython.yml pull
-docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml up -d --no-build
 docker image prune -f
 ```
 
@@ -289,28 +376,28 @@ verwenden. Die Befehle löschen keine Volumes und keine Daten unter
 ```bash
 cd /opt/letto/docker/compose/letto
 
-docker compose --env-file .env -f docker-service-pluginpython.yml down --remove-orphans
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml down --remove-orphans
 
 for image_id in $(docker image ls \
-  --filter 'reference=klausstocker/letto-plugin-python*' \
+  --filter 'reference=klausstocker/python-cpp-plugin*' \
   --quiet | sort -u); do
   docker image rm "$image_id"
 done
 
 docker image prune -f
 
-docker compose --env-file .env -f docker-service-pluginpython.yml pull
-docker compose --env-file .env -f docker-service-pluginpython.yml up -d --no-build --force-recreate
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml pull
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml up -d --no-build --force-recreate
 ```
 
 Danach prüfen, ob beide Container die neu heruntergeladenen Images verwenden
 und erfolgreich antworten:
 
 ```bash
-docker compose --env-file .env -f docker-service-pluginpython.yml ps
-docker inspect letto-pluginpython --format '{{.Config.Image}} {{.Image}}'
-docker inspect letto-jobe --format '{{.Config.Image}} {{.Image}}'
-docker compose --env-file .env -f docker-service-pluginpython.yml logs --tail=100
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml ps
+docker inspect PythonCppPlugin --format '{{.Config.Image}} {{.Image}}'
+docker inspect PythonCppPlugin-jobe --format '{{.Config.Image}} {{.Image}}'
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml logs --tail=100
 curl --fail http://localhost:8209/ping
 curl --fail http://localhost:4000/
 ```
@@ -325,19 +412,228 @@ löschen:
 
 ```bash
 cd /opt/letto/docker/compose/letto
-docker compose --env-file .env -f docker-service-pluginpython.yml down
+docker compose --env-file .env -f docker-service-pluginpythoncpp.yml down
 ```
 
 Sind die Docker-Hub-Repositories nicht öffentlich, muss vor `pull` einmal
 `docker login` ausgeführt werden.
 
 * Proxy Konfiguration:
-  * kopiere proxy/pluginpython.conf in /opt/letto/docker/proxy/ am LeTTo-Server 
+  * kopiere proxy/pluginpythoncpp.conf in /opt/letto/docker/proxy/ am LeTTo-Server
+  * entferne die alte pluginpython.conf, damit die location-Blöcke nicht doppelt geladen werden
+  * falls nginx die Datei ausdrücklich per include lädt, ändere den Dateinamen dort ebenfalls; bei einem *.conf-Include ist keine Änderung nötig
+  * prüfe vor dem Reload: docker exec letto-proxy nginx -t
   * restarte den Proxy (docker restart letto-proxy)
 * Ressourcen-Synchronisierung:
   * Beim Start kopiert der Service automatisch `RESOURCE_DIR/plugins` in die gesetzten Zielpfade:
     * `${letto_pathPlugins}` (z. B. `/opt/letto/plugins`)
     * `${letto_pathImages}/plugins` (z. B. `/opt/letto/images/plugins`)
+
+## Tests ausfuehren
+
+Die Tests laufen vom Projektverzeichnis mit den Abhaengigkeiten aus
+`requirements.txt`. Es werden keine Testimages gebaut und keine zusaetzlichen
+Docker-Container gestartet. Fuer die Jobe-Integrationstests muss der regulaere
+Projekt-Jobe auf `localhost:4000` laufen. Die Formatter-Integrationstests nutzen
+die Endpunkte des regulaeren Plugins auf `http://localhost:8209`;
+`PLUGIN_TEST_SERVER` kann dessen Basis-URL anpassen.
+
+| Tests | Zweck | Voraussetzung |
+| --- | --- | --- |
+| `test_formatting` | Authentifizierung, Format-Konfiguration, Fehlerbehandlung und Compiler-Flags | Python; Integrationstests nutzen regulaeres Plugin und Projekt-Jobe |
+| `test_cpp_entrypoint` | Studentisches `main` beim Run ausfuehren, bei Catch2 ausschliessen | Projekt-Jobe per HTTP |
+| `test_check_catch2` | Bewertung, Compilerfehler, Zeitlimits und Testobjekt-Cache | Python; Integrationstests nutzen Projekt-Jobe |
+| `test_cpp_plugin` | C/C++-Endpunkte, Beispiele, Registrierung und statische Ressourcen | Python; Integrationstests nutzen Projekt-Jobe |
+| `test_cpp_dataset` | Dataset-Header fuer Lehrertests, studentische Werte bei Bewertung und Header-Downloads | Python; Integrationstests nutzen Projekt-Jobe |
+| `test_endpoints`, `test_question_examples`, `test_score`, `test_dataset`, `test_dev_ui` | Python-Endpunkte, Beispielabgaben, Bewertung und Entwicklungsdialog | Python, kein Docker |
+| `test_jobe`, `test_jobe_compiled` | Python/C/C++-Ausfuehrung, Uploads und CPU-Zeitlimits | Projekt-Jobe |
+
+```powershell
+py -m unittest discover -s tests -v
+```
+
+Ruff und clang-format werden ueber die Plugin-Endpunkte geprueft, ohne lokale
+Formatter-Installation oder uebersprungene Tests. Die Unit-Tests fuer Endpunkte
+und Konfiguration verwenden Mocks und laufen ohne gestartetes Plugin.
+
+Die Tests benoetigen keinen Browser und keine Ace-Testdatei. UI-Verhalten wie
+Ace Undo und gleichzeitige Eingaben wird bei der Entwicklung manuell geprueft.
+
+## C/C++ Dataset-Variablen
+
+Catch2-Lehrertests koennen `dataset.h` einbinden. C und C++ verwenden dieselbe
+Name/Wert-Tabelle `DATASET_VARIABLES` und `dataset_get("name")`, das
+`const variable *` oder `NULL` liefert. `variable` hat `float value` und
+`const char *unit`; `DATASET_VARIABLE_COUNT` gibt die Anzahl der Variablen an.
+Auch C-Lehrertests laufen als C++.
+
+Die Header werden automatisch hochgeladen. Lehrer koennen die gemeinsame
+`helpers.h` ueber die C/C++-Hilfe herunterladen. `dataset.h` wird fuer jede
+Bewertung aus den aktuellen studentischen `varsQuestion` erzeugt. Bei den
+Lehrerbuttons check/score kommen die Vorschauwerte aus der Frage zum Einsatz.
+Numerische Werte werden als `float` gespeichert, Einheiten als UTF-8-Strings;
+ohne Dataset bleibt die Tabelle leer. Nichtnumerische Werte oder Werte
+ausserhalb des `float`-Wertebereichs werden mit einer Fehlermeldung abgewiesen.
+
+Studentenfunktionen verwenden normale Parameter, keine Dataset-Imports. Run und
+Compile erhalten keine `dataset.h`; auch eine gleichnamige hochgeladene Datei
+wird dort ausgeschlossen. `helpers.h` und `dataset.h` fuer Lehrertests werden
+automatisch bereitgestellt und ersetzen gleichnamige Aufgabendateien.
+
+## Jobe-Integrationstests fuer C und C++
+
+Voraussetzung ist ein laufender Jobe-Container auf `localhost:4000`.
+
+```powershell
+py -m unittest tests.test_jobe tests.test_jobe_compiled -v
+```
+
+Die C/C++-Tests pruefen Sprach-IDs und Compiler-Versionen, stdout,
+Compilerfehler, Laufzeitabbruch, CPU-Zeitlimits, das Lesen und Schreiben von
+Dateien sowie hochgeladene Header und zusaetzliche Quelldateien. Die
+Sprachunterstuetzung wird vorausgesetzt; fehlende Sprachen lassen die Tests
+fehlschlagen.
+
+Im geprueften Entwicklungscontainer sind `c` und `cpp` mit GCC/G++ 13.3.0
+verfuegbar. Jobe verwendet fuer C standardmaessig C99; explizite C17- und
+C++17-Optionen funktionieren ueber `parameters.compileargs`. Eine weitere
+Quelldatei kann ueber `parameters.linkargs` mitkompiliert werden. Der Python-
+Wrapper bietet diese Compiler-/Linkeroptionen derzeit noch nicht an.
+Die getrennte C-Kompilierung mit anschliessendem Linken gegen einen C++-
+Catch2-Runner wird durch die unten beschriebenen Catch2-Tasks umgesetzt.
+
+Ein Programm mit Exitcode 1 wird von diesem Jobe als erfolgreich ausgefuehrt
+gemeldet; ein Abbruch mit `abort()` liefert dagegen Outcome 12. Catch2-
+Testergebnisse muessen deshalb spaeter anhand des Testreports bewertet werden.
+
+## Catch2 fuer C- und C++-Funktionstests
+
+Das Jobe-Dockerfile installiert die feste stabile Version
+[Catch2 3.16.1](https://github.com/catchorg/Catch2/releases/tag/v3.16.1).
+Catch2 und der Test-Runner werden beim Image-Build vorkompiliert; Compiler und
+CMake fuer den Catch2-Build bleiben im separaten Build-Stage.
+
+```powershell
+docker build -f jobe/Dockerfile -t klausstocker/python-cpp-plugin-jobe:1.0.0 .
+```
+
+Nach dem Neuaufsetzen des Jobe-Containers mit diesem Image bietet Jobe
+zusaetzlich die internen Sprach-IDs `catch2c` und `catch2cpp` an.
+`shared.check_catch2.check_catch2` akzeptiert als Abgabesprache `c` oder `cpp`:
+
+```python
+from shared.check_catch2 import check_catch2
+
+result = check_catch2(
+    "localhost:4000",
+    "int calculate_sum(int a, int b) { return a + b; }",
+    '''#include <catch2/catch_test_macros.hpp>
+extern "C" { int calculate_sum(int, int); }
+TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }
+''',
+    language="c",
+)
+assert result.wasSuccessful()
+```
+
+C-Abgaben werden separat mit GCC als C17 kompiliert; Testcode ist C++17 und
+deklariert C-Funktionen mit `extern "C"`. Bei C++-Abgaben entfaellt `extern "C"`.
+Abgaben und Testcode definieren kein eigenes `main`; dieses liefert der
+vorkompilierte Runner. Hochgeladene Header und Datendateien sind ueber `files`
+verfuegbar. Kompilierung, Linken und Ausfuehrung erfolgen in Jobe-Sandboxes.
+
+Der XML-Report wird getrennt von studentischem stdout erzeugt und in ein
+`CheckResult` umgewandelt. Bewertet werden Testfaelle (`TEST_CASE`), keine
+einzelnen Assertions. Compiler-/Linkerfehler, Laufzeitabbruch, Zeitlimit und
+fehlende oder leere Reports liefern Fehler statt einer erfolgreichen Bewertung.
+Die Sprachauswahl in den Plugin-Endpunkten und im Dialog folgt separat.
+
+```powershell
+py -m unittest tests.test_check_catch2 -v
+```
+
+Die Tests verwenden den regulaeren Projekt-Jobe auf `localhost:4000`.
+`JOBE_TEST_SERVER` kann dessen Adresse bei einem anderen Port oder Host anpassen;
+ein separater Testcontainer oder ein spezielles Testimage ist nicht erforderlich.
+
+### Laufzeiten messen
+
+Catch2 ist in jedem Build des Jobe-Dockerfiles enthalten. Der Build prueft
+Bibliothek, Header, Runner und Jobe-Tasks; es ist keine Installation nach dem
+Containerstart erforderlich. Aenderungen am laufenden Container allein gehen
+bei dessen Neuerstellung verloren, daher fuer dauerhafte Updates das Image
+mit `build.bat jobe --no-push` bauen und den Jobe-Container neu erstellen.
+
+```powershell
+py scripts/benchmark_jobe_cpp.py --runs 5
+```
+
+Der Benchmark speichert Einzelmessungen und die zurueckgegebenen XML-Reports
+in `artifacts/jobe_cpp_timings.json`. `--server localhost:4001` und
+`--output anderer-pfad.json` passen Server und Ausgabedatei an.
+Alle Zeitangaben in der JSON-Datei sind Sekunden; die Konsolentabelle zeigt
+Millisekunden. Es gibt keinen zusaetzlichen Download beliebiger Ergebnisdateien:
+Der Catch2-XML-Report wird als Teil von Jobe-stdout zurueckgegeben und lokal gespeichert.
+
+| Messung | Umfang |
+| --- | --- |
+| `total_client_seconds` | Von `run_test` inklusive Datei-Uploads bis zur empfangenen und dekodierten Antwort |
+| `upload_and_verify_seconds` | Datei-Uploads und deren HEAD-Pruefungen inklusive kleiner Vorbereitungsarbeit |
+| `run_request_seconds` | POST `/runs` bis zur empfangenen und dekodierten Antwort |
+| `answer_compile_wall_seconds` | GCC/G++-Aufruf zum Kompilieren der Abgabe in eine Objektdatei |
+| `test_compile_wall_seconds` | G++-Aufruf zum Kompilieren der Catch2-Testdatei |
+| `link_wall_seconds` | Separater G++-Linkeraufruf mit vorkompiliertem Runner und Catch2 |
+| `compile_sandbox_wall_seconds` | Alle drei Compiler-/Linkerphasen samt Python-Treiber und Sandbox-Verwaltung |
+| `test_run_wall_seconds` | Catch2 `Session::run`, inklusive Framework und XML-Reporter, ohne Prozessstart |
+| `execute_sandbox_wall_seconds` | Gesamte Ausfuehrungsphase inklusive Sandbox, Prozessstart und Reportausgabe |
+
+Die drei Compiler-/Linkerphasen liefern zusaetzlich `*_cpu_seconds`, gemessen
+ueber die vom Betriebssystem erfasste Benutzer- und System-CPU-Zeit ihrer
+Kindprozesse. Die anderen Angaben sind monotone Wall-Clock-Zeiten. Die
+Messbereiche ueberlappen; sie duerfen nicht alle addiert werden. Die Differenz
+zwischen POST-Zeit und beiden Sandbox-Zeiten enthaelt unter anderem
+HTTP-Verarbeitung, Arbeitsplatzvorbereitung und Aufraeumen, keine isolierte
+Netzwerkzeit. Fehlgeschlagene Phasen liefern nur die bis dahin vorhandenen
+Messungen; bei hartem Sandbox-Abbruch koennen innere Messungen fehlen.
+
+Eine erste lokale Messung mit zwei sehr kleinen C++-Testfaellen ergab nach
+dem ersten Lauf etwa 0,65 bis 0,68 Sekunden insgesamt. Der Median von drei
+Laeufen lag bei etwa 17 ms fuer Abgabekompilierung, 360 ms fuer Testkompilierung,
+117 ms fuer Linken und 0,44 ms fuer Catch2 selbst. Der erste Lauf dauerte
+1,72 Sekunden; diese Werte sind eine lokale Baseline, kein Geschwindigkeitsversprechen.
+
+### Cache fuer Catch2-Testobjekte
+
+Jobe speichert erfolgreich kompilierte Testobjekte in `/var/cache/jobe/catch2`.
+Der Docker-Entrypoint leert dieses Verzeichnis bei jedem Containerstart,
+auch bei `docker restart`. Es wird kein Volume benoetigt und kein Versionsschluessel
+verwendet. Fuer einen neuen Compiler oder eine neue Catch2-Version muss der
+Container mit dem entsprechenden Image neu erstellt werden.
+
+Jede Abgabe kann einen Cache-Miss fuellen; ein vorheriger Aufruf im Lehrer-Dialog
+ist nicht erforderlich. Der SHA-256-Schluessel umfasst Testquelle und Dateinamen,
+Test-Compilerflags, die vom Praeprozessor gefundenen lokalen Includes und alle
+weiteren hochgeladenen Hilfsdateien. Aenderungen an Hilfsdateien duerfen deshalb
+auch dann eine Neukompilierung ausloesen, wenn die Datei nicht verwendet wird.
+Abgabeinhalte werden nur dann mitgehasht, wenn die Tests die Abgabedatei selbst
+inkludieren. Andernfalls koennen verschiedene Abgaben dasselbe Testobjekt nutzen.
+
+Abgabeobjekt und ausfuehrbares Programm werden immer neu erstellt. Bei unbekannten
+externen Includes, zeitabhaengigen Makros oder nicht verfuegbarem Cache wird
+konservativ neu kompiliert. Fehlerhaftes Linken mit einem gecachten Objekt wird
+einmal mit frisch kompiliertem Testobjekt wiederholt. Eine fehlerhafte Kompilierung bzw. ein fehlerhaftes
+Linken fuellt den Cache nicht. Assertion-Fehler im anschliessenden Testlauf
+verhindern dagegen nicht die Wiederverwendung des korrekt gebauten Testobjekts.
+
+Jobe verwaltet Cache-Locks und publiziert Objekte atomar vor der Ausfuehrung
+studentischen Codes. Die Sandbox hat nur Lesezugriff auf den gemeinsamen Cache.
+Parallele Abgaben mit identischem Schluessel teilen sich die erste Kompilierung.
+Die erste Version hat keine Groessenbegrenzung; der Cache wird beim Start geleert.
+
+`RunResult.timings` enthaelt `test_cache_hit` und die Zeit fuer die
+Abhaengigkeitsanalyse (`test_cache_key_wall_seconds`). Bei einem Treffer sind
+Testkompilierungszeiten null; Cache-Pruefung, Kopieren, Abgabekompilierung und
+Linken kosten weiterhin Zeit. Der Benchmark speichert den Trefferstatus pro Lauf.
 
 ## Wichtige Endpoints
 - `GET /ping`  → `pong`

@@ -6,6 +6,8 @@ const PYTHON_SCRIPT_COMMIT_HASH = "c70dad38cc61";
 
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
+    const darkTheme = window.dark_design === true;
+    const aceTheme = darkTheme ? "ace/theme/monokai" : "ace/theme/chrome";
     const dtoParams = (dto.params && typeof dto.params === "object")
         ? dto.params
         : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
@@ -26,12 +28,13 @@ function initPluginPython(dtoString, active) {
     }
 
 
-    const plugin_div = "#" + dto.tagName + "_div";
-    const plugin_inp = "." + dto.tagName + "_inp";
+    const pluginContainer = document.getElementById(dto.tagName + "_div");
+    // PrimeFaces can initialize a plugin after its question fragment was removed.
+    if (!pluginContainer) return;
     const plugin = {
         name: dto.tagName,
         active: !!active,
-        serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || "/pluginpython").replace(/\/$/, "")
+        serviceBase: ((dto.pluginDto && dto.pluginDto.serviceBase) || dto.serviceBase || dtoParams.serviceBase || "/pluginpython").replace(/\/$/, "")
     };
     const pluginTokenPromise = requestExecutionToken();
 
@@ -44,14 +47,17 @@ function initPluginPython(dtoString, active) {
     const outputPanelId = `outputPanel_${plugin.name}`;
     const toggleLayoutButtonId = `toggleLayout_${plugin.name}`;
     const buildInfoId = `buildInfo_${plugin.name}`;
+    const formatButtonId = `formatButton_${plugin.name}`;
+    let refreshFormat = () => {};
     const runButtonId = `runButton_${plugin.name}`;
     const lintButtonId = `lintButton_${plugin.name}`;
     const defaultRatio = 2 / 3;
     let orientation = "horizontal";
     let splitRatio = defaultRatio;
     let aceEditor = null;
+    let editorContainer = null;
 
-    const answerField = $(plugin_inp)[0];
+    const answerField = document.getElementsByClassName(dto.tagName + "_inp")[0];
     const defaultMain = dtoData.indication || "# Write your Python code here\n";
     const initialMain = (answerField && answerField.value) || defaultMain;
     const linterConfig = dtoData.linterConfig || "";
@@ -67,19 +73,18 @@ function initPluginPython(dtoString, active) {
     }
 
     drawLayout();
+    editorContainer = pluginContainer.querySelector(".editor-box");
+    if (!editorContainer) return;
     ensureStyles();
     setupEditors(initialMain);
     bindActions();
     setupBuildInfo();
 
     function drawLayout() {
-        const clsName = "." + rootClass;
-        if ($(clsName).length > 0) {
-            $(clsName).remove();
-        }
+        $(pluginContainer).children(".code-runner-root").remove();
 
-        $(plugin_div).append(`
-            <div class="${rootClass} code-runner-root" data-service-base="${plugin.serviceBase}">
+        $(pluginContainer).append(`
+            <div class="${escapeHtmlAttr(rootClass)} code-runner-root" data-service-base="${escapeHtmlAttr(plugin.serviceBase)}" style="--plugin-output-background: ${darkTheme ? "black" : "white"}; --plugin-output-color: ${darkTheme ? "rgb(70, 242, 70)" : "black"};">
                 <div class="container horizontal" id="${containerId}">
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
@@ -90,7 +95,7 @@ function initPluginPython(dtoString, active) {
 Server build: loading...">?</span>
                             </span>
                         </div>
-                        <div id="${mainEditorId}" class="editor-box"></div>
+                        <div id="${escapeHtmlAttr(mainEditorId)}" class="editor-box"></div>
                     </div>
                     <div class="splitter" id="${splitterId}" role="separator" aria-label="Resize panels"></div>
                     <div class="panel panel-output" id="${outputPanelId}">
@@ -100,8 +105,9 @@ Server build: loading...">?</span>
                 </div>
 
                 <div class="btn-container">
-                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}">Run Code</button>` : ""}
-                    ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}">Lint Code</button>` : ""}
+                    ${plugin.active ? `<button class="black-button" id="${formatButtonId}" type="button" title="Format code" disabled>Format Code</button>` : ""}
+                    ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}" type="button">Lint Code</button>` : ""}
+                    ${plugin.active && enableRun ? `<button class="black-button" id="${runButtonId}" type="button">Run Code</button>` : ""}
                 </div>
             </div>
         `);
@@ -234,8 +240,8 @@ Server build: loading...">?</span>
                 font-family: monospace;
             }
             .code-runner-root .output-box {
-                background-color: black;
-                color: rgb(70, 242, 70);
+                background-color: var(--plugin-output-background, white);
+                color: var(--plugin-output-color, black);
                 overflow-y: auto;
                 padding: 8px;
                 white-space: pre-wrap;
@@ -253,35 +259,52 @@ Server build: loading...">?</span>
             }
             .code-runner-root .btn-container {
                 margin-top: 8px;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
             }
         `;
         document.head.appendChild(style);
     }
 
     function ensureAceLoaded() {
-        return new Promise((resolve) => {
-            if (window.ace) {
-                resolve(true);
-                return;
+        const aceBase = `${plugin.serviceBase}/static/ace/1.44.0`;
+        const configureAce = () => {
+            if (!window.ace) return false;
+            for (const key of ["basePath", "modePath", "themePath", "workerPath"]) {
+                window.ace.config.set(key, aceBase);
             }
-            const script = document.createElement("script");
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js";
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.head.appendChild(script);
-        });
+            return true;
+        };
+        if (window.ace) return Promise.resolve(configureAce());
+        // Multiple questions and both plugins share one Ace runtime.
+        if (!window.pluginAceLoadPromise) {
+            window.pluginAceLoadPromise = new Promise((resolve) => {
+                const script = document.createElement("script");
+                script.src = `${aceBase}/ace.js`;
+                script.onload = () => resolve(configureAce());
+                script.onerror = () => {
+                    window.pluginAceLoadPromise = null;
+                    script.remove();
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+        return window.pluginAceLoadPromise;
     }
 
     async function setupEditors(initialMainCode) {
         const aceAvailable = await ensureAceLoaded();
+        if (!editorContainer.isConnected) return;
         if (!aceAvailable || !window.ace) {
             fallbackTextareas(initialMainCode);
             return;
         }
 
-        const editor = ace.edit(mainEditorId);
+        const editor = ace.edit(editorContainer);
         aceEditor = editor;
-        editor.setTheme("ace/theme/monokai");
+        editor.setTheme(aceTheme);
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
         editor.setReadOnly(!plugin.active);
@@ -294,10 +317,11 @@ Server build: loading...">?</span>
         }
 
         plugin.getMainCode = () => editor.getValue();
+        refreshFormat();
     }
 
     function fallbackTextareas(initialMainCode) {
-        const mainEl = document.getElementById(mainEditorId);
+        const mainEl = editorContainer;
         mainEl.innerHTML = `<textarea style="width:100%;height:100%;box-sizing:border-box;">${escapeHtml(initialMainCode)}</textarea>`;
 
         const mainTextArea = mainEl.querySelector("textarea");
@@ -309,10 +333,40 @@ Server build: loading...">?</span>
             });
         }
         plugin.getMainCode = () => mainTextArea.value;
+        refreshFormat();
+    }
+
+    async function setupFormatting() {
+        const button = document.getElementById(formatButtonId);
+        if (!button) return;
+        try {
+            const { bindFormatButton } = await import(`${plugin.serviceBase}/static/formatting/client.js`);
+            if (!button.isConnected) return;
+            refreshFormat = bindFormatButton({
+                button,
+                output: document.getElementById(outputId),
+                requestFormat: async (code, filename) => {
+                    const response = await fetch(`${plugin.serviceBase}/format`, {
+                        method: "POST", headers: await buildHeaders(), credentials: "include",
+                        body: JSON.stringify({ code, filename, questionConfigDto: { formatterConfig: dtoData.formatterConfig || "" } })
+                    });
+                    const data = await readExecutionResponse(response);
+                    if (typeof data.code !== "string") throw new Error("Formatter returned no code");
+                    return data.code;
+                },
+                getTarget: () => {
+                    const textarea = editorContainer.querySelector("textarea");
+                    return aceEditor || textarea ? { editor: aceEditor, textarea, filename: "main.py" } : null;
+                },
+                onChange: () => { if (answerField) answerField.value = plugin.getMainCode(); }
+            });
+        } catch (error) {
+            button.title = "Formatter could not be loaded: " + (error.message || error);
+        }
     }
 
     function bindActions() {
-        const editorContainer = document.getElementById(mainEditorId);
+        setupFormatting();
         const stopEnterPropagation = (event) => {
             if (event.key === "Enter" || event.keyCode === 13) {
                 // Keep Enter inside Ace/the fallback textarea without cancelling newlines.
@@ -432,7 +486,7 @@ Server build: unavailable`;
                     credentials: "include",
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
+                const data = await readExecutionResponse(res);
                 targetEl.textContent = (data && data.output) ? data.output : JSON.stringify(data);
             } catch (error) {
                 targetEl.textContent = "Error: " + (error && error.message ? error.message : "request failed");
@@ -456,6 +510,20 @@ Server build: unavailable`;
             .replace(/"/g, "&quot;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+    }
+
+    async function readExecutionResponse(response) {
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            throw new Error(`HTTP ${response.status} from ${response.url}: expected JSON, received ${response.headers.get("content-type") || "an unknown content type"}. ${text.replace(/\s+/g, " ").slice(0, 160)}`);
+        }
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} from ${response.url}: ${data.output || data.detail || data.error || JSON.stringify(data)}`);
+        }
+        return data;
     }
 
     async function requestExecutionToken() {

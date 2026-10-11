@@ -12,6 +12,39 @@ from app.static_resources import install_static_resources
 
 
 class TestDevUi(unittest.TestCase):
+    def test_shared_help_is_served_for_both_plugins_and_custom_paths(self):
+        resources = Path(__file__).resolve().parents[1] / "resources"
+        with patch.dict(os.environ, {"RESOURCE_DIR": str(resources)}):
+            app = FastAPI()
+            install_static_resources(app, "/custom-python")
+            install_static_resources(app, "/custom-cpp", "Cpp", root_alias=False)
+        client = TestClient(app)
+        for prefix in ("", "/custom-python", "/custom-cpp"):
+            with self.subTest(prefix=prefix):
+                response = client.get(f"{prefix}/static/help%2FEnvironment.html")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("text/html", response.headers["content-type"])
+                self.assertEqual(response.content, (resources / "help/Environment.html").read_bytes())
+                self.assertEqual(client.get(f"{prefix}/static/help/missing.html").status_code, 404)
+                self.assertEqual(client.get(f"{prefix}/static/help/%2e%2e/plugins/Python/PythonScript.js").status_code, 404)
+
+    def test_bundled_ace_is_served_for_both_plugins_and_custom_paths(self):
+        resources = Path(__file__).resolve().parents[1] / "resources"
+        with patch.dict(os.environ, {"RESOURCE_DIR": str(resources)}):
+            app = FastAPI()
+            install_static_resources(app, "/custom-python")
+            install_static_resources(app, "/custom-cpp", "Cpp", root_alias=False)
+        client = TestClient(app)
+        for prefix in ("", "/custom-python", "/custom-cpp"):
+            for name in ("ace.js", "mode-python.js", "mode-c_cpp.js", "theme-monokai.js", "theme-chrome.js", "ext-searchbox.js"):
+                with self.subTest(prefix=prefix, name=name):
+                    response = client.get(f"{prefix}/static/ace/1.44.0/{name}")
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn("javascript", response.headers["content-type"])
+                    self.assertEqual(response.content, (resources / "vendor/ace/1.44.0" / name).read_bytes())
+            self.assertEqual(client.get(f"{prefix}/static/ace/1.44.0/missing.js").status_code, 404)
+            self.assertEqual(client.get(f"{prefix}/static/ace/%2e%2e/%2e%2e/plugins/Python/PythonScript.js").status_code, 404)
+
     def test_disabled_by_default(self):
         with patch.dict(os.environ, {}, clear=True):
             app = FastAPI()

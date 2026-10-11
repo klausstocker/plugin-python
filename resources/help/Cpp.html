@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  <title>C/C++ - Plugin - Help</title>
+</head>
+
+<body>
+  <style>
+    .cpp-plugin-help {
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      font-family: sans-serif;
+      line-height: 1.5;
+    }
+
+    .cpp-plugin-help pre {
+      overflow: auto;
+      padding: 0.5rem;
+      background: #f0f0f0;
+    }
+  </style>
+  <div class="cpp-plugin-help">
+    <h1 style="display: flex; align-items: center; gap: 0.4rem;"><img src="static/cpp-logo.png"
+        data-plugin-static-file="cpp-logo.png" alt="" width="40" height="40"
+        style="object-fit: contain; flex-shrink: 0;">C/C++ - Plugin<img src="static/unittest-logo.png"
+        data-plugin-static-file="unittest-logo.png" alt="" width="40" height="40"
+        style="object-fit: contain; flex-shrink: 0;"></h1>
+
+    <p>Mit diesem Plugin können C/C++-Aufgaben erstellt, ausprobiert und automatisch mit Catch2 bewertet werden.</p>
+
+    <h2>Beispiele</h2>
+    <p>Im Tab <strong>UnitTest</strong> ein Beispiel auswählen und mit <strong>Apply</strong> laden.
+      Die Beispiele zeigen Funktionstests, die Prüfung von stdout und das Lesen von <code>number.txt</code>.
+      Die Templates müssen noch vervollständigt werden. Das Laden ersetzt Template, Tests und Dateiliste;
+      bei vorhandenem Code oder Dateien erscheint eine Rückfrage.</p>
+
+    <h2>Kurz erklärt</h2>
+    <ul>
+      <li><strong>UnitTest:</strong> Enthält die Catch2-Tests, mit denen die eingereichte Lösung geprüft wird.
+        Diese Tests werden als C++ kompiliert (Standard: C++17).</li>
+      <li><strong>Template:</strong> Code, der den Studierenden als Angabe vorgegeben wird.</li>
+      <li><strong>Files:</strong> Zusätzliche Dateien hochladen, herunterladen oder aus der Aufgabe entfernen.</li>
+      <li><strong>Configuration:</strong> Sprache der Antwort, CPU-Limit und verfügbare Studentenbuttons festlegen.</li>
+    </ul>
+
+    <h2>Buttons</h2>
+    <ul>
+      <li><strong>Format:</strong> Formatiert den aktiven Code-Editor mit clang-format und speichert das Ergebnis.
+        Die Änderung lässt sich im Ace-Editor rückgängig machen. Studierende verwenden <strong>Format Code</strong>.</li>
+      <li><strong>run:</strong> Kompiliert das Template und führt dessen <code>main</code>-Funktion aus.
+        Nur im Tab <strong>Template</strong> verfügbar.</li>
+      <li><strong>compile:</strong> Prüft das Template mit C17 oder C++17; Warnungen werden als Fehler behandelt.
+        Nur im Tab <strong>Template</strong> verfügbar. Der Code wird weder gelinkt noch ausgeführt.
+        Funktionstests benötigen hier keine <code>main</code>-Funktion. Compilerdiagnosen erscheinen im Ausgabefeld.</li>
+      <li><strong>check:</strong> Führt die Catch2-Tests mit dem Template-Code aus und zeigt das Prüfergebnis an.</li>
+      <li><strong>score:</strong> Berechnet die Punkte aus den Catch2-Testfällen.
+        Jeder <code>TEST_CASE</code> zählt als ein bewerteter Fall; einzelne Assertions erhalten keine eigenen Punkte.
+        Ein Kompilierungsfehler ergibt null Punkte.</li>
+    </ul>
+    <p>Erfolgreiches <strong>compile</strong> prüft weder ungelöste Referenzen noch die Catch2-Tests.
+      Dafür <strong>check</strong> oder <strong>score</strong> verwenden.
+      Das gemeinsame Ausgabefeld und die Hilfe lassen sich ein- und ausblenden;
+      der Trenner zwischen Editor und Ausgabe lässt sich verschieben.</p>
+
+    <h2>Configuration</h2>
+    <p>Die Tabs <strong>Compiler</strong> und <strong>clang-format</strong> enthalten die Code-Einstellungen.
+      Daneben zeigt <strong>Available dataset variables</strong> die aktuellen Namen, Werte und Einheiten.
+      Die Verwendung im Lehrertest ist im Abschnitt <strong>Dataset variables (teacher tests)</strong> beschrieben.</p>
+    <ul>
+      <li><strong>Answer language:</strong> C17 oder C++17 für Template und Studentenlösung auswählen.</li>
+      <li><strong>enable run:</strong> Zeigt den Button <strong>Run Code</strong> in der Aufgabe an.</li>
+      <li><strong>enable compile:</strong> Zeigt den Button <strong>Compile Code</strong> in der Aufgabe an.</li>
+      <li><strong>CPU time limit (seconds):</strong> Begrenzt die Prozessorzeit (Standard: 5 Sekunden).</li>
+      <li><strong>clang-format configuration (YAML):</strong> Im Tab <strong>clang-format</strong> die
+        Formatierungsoptionen dieser Aufgabe eintragen, z. B.
+        <code>BasedOnStyle: LLVM</code> und <code>IndentWidth: 4</code>. Eine leere Konfiguration verwendet die Vorgaben.
+        Die Einstellungen werden mit der Aufgabe gespeichert und von den Format-Buttons für Lehrende und
+        Studierende verwendet; sie gelten für Lehrertests, Template und Studentenlösung.</li>
+      <li><strong>Additional compiler flags:</strong> Im Tab <strong>Compiler</strong> zusätzliche Optionen
+        für run, compile, check und Bewertung eintragen, durch Leerzeichen oder Zeilenumbrüche getrennt,
+        z. B. <code>-O2 -Wextra -DNUMBER=42</code>. <code>-std=c++20</code> ändert den C++-Standard;
+        Die Vorgaben sind C17/C++17 und <code>-Wall -Werror</code>; <code>-Wno-error</code> erlaubt Warnungen.
+        C-Standardoptionen ändern den C++17-Teststandard nicht.</li>
+    </ul>
+
+    <h3>Compilerdiagnosen und Autoformatter</h3>
+    <p><strong>Compile Code</strong> zeigt die GCC-Diagnosen; eine separate Linter-Bewertung
+      gibt es bei C/C++ nicht. <strong>clang-format 23.1.3</strong> formatiert den Code
+      im Plugin-Dienst. Die YAML-Konfiguration muss eigenständig sein;
+      <code>InheritParentConfig</code> ist nicht erlaubt. Dokumentation:
+      <a href="https://gcc.gnu.org/onlinedocs/gcc-15.2.0/gcc/" target="_blank" rel="noopener">GCC 15.2 und Compileroptionen</a>,
+      <a href="https://clang.llvm.org/docs/ClangFormat.html" target="_blank" rel="noopener">clang-format</a>,
+      <a href="https://clang.llvm.org/docs/ClangFormatStyleOptions.html" target="_blank" rel="noopener">clang-format-Style-Optionen</a>.</p>
+
+    <h2>C/C++ programming questions</h2>
+    <p>Studentenlösung und Lehrertests werden getrennt kompiliert und anschließend mit dem Catch2-Runner
+      verbunden. In den Lehrertests keine eigene Catch2-<code>main</code>-Funktion definieren.</p>
+
+    <h3>Funktionen testen</h3>
+    <pre>#include &lt;catch2/catch_test_macros.hpp&gt;
+// C-Antworten benötigen C-Linkage; die Tests selbst sind immer C++.
+#if __has_include("answer.c")
+#define ANSWER_LINKAGE extern "C"
+#else
+#define ANSWER_LINKAGE
+#endif
+ANSWER_LINKAGE int calculate_sum(int, int);
+TEST_CASE("sum") { REQUIRE(calculate_sum(2, 3) == 5); }</pre>
+    <p>Bei C-Antworten müssen die getesteten Funktionen mit C-Linkage deklariert werden,
+      zum Beispiel <code>extern "C" int calculate_sum(int, int);</code>.
+      Das gezeigte Muster funktioniert mit beiden Antwortsprachen, ohne die Implementierung einzubinden.</p>
+
+    <h3>Antwortsprache wechseln</h3>
+    <p>Ein Wechsel zwischen C17 und C++17 schreibt Template und Tests nicht um.
+      Prüfen Sie den Code und die Funktionsdeklarationen; unpassende Linkage kann einen
+      <code>undefined reference</code>-Linkerfehler verursachen.</p>
+    <p>Die Beispiele verwenden <code>ANSWER_LINKAGE</code> vor jeder getesteten Funktionsdeklaration.
+      Die Umgebung stellt <code>answer.c</code> für C und <code>answer.cpp</code> für C++ bereit.
+      <code>__has_include</code> erkennt die C-Antwort, ohne sie einzubinden.
+      <code>__cplusplus</code> eignet sich dafür nicht, da die Catch2-Tests immer C++ sind.</p>
+
+    <h3>Eigene main-Funktion für Run</h3>
+    <p><strong>Run Code</strong> startet die <code>main</code>-Funktion der Studentenlösung und ruft keine
+      Funktionen automatisch auf. UnitTests verwenden stattdessen die <code>main</code>-Funktion von Catch2.
+      Beim Kompilieren für UnitTests ist <code>LETTO_UNIT_TEST</code> für Antwort und Tests definiert;
+      bei <strong>run</strong> und <strong>compile</strong> ist es nicht definiert.</p>
+    <pre>int calculate_sum(int a, int b) { return a + b; }
+
+#ifndef LETTO_UNIT_TEST
+#include &lt;stdio.h&gt;
+int main(void) {
+    printf("Sum: %d\n", calculate_sum(2, 3));
+    return 0;
+}
+#endif</pre>
+    <p>Die getesteten Funktionen bleiben außerhalb des Guards. Hilfsfunktionen und Includes, die nur
+      <code>main</code> benötigt, können innerhalb stehen. Eine ungeschützte <code>main</code>-Funktion
+      kollidiert beim Linken mit Catch2. Reine Funktionsantworten dürfen <code>main</code> weglassen.</p>
+
+    <h2>Dataset variables (teacher tests)</h2>
+    <p>Die Lehrertests erhalten eine pro Student erzeugte <code>dataset.h</code> mit den aktuellen
+      Dataset-Werten. Die Werte stehen nur bei <strong>check</strong> und Bewertung bereit.
+      Studentencode darf keine Dataset-Werte importieren; die Lehrertests geben sie als Funktionsargumente
+      weiter. <strong>run</strong> und <strong>compile</strong> erhalten keine <code>dataset.h</code>.</p>
+    <p><code>helpers.h</code> definiert <code>variable</code> mit <code>float value</code> und
+      <code>const char *unit</code> fuer C und C++. Beide Header werden automatisch bereitgestellt.
+      Download fuer die lokale Vorbereitung der Lehrertests:
+      <a href="static/helpers.h" data-plugin-help-file="helpers.h" download="helpers.h">helpers.h (C und C++)</a>.</p>
+    <p>Die Catch2-Lehrertests erhalten auch <code>helpers.c</code>. Mit
+      <code>#include "helpers.c"</code> stehen die Klassen <code>StdoutBuffer</code> und
+      <code>CaptureStdout</code> bereit, um Ausgaben von <code>printf</code> und
+      <code>std::cout</code> abzufangen. Die Datei wird in die als C++ kompilierten Tests eingebunden.
+      Download fuer lokale Lehrertests:
+      <a href="static/helpers.c" data-plugin-help-file="helpers.c" download="helpers.c">helpers.c</a>.</p>
+    <p>In beiden Sprachen gibt es eine Tabelle <code>DATASET_VARIABLES</code> und
+      <code>DATASET_VARIABLE_COUNT</code>. <code>dataset_get("name")</code> liefert einen Zeiger
+      auf <code>variable</code> oder <code>NULL</code> fuer einen fehlenden Namen.
+      Diese Schnittstelle ist auch in den als C++ kompilierten Catch2-Tests verwendbar:</p>
+    <pre>#include "dataset.h"
+#include &lt;catch2/catch_test_macros.hpp&gt;
+#if __has_include("answer.c")
+#define ANSWER_LINKAGE extern "C"
+#else
+#define ANSWER_LINKAGE
+#endif
+ANSWER_LINKAGE float double_value(float);
+TEST_CASE("dataset") {
+    const variable *number = dataset_get("number");
+    REQUIRE(number != nullptr);
+    REQUIRE(double_value(number-&gt;value) == number-&gt;value * 2);
+}</pre>
+    <p>Einheit ueber <code>number-&gt;unit</code> lesen. Strings mit <code>strcmp</code> vergleichen.
+      Nur numerische Dataset-Werte werden exportiert; Text und leere Werte werden ausgelassen.
+      <code>dataset_get</code> liefert fuer ausgelassene Variablen <code>NULL</code>.
+      Numerische Werte muessen in den Wertebereich von <code>float</code> passen;
+      eine fehlende Einheit ist ein leerer String. Ohne Dataset ist die Tabelle leer.
+      Die Bewertung verwendet immer das aktuelle studentische Dataset, keine gespeicherten Vorschauwerte.</p>
+
+    <h2>Files</h2>
+    <p>Hochgeladene Dateien und Beispieldateien stehen beim Ausführen und Testen im Arbeitsverzeichnis bereit.
+      Eine Datei auswählen, um sie herunterzuladen oder mit <strong>delete selected</strong> aus der Aufgabe zu
+      entfernen. Das Entfernen löscht keine gespeicherten Inhalte, die andere Aufgaben verwenden.</p>
+
+    <h2>CPU time limit (seconds)</h2>
+    <p>Begrenzt die Prozessorzeit für Run, Check und Score (Standard: 5 Sekunden).
+      Wartezeiten und Ein-/Ausgabe verbrauchen keine CPU-Zeit. Die angezeigte verstrichene Zeit misst die
+      gesamte Anfrage und kann daher länger sein. Die Ausführungsumgebung beendet eine Ausführung zusätzlich
+      nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten. Bei 5 Sekunden CPU-Limit sind
+      daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
+    <h2>Ausführungsumgebung und Werkzeuge</h2>
+    <p>Jobe kompiliert mit GCC/G++ <strong>15.2.0 (Ubuntu 15.2.0-16ubuntu1)</strong>.
+      Die Lehrertests verwenden Catch2 <strong>3.16.1</strong>.
+      <a href="static/help/Environment.html" data-plugin-help-file="help/Environment.html"
+        target="_blank" rel="noopener">Versionen, Bibliotheken, Compiler und Autoformatter</a>
+      (geprüfter Stand: 11. Oktober 2026).</p>
+  </div>
+</body>
+
+</html>

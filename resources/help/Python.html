@@ -47,6 +47,8 @@
     <h2>Buttons</h2>
     <ul>
       <li><strong>run:</strong> Führt den Code des aktuell geöffneten Editors aus und zeigt dessen Ausgabe an.</li>
+      <li><strong>Format:</strong> Formatiert den aktiven Code-Editor mit Ruff und speichert das Ergebnis.
+        Die Änderung lässt sich im Ace-Editor rückgängig machen. Studierende verwenden <strong>Format Code</strong>.</li>
       <li><strong>lint:</strong> Prüft den Stil des Codes im aktuell geöffneten Editor anhand der Linter-Konfiguration.</li>
       <li><strong>check:</strong> Führt die UnitTests mit dem Preview-Code aus und zeigt das Prüfergebnis an.</li>
       <li><strong>score:</strong> Berechnet die Punkte aus UnitTests und – sofern aktiviert – dem gewichteten
@@ -54,9 +56,16 @@
     </ul>
 
     <h2>Configuration</h2>
+    <p>Die Reiter <strong>Linter</strong> und <strong>Ruff</strong> zeigen jeweils eine Konfiguration an.
+      Beim Wechsel bleiben beide Einstellungen erhalten.</p>
     <ul>
       <li><strong>enable run:</strong> Zeigt den Button "Run Code" in der Aufgabe an.</li>
       <li><strong>enable lint:</strong> Zeigt den Button "Lint Code" in der Aufgabe an.</li>
+      <li><strong>Ruff configuration (TOML):</strong> Speichert die Formatierungsoptionen mit der Aufgabe,
+        z. B. <code>line-length = 88</code> und <code>indent-width = 4</code> sowie Optionen im Abschnitt
+        <code>[format]</code>. Eine leere Konfiguration verwendet die Ruff-Vorgaben. Die Einstellungen gelten
+        für die Format-Buttons der Lehrenden und Studierenden, also für Lehrertests, Template und Studentenlösung;
+        die Pylint-Bewertung bleibt separat konfiguriert.</li>
       <li><strong>Linter configuration:</strong> Hier können zusätzliche Linter-Optionen angegeben werden, beispielsweise
         Regeln, die nicht geprüft werden sollen.</li>
       <li><strong>Weight:</strong> Legt fest, wie stark das Linter-Ergebnis im Verhältnis zum UnitTest-Ergebnis (1.0) in die
@@ -64,6 +73,24 @@
       <li><strong>Dataset variables:</strong> Zeigt die verfügbaren Aufgabenvariablen mit Wert und Einheit. Im UnitTest
         können sie aus <code>dataset</code> importiert werden.</li>
     </ul>
+
+    <h3>Linter und Autoformatter</h3>
+    <p><strong>Pylint 4.1.2</strong> prüft den Code und liefert die optionale Linter-Bewertung.
+      <strong>Ruff 0.17.0</strong> formatiert den Code über <code>ruff format</code>.
+      Beide Werkzeuge laufen im Plugin-Dienst. Dokumentation:
+      <a href="https://pylint.readthedocs.io/en/stable/user_guide/usage/run.html" target="_blank" rel="noopener">Pylint-Optionen</a>,
+      <a href="https://docs.astral.sh/ruff/formatter/" target="_blank" rel="noopener">Ruff-Formatter</a>,
+      <a href="https://docs.astral.sh/ruff/settings/" target="_blank" rel="noopener">Ruff-Einstellungen</a>.
+      Linter-Optionen sind Kommandozeilenargumente, z. B.
+      <code>--disable=missing-module-docstring</code>; Formatter-Optionen sind TOML.
+      Ruff erlaubt hier zusätzlich <code>target-version</code> und <code>preview</code>;
+      externe Konfigurationsdateien werden nicht gelesen.</p>
+
+    <h3>Ruff configuration example</h3>
+    <pre><code>line-length = 88
+indent-width = 4
+[format]
+quote-style = "double"</code></pre>
 
     <h3>Linter presets</h3>
     <p>Die Auswahl einer Vorgabe ersetzt den Text in <strong>Linter configuration</strong>.
@@ -106,6 +133,11 @@
       Die angezeigte verstrichene Zeit misst die gesamte Anfrage und kann daher länger sein.
       Jobe beendet eine Ausführung zusätzlich nach etwa dem Doppelten des CPU-Limits als Schutz vor endlosem Warten.
       Bei 5 Sekunden CPU-Limit sind daher etwa 10 Sekunden zuzüglich Upload-, Warteschlangen- und Netzwerkzeit möglich.</p>
+    <h2>Ausführungsumgebung und Werkzeuge</h2>
+    <p>Jobe verwendet Python <strong>3.14.4</strong> mit NumPy <strong>2.5.4</strong>.
+      <a href="static/help/Environment.html" data-plugin-help-file="help/Environment.html"
+        target="_blank" rel="noopener">Versionen, installierte Bibliotheken, Linter und Autoformatter</a>
+      (geprüfter Stand: 11. Oktober 2026).</p>
   </div>
 
 </body>

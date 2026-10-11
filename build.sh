@@ -40,7 +40,7 @@ if (( ${#tags[@]} )) && [[ "$no_push" == false ]]; then
     fi
 fi
 
-images=(klausstocker/letto-plugin-python klausstocker/letto-plugin-python-jobe)
+images=(klausstocker/python-cpp-plugin klausstocker/python-cpp-plugin-jobe)
 files=(Dockerfile jobe/Dockerfile)
 case "$target" in
     plugin) images=("${images[0]}"); files=("${files[0]}") ;;

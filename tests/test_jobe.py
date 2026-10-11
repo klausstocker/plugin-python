@@ -1,5 +1,6 @@
 import unittest
 import sys
+import json
 from unittest.mock import patch
 
 from app.dataset_helper import DatasetVariable, dataset_file_from_variables
@@ -11,6 +12,31 @@ from shared.question_examples import *
 
 
 class TestJobeWrapper(unittest.TestCase):
+
+    def test_python314_submission_runtime_supports_templates_and_numpy(self):
+        code = '''
+import json
+import sys
+import sqlite3
+import numpy as np
+from string.templatelib import Template
+
+message = t"Python {sys.version_info.minor}"
+assert isinstance(message, Template)
+with sqlite3.connect(":memory:") as connection:
+    assert connection.execute("SELECT 42").fetchone()[0] == 42
+print(json.dumps({"version": list(sys.version_info[:2]),
+                  "executable": sys.executable,
+                  "sum": int(np.array([1, 2, 3]).sum())}))
+'''
+        jobe = JobeWrapper('localhost:4000')
+        self.assertRegex(jobe.languages()['python3'], r'^3\.14\.')
+        result = jobe.run_test('python3', code, 'test.py')
+        self.assertTrue(result.success(), repr(result))
+        runtime = json.loads(result.stdout)
+        self.assertEqual(runtime['version'], [3, 14])
+        self.assertEqual(runtime['executable'], '/opt/jobe-python/bin/python3')
+        self.assertEqual(runtime['sum'], 6)
 
     def test_run(self):
         code = """
@@ -78,7 +104,8 @@ class Checker(unittest.TestCase): # do not rename
 """
         result = checkCode('localhost:4000', code, testCode)
         self.assertEqual(result.count, 2)
-        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(result.failure_count, 1)
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(result.score(), 0.5)
 
 
@@ -185,8 +212,9 @@ print(open('file2').read())
                 name: content.encode("utf-8") for name, content in example.files.items()
             }
             file_data.update(dataset_file_from_variables([
-                DatasetVariable(name="number", value=7),
+                DatasetVariable(name="a", value=3),
+                DatasetVariable(name="n", value=4),
             ]))
             files = JobeWrapper.createFiles(file_data)
             result = checkCode('localhost:4000', example.indication, example.validation, files=files)
-            self.assertTrue(result.wasSuccessful())
+            self.assertTrue(result.wasSuccessful(), repr(result))

@@ -1,0 +1,58 @@
+networks:
+  nw-letto:
+    external: true
+
+# Der Name bestimmt das Projekt und sollte bei jeder yml-Datei unterschiedlich sein - er kann mit -p bei docker-compose überschrieben werden
+name: python-cpp-plugin
+
+services:
+  pythoncppplugin:
+    image: "klausstocker/python-cpp-plugin:${PLUGIN_IMAGE_TAG:-latest}"
+    restart: always
+    networks:
+      - nw-letto
+    hostname: PythonCppPlugin
+    container_name: PythonCppPlugin
+    deploy:
+      resources:
+        limits:
+          memory: "${PLUGIN_MEMORY_LIMIT:-500m}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "3"
+    volumes:
+      - ${VOLUME_LOG:-/opt/letto/docker/storage/log}/pluginpython:/log
+      - ${VOLUME_IMAGES:-/opt/letto/docker/storage/images}:/opt/letto/images
+      - ${VOLUME_PLUGINS:-/opt/letto/docker/storage/plugins}:/opt/letto/plugins
+    ports:
+      - "8209:8080"
+      - "5209:5080"
+    environment:
+      TZ: ${TIMEZONE:-Europe/Berlin}
+      LC_ALL: ${LOCALE:-de_DE.UTF-8}
+      SERVICEPATH: "/pluginpython"
+      CPP_SERVICEPATH: "/plugincpp"
+      RESOURCE_DIR: "/app/resources"
+      network_letto_address: PythonCppPlugin
+      docker_container_name: PythonCppPlugin
+      letto_user_user_password: ${SERVICE_USER_PASSWORD}
+      letto_setup_uri: ${LETTO_SETUP_URI:-http://letto-setup.nw-letto:8096}
+      letto_plugin_uri_intern: ${LETTO_PLUGIN_URI_INTERN:-http://PythonCppPlugin.nw-letto:8080}
+      letto_plugin_uri_extern: ${LETTO_PLUGIN_URI_EXTERN:-https://${SERVER_NAME}/pluginpython}
+      letto_pathImages: /opt/letto/images
+      letto_pathPlugins: /opt/letto/plugins
+      PluginPythonLogLevel: ${PLUGIN_PYTHON_LOG_LEVEL:-INFO}
+      PLUGIN_DEV_UI: ${PLUGIN_DEV_UI:-false}
+      PLUGIN_REGISTER_ON_READY: ${PLUGIN_REGISTER_ON_READY:-true}
+
+  jobe:
+    image: "klausstocker/python-cpp-plugin-jobe:${PLUGIN_IMAGE_TAG:-latest}"
+    container_name: PythonCppPlugin-jobe
+    hostname: PythonCppPlugin-jobe
+    restart: always
+    ports:
+      - "4000:80"
+    networks:
+      - nw-letto
