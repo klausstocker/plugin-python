@@ -141,8 +141,8 @@ class TestSqlPlugin(unittest.TestCase):
         self.assertEqual(set(self.client.get('/open/pluginlist').json()), {'Python', 'Cpp', 'SQL'})
         config = {'preparation': PREPARATION, 'preparationLanguage': 'sql', 'cpuTime': 9,
                   'validation': TESTS, 'indication': 'SELECT 1;', 'linterWeight': 1}
-        for endpoint in ('loadplugindto', 'reloadplugindto'):
-            response = self.client.post('/open/' + endpoint, json={'typ': 'SQL', 'name': 'q', 'config': json.dumps(config)})
+        for endpoint in ('/open/loadplugindto', '/open/reloadplugindto', '/pluginpython/api/open/reloadplugindto'):
+            response = self.client.post(endpoint, json={'typ': 'SQL', 'name': 'q', 'config': json.dumps(config)})
             self.assertEqual(response.status_code, 200, response.text)
             dto = response.json()
             self.assertEqual(dto['params']['serviceBase'], '/pluginsql')

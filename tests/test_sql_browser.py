@@ -10,6 +10,7 @@ import tempfile
 import threading
 import unittest
 from shared.sql_examples import EXAMPLE_NAMES, sql_example
+from shared.formatting import format_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,12 +31,13 @@ window.fetch = async (url, options) => {
     if (url.endsWith('/example')) return {ok:true, json:async () => ({count:examples.length,
         names:['select_products', 'insert_products', 'update_prices', 'delete_products', 'join_products'],
         output:examples[JSON.parse(options.body).index]})};
+    if (url.endsWith('/format')) return realFetch('/format', options);
     if (failNextCheck && url.endsWith('/check')) { failNextCheck = false; throw Error('Test connection failure'); }
     return {ok:true, json:async () => url.endsWith('/exectoken') ? {token:'test'} : {output:'Query output'}};
 };
 const serviceBase = '/resources';
-configPluginSQL(JSON.stringify({serviceBase, params:{datasetVariables:[{name:'n', value:3}]}}));
-initPluginSQL(JSON.stringify({tagName:'student', serviceBase}), true);
+configPluginSQL(JSON.stringify({serviceBase, params:{datasetVariables:[{name:'n', value:3}]}})).then(() =>
+    initPluginSQL(JSON.stringify({tagName:'student', serviceBase}), true));
 function assert(value, message) { if (!value) throw Error(message); }
 setTimeout(async () => {
     try {
@@ -77,6 +79,28 @@ setTimeout(async () => {
         assert(tabs[0].getAttribute('aria-selected') === 'true', 'Keyboard tab navigation failed');
         const editor = ace.edit(document.querySelector('#student_div .sql-editor'));
         assert(editor.session.getMode().$id === 'ace/mode/letto_sql', 'SQL mode not loaded');
+        const student = document.querySelector('.sql-student');
+        const mainPanel = student.querySelector('.sql-main-panel');
+        const outputPanel = student.querySelector('.sql-output-panel');
+        const splitter = student.querySelector('.sql-splitter');
+        const layout = student.querySelector('.sql-layout-toggle');
+        assert(getComputedStyle(student.querySelector('.sql-file-info')).backgroundColor === 'rgb(240, 240, 240)', 'Student header should match Python');
+        assert(getComputedStyle(student.querySelector('.sql-editor')).fontSize === '16px', 'Student font should match Python');
+        assert(mainPanel.getBoundingClientRect().width > outputPanel.getBoundingClientRect().width, 'Editor should occupy two thirds initially');
+        const initialWidth = mainPanel.getBoundingClientRect().width;
+        splitter.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowLeft', bubbles:true}));
+        assert(mainPanel.getBoundingClientRect().width < initialWidth, 'Divider keyboard resizing failed');
+        layout.click();
+        assert(student.querySelector('.sql-panels').classList.contains('vertical'), 'Vertical layout toggle failed');
+        assert(outputPanel.getBoundingClientRect().top >= mainPanel.getBoundingClientRect().bottom, 'Output should be below editor');
+        assert(splitter.getAttribute('aria-orientation') === 'horizontal', 'Separator orientation missing');
+        layout.click();
+        const panelRect = student.querySelector('.sql-panels').getBoundingClientRect();
+        splitter.dispatchEvent(new PointerEvent('pointerdown', {pointerId:1, bubbles:true}));
+        document.dispatchEvent(new PointerEvent('pointermove', {pointerId:1, clientX:panelRect.left + panelRect.width * 0.5, bubbles:true}));
+        document.dispatchEvent(new PointerEvent('pointerup', {pointerId:1, bubbles:true}));
+        assert(splitter.getAttribute('aria-valuenow') === '50', 'Divider pointer resizing failed');
+        assert(student.querySelector('.sql-help-link').getAttribute('href').endsWith('/help'), 'Header help link missing');
         editor.setValue('SELECT 42;', -1);
         assert(document.querySelector('.student_inp').value === 'SELECT 42;', 'Student answer not persisted');
         assert(ace.edit(document.querySelector('[data-editor="preparation"]')).session.getMode().$id === 'ace/mode/letto_sql', 'SQL preparation mode not loaded');
@@ -98,6 +122,28 @@ setTimeout(async () => {
             }
             throw Error(typeof message === 'function' ? message() : message);
         }
+        const format = document.querySelector('[data-format]');
+        for (const [name, code, expected] of [['validation', 'x=1', 'x = 1'], ['indication', 'select 42;', 'SELECT 42;'], ['preparation', 'create table t(n int);', 'CREATE TABLE']]) {
+            document.querySelector(`[data-tab="${name}"]`).click();
+            const codeEditor = ace.edit(document.querySelector(`[data-editor="${name}"]`));
+            codeEditor.setValue(code, -1);
+            codeEditor.session.getUndoManager().reset();
+            await waitFor(() => !format.disabled, 'Format unavailable');
+            format.click();
+            await waitFor(() => !format.disabled, 'Format did not finish');
+            assert(codeEditor.getValue().includes(expected), 'Wrong formatter for ' + name);
+            assert(JSON.parse(configField.value)[name].includes(expected), 'Formatted code not saved');
+            codeEditor.undo();
+            assert(codeEditor.getValue() === code, 'Format must preserve Undo');
+        }
+        tabs[0].click();
+        const studentFormat = document.querySelector('[data-student-format]');
+        editor.setValue('select 99;', -1);
+        await waitFor(() => !studentFormat.disabled, 'Student formatter unavailable');
+        studentFormat.click();
+        await waitFor(() => !studentFormat.disabled, 'Student format did not finish');
+        assert(editor.getValue() === 'SELECT 99;', 'Student SQL not formatted');
+        assert(document.querySelector('.student_inp').value === 'SELECT 99;', 'Formatted answer not saved');
         assert(exampleSelect.options.length === 5, 'Five examples should be available');
         assert(exampleSelect.options[0].textContent === '01 select_products', 'Example numbering missing');
         const savedBeforeCancel = configField.value;
@@ -129,7 +175,7 @@ setTimeout(async () => {
         document.querySelector('[data-action="check"]').click(); await delay();
         assert(document.querySelector('.sql-output').textContent.includes('Test connection failure'), 'Check error not displayed');
         assert(document.querySelector('.sql-output').textContent.includes('s elapsed'), 'Failed check timing missing');
-        document.querySelector('#student_div button').click();
+        document.querySelector('[data-student-run]').click();
         await new Promise(resolve => setTimeout(resolve, 100));
         assert(document.querySelector('#student_div pre').textContent === 'Query output', 'Run SQL output missing');
         document.getElementById('result').textContent = 'PASS';
@@ -140,14 +186,32 @@ HTML = HTML.replace('SQL_EXAMPLES_JSON', json.dumps([sql_example(index).model_du
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        try:
+            code = format_source(body['code'], 'python' if body['filename'] == 'main.py' else 'sql')
+            data, status = {'code': code}, 200
+        except Exception as error:
+            data, status = {'output': str(error)}, 400
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
     def do_GET(self):
-        if self.path == '/smoke':
+        if self.path in ('/smoke', '/smoke-config-only'):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.end_headers()
-            self.wfile.write(HTML.encode())
+            page = HTML
+            if self.path == '/smoke-config-only':
+                page = page.replace('<script src="/resources/plugins/SQL/SQLScript.js"></script>', '')
+            self.wfile.write(page.encode())
         elif self.path.startswith('/resources/static/ace/'):
             self.path = self.path.replace('/resources/static/ace/', '/resources/vendor/ace/', 1)
+            super().do_GET()
+        elif self.path.startswith('/resources/static/formatting/'):
+            self.path = self.path.replace('/resources/static/formatting/', '/resources/formatting/', 1)
             super().do_GET()
         elif self.path.startswith('/resources/static/'):
             self.path = self.path.replace('/resources/static/', '/resources/plugins/SQL/', 1)
@@ -162,6 +226,12 @@ class Handler(SimpleHTTPRequestHandler):
 @unittest.skipUnless(os.getenv('SQL_BROWSER_TEST') == 'true' and CHROME.exists(), 'Set SQL_BROWSER_TEST=true with Chrome installed')
 class TestSqlBrowser(unittest.TestCase):
     def test_ace_configuration_persistence_and_student_run(self):
+        self.check_page('/smoke')
+
+    def test_config_script_loads_support_without_student_script(self):
+        self.check_page('/smoke-config-only')
+
+    def check_page(self, path):
         server = ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Handler, directory=str(ROOT)))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -171,7 +241,7 @@ class TestSqlBrowser(unittest.TestCase):
                                           '--no-default-browser-check', '--disable-extensions',
                                           '--window-size=1280,900',
                                           '--user-data-dir=' + profile, '--dump-dom', '--virtual-time-budget=8000',
-                                          f'http://127.0.0.1:{server.server_port}/smoke'],
+                                          f'http://127.0.0.1:{server.server_port}{path}'],
                                          capture_output=True, text=True, encoding='utf-8', timeout=30)
                 result = re.search(r'<pre id="result">([^<]*)</pre>', process.stdout)
                 self.assertIsNotNone(result, process.stderr[-1000:])

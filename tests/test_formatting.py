@@ -23,7 +23,7 @@ class TestFormattingEndpoints(unittest.TestCase):
         self.headers = {'Authorization': 'Bearer ' + common.get_exec_token()}
 
     def test_each_endpoint_requires_authentication(self):
-        for prefix in ('pluginpython', 'plugincpp'):
+        for prefix in ('pluginpython', 'plugincpp', 'pluginsql'):
             self.assertEqual(self.client.post('/' + prefix + '/format', json={'code': ''}).status_code, 401)
 
     @patch('app.formatting_endpoints.format_source', return_value='formatted\n')
@@ -40,6 +40,21 @@ class TestFormattingEndpoints(unittest.TestCase):
             self.assertEqual(response.json()['code'], 'formatted\n')
             self.assertGreaterEqual(response.json()['timings']['format_seconds'], 0)
             formatter.assert_called_with('original', language, config)
+
+    @patch('app.formatting_endpoints.format_source', return_value='formatted\n')
+    def test_sql_routes_sql_editors_and_python_tests(self, formatter):
+        for filename, language in [('main.sql', 'sql'), ('preparation.sql', 'sql'), ('main.py', 'python')]:
+            response = self.client.post('/pluginsql/format', headers=self.headers,
+                                        json={'code': 'original', 'filename': filename})
+            self.assertEqual(response.status_code, 200, response.text)
+            formatter.assert_called_with('original', language, '')
+
+    @patch('app.formatting_endpoints.format_source')
+    def test_sql_format_rejects_invalid_requests(self, formatter):
+        for body in ([], {}, {'code': 'x' * 131073}, {'code': '', 'filename': 'answer.cpp'}):
+            response = self.client.post('/pluginsql/format', headers=self.headers, json=body)
+            self.assertEqual(response.status_code, 400, response.text)
+        formatter.assert_not_called()
 
     @patch('app.formatting_endpoints.format_source', return_value='')
     def test_cpp_defaults_to_question_language(self, formatter):

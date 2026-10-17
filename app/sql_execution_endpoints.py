@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app import code_execution_endpoints as common
 from app.dataset_helper import dataset_file_from_payload
+from app.formatting_endpoints import format_request
 from shared.check_sql import check_sql, sql_program
 from shared.jobe_wrapper import JobeWrapper
 from shared.question_config import SqlQuestionConfigDto
@@ -21,6 +22,11 @@ class SqlRequest(BaseModel):
     code: str
     testcode: str = ''
     questionConfigDto: SqlQuestionConfigDto = Field(default_factory=SqlQuestionConfigDto)
+
+
+@router.post('/format')
+async def format_code(request: Request):
+    return await format_request(request, sql=True)
 
 
 @router.post('/run')

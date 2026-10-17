@@ -18,11 +18,13 @@
 <code>answer.connection.execute(...)</code>: Datenbank prüfen.<br>
 <code>answer.reset()</code> in <code>setUp</code>: Datenbank je Test zurücksetzen.</p>
 <p><strong>Run SQL:</strong> Template ausführen.<br>
+<strong>Format:</strong> Aktiven Tab formatieren: SQL mit sqlparse, UnitTests mit Ruff. Rückgängig im Editor ist möglich.<br>
 <strong>Check tests / Calculate score:</strong> Tests ausführen; jeder Test zählt gleich viel. SQL-Fehler ergeben keine Punkte.</p>
 <h2>Configuration</h2>
 <p>CPU-Zeit für den gesamten Lauf und den Run-Button der Studierenden festlegen. Für feste Zeilenreihenfolge <code>ORDER BY</code> verwenden.</p>
 <h2>Umgebung</h2>
 <p>SQLite <strong>3.46.1</strong> über Python in Jobe (am 16.10.2026 im laufenden Jobe-Container geprüft).
+Formatierung im Plugin-Dienst: sqlparse <strong>0.6.0</strong>, Ruff <strong>0.17.0</strong>.
 <a href="static/help/Environment.html" data-plugin-help-file="help/Environment.html" target="_blank" rel="noopener">Ausführungsumgebung</a> ·
 <a href="https://www.sqlite.org/lang.html" target="_blank" rel="noopener">SQL-Referenz</a></p>
 </body></html>

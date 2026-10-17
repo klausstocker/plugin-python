@@ -1,5 +1,7 @@
 """Native stdin formatting, independent of Jobe and code execution."""
 import os
+import importlib.util
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -18,8 +20,16 @@ class FormatterUnavailable(RuntimeError):
 
 
 def format_source(code: str, language: str, config: str = '') -> str:
-    if language not in {'python', 'c', 'cpp'}:
+    if language not in {'python', 'c', 'cpp', 'sql'}:
         raise ValueError('Unsupported formatting language')
+    if language == 'sql':
+        if config.strip():
+            raise ValueError('SQL formatting uses fixed defaults')
+        if importlib.util.find_spec('sqlparse') is None:
+            raise FormatterUnavailable('sqlparse is not installed in the plugin service')
+        return _run_formatter([sys.executable, '-c',
+            'import sys, sqlparse; sys.stdout.write(sqlparse.format(sys.stdin.read(), '
+            'reindent=True, keyword_case="upper", indent_width=4))'], code)
     if language == 'python':
         if config.strip():
             settings = tomllib.loads(config)

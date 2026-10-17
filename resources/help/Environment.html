@@ -79,10 +79,17 @@ quote-style = "double"</code></pre>
   <p>Das SQL-Plugin verwendet das vorhandene Python-Modul <code>sqlite3</code> in Jobe.
     Die Lehrperson bereitet eine neue In-Memory-Datenbank mit SQL vor;
     anschließend werden die SQL-Anweisungen der Studierenden und die Python-Unit-Tests ausgeführt.
-    Weitere Pakete werden nicht benötigt. Das SQL-Plugin bietet keine Linter- oder Formatter-Einstellungen.
+    Die Ausführung benötigt keine weiteren Pakete. Es gibt keine SQL-Linter-Einstellungen.
     Siehe <a href="SQL.html">SQL-Hilfe</a> für Vorbereitung, Ergebnisdaten und Bewertungs-API.</p>
   <p>SQLite-Laufzeitversion: <strong>3.46.1</strong>, am 16.10.2026 im laufenden Jobe-Container
     mit <code>/opt/jobe-python/bin/python3</code> und <code>sqlite3.sqlite_version</code> geprüft.</p>
+  <p><strong>SQL-Autoformatter im Plugin-Dienst: sqlparse 0.6.0</strong>.
+    Format verwendet für Preparation, Template und Studenten-SQL Großbuchstaben für Schlüsselwörter
+    und vier Leerzeichen Einrückung. Kommentare und Zeichenketten bleiben erhalten;
+    SQL wird weder ausgeführt noch validiert. Für Python-UnitTests wird Ruff 0.17.0 verwendet.
+    Eigene Formatierungseinstellungen sind im SQL-Dialog nicht erforderlich.
+    <a href="https://sqlparse.readthedocs.io/en/stable/" target="_blank" rel="noopener">sqlparse-Dokumentation</a>.</p>
+  <p>Jobe Python 3.14.4 und GCC/G++ 15.2.0 wurden am 17.10.2026 erneut im gebauten Jobe-Image geprüft.</p>
 
   <h2 id="cpp">C/C++</h2>
   <h3>Compiler und Testbibliothek in Jobe</h3>

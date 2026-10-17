@@ -41,6 +41,24 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
             .sql-plugin button {padding:8px 14px; margin:8px 8px 8px 0; cursor:pointer;}
             .sql-plugin label {display:block; margin:10px 0;}
             .sql-plugin .sql-output {background:var(--sql-bg); color:var(--sql-fg);}
+            .sql-student .sql-panels {gap:0; flex-wrap:nowrap; height:340px; margin-bottom:10px;}
+            .sql-student .sql-panels.vertical {flex-direction:column;}
+            .sql-student .sql-panel {display:flex; flex-direction:column; min-width:120px; min-height:80px; overflow:hidden; border:1px solid #d0d0d0; box-sizing:border-box;}
+            .sql-student .sql-file-info {padding:10px; background:#f0f0f0; color:black; font: bold 16px monospace; border-bottom:1px solid #ccc; flex-shrink:0;}
+            .sql-student .sql-main-header {display:flex; align-items:center; justify-content:space-between; gap:8px;}
+            .sql-student .sql-header-actions {display:inline-flex; align-items:center; gap:6px;}
+            .sql-student .sql-layout-toggle {margin:0; padding:0 8px; min-width:36px; height:32px; border:1px solid #b8b8b8; border-radius:4px; background:#f0f0f0; color:black; font-size:16px; line-height:1;}
+            .sql-student .sql-help-link {display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid #888; border-radius:50%; background:#f7f7f7; color:#444; font: bold 12px sans-serif; text-decoration:none; line-height:1;}
+            .sql-student .sql-editor {flex:1; height:auto; min-height:0; border:0; resize:none; font:16px monospace;}
+            .sql-student textarea {border:0; resize:none; font:16px monospace;}
+            .sql-student .sql-output {flex:1; width:100%; min-height:0; margin:0; padding:8px; overflow:auto; font:16px monospace; box-sizing:border-box;}
+            .sql-student .sql-splitter {background:#d0d0d0; flex:0 0 8px; touch-action:none; user-select:none;}
+            .sql-student .horizontal .sql-splitter {cursor:col-resize;}
+            .sql-student .vertical .sql-splitter {cursor:row-resize;}
+            .sql-student .sql-actions {margin-top:8px; display:flex; align-items:center; flex-wrap:wrap;}
+            .sql-student .sql-actions button {color:black; background:#f0f0f0; padding:10px 20px; display:inline-flex; align-items:center; font-size:14px; font-weight:bold; margin:4px 8px 4px 0; border:1px solid #b8b8b8; border-radius:5px; transition:background-color 0.3s ease, color 0.3s ease;}
+            .sql-student .sql-actions button:active {background:#333; color:white; transform:scale(0.98);}
+            .sql-student .sql-actions button:disabled {opacity:0.5; cursor:not-allowed;}
             .sql-config {display:flex; gap:8px; align-items:flex-start; width:100%;}
             .sql-config .sql-config-main {flex:2; min-width:0;}
             .sql-config .sql-tab-title-row {display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;}
@@ -120,7 +138,7 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
         textarea.setAttribute('aria-label', element.getAttribute('aria-label') || language + ' code');
         element.appendChild(textarea);
         const control = {get: () => textarea.value, set: text => { textarea.value = text; onChange(text); },
-            mode: mode => { language = mode; }, resize: () => {}};
+            mode: mode => { language = mode; }, resize: () => {}, target: filename => ({textarea, filename})};
         textarea.addEventListener('input', () => onChange(textarea.value));
         for (const type of ['keydown', 'keypress', 'keyup']) element.addEventListener(type, event => {
             if (event.key === 'Enter') event.stopPropagation();
@@ -141,10 +159,24 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
             control.set = text => editor.setValue(text, -1);
             control.mode = mode;
             control.resize = () => editor.resize(true);
+            control.target = filename => ({editor, filename});
         }).catch(() => {}); // The textarea remains available if Ace cannot load.
         return control;
     }
-    return {decode, base, client, theme, editor};
+    async function bindFormatting(button, output, service, getTarget, request, onChange) {
+        button.disabled = true;
+        try {
+            const {bindFormatButton} = await import(service + '/static/formatting/client.js');
+            if (!button.isConnected) return;
+            bindFormatButton({button, output, getTarget, onChange,
+                requestFormat: async (code, filename) => {
+                    const data = await request('/format', {code, filename});
+                    if (typeof data.code !== 'string') throw new Error('Formatter returned no code');
+                    return data.code;
+                }});
+        } catch (error) { button.title = 'Formatter unavailable: ' + error.message; }
+    }
+    return {decode, base, client, theme, editor, bindFormatting};
 })());
 
 function initPluginSQL(dtoString, active) {
@@ -159,17 +191,89 @@ function initPluginSQL(dtoString, active) {
     if (active && field && !field.value) field.value = initial;
     container.querySelector('.sql-plugin')?.remove();
     const root = document.createElement('div');
-    root.className = 'sql-plugin';
-    root.innerHTML = `<div class="sql-panels"><section class="sql-panel"><h3>answer.sql</h3><div class="sql-editor" aria-label="Student SQL"></div></section>
-        <section class="sql-panel"><h3>Output</h3><pre class="sql-output" role="status"></pre></section></div>`;
+    root.className = 'sql-plugin sql-student';
+    root.innerHTML = `<div class="sql-panels horizontal">
+        <section class="sql-panel sql-main-panel"><div class="sql-file-info sql-main-header"><span>main.sql</span>
+        <span class="sql-header-actions"><button type="button" class="sql-layout-toggle" aria-label="Switch to vertical layout" title="Switch to vertical layout">⇅</button>
+        <a class="sql-help-link" target="_blank" rel="noopener" aria-label="SQL help" title="SQL help">?</a></span></div>
+        <div class="sql-editor" aria-label="Student SQL"></div></section>
+        <div class="sql-splitter" role="separator" tabindex="0" aria-label="Resize panels" aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85"></div>
+        <section class="sql-panel sql-output-panel"><div class="sql-file-info">output</div><pre class="sql-output" role="status"></pre></section></div>
+        <div class="sql-actions"></div>`;
     container.appendChild(root);
     SQLPluginUI.theme(root);
     const editor = SQLPluginUI.editor(root.querySelector('.sql-editor'), initial, 'sql', !active, service,
         value => { if (active && field) field.value = value; });
+    root.querySelector('.sql-help-link').href = service + '/help';
+    const panels = root.querySelector('.sql-panels');
+    const mainPanel = root.querySelector('.sql-main-panel');
+    const outputPanel = root.querySelector('.sql-output-panel');
+    const splitter = root.querySelector('.sql-splitter');
+    const layoutToggle = root.querySelector('.sql-layout-toggle');
+    const actions = root.querySelector('.sql-actions');
+    let horizontal = true;
+    let ratio = 2 / 3;
+    function applyLayout() {
+        panels.classList.toggle('horizontal', horizontal);
+        panels.classList.toggle('vertical', !horizontal);
+        mainPanel.style.flex = `${ratio} 1 0`;
+        outputPanel.style.flex = `${1 - ratio} 1 0`;
+        splitter.setAttribute('aria-orientation', horizontal ? 'vertical' : 'horizontal');
+        splitter.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+        layoutToggle.textContent = horizontal ? '⇅' : '⇄';
+        layoutToggle.title = horizontal ? 'Switch to vertical layout' : 'Switch to horizontal layout';
+        layoutToggle.setAttribute('aria-label', layoutToggle.title);
+        editor.resize();
+    }
+    function resize(value) {
+        ratio = Math.min(0.85, Math.max(0.15, value));
+        applyLayout();
+    }
+    layoutToggle.addEventListener('click', () => { horizontal = !horizontal; applyLayout(); });
+    splitter.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        const move = moveEvent => {
+            if (moveEvent.pointerId !== event.pointerId) return;
+            const rect = panels.getBoundingClientRect();
+            const size = horizontal ? rect.width : rect.height;
+            if (size > 0) resize((horizontal ? moveEvent.clientX - rect.left : moveEvent.clientY - rect.top) / size);
+        };
+        const finish = () => {
+            document.removeEventListener('pointermove', move);
+            document.removeEventListener('pointerup', finish);
+            document.removeEventListener('pointercancel', finish);
+        };
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', finish);
+        document.addEventListener('pointercancel', finish);
+    });
+    splitter.addEventListener('keydown', event => {
+        const decrease = horizontal ? 'ArrowLeft' : 'ArrowUp';
+        const increase = horizontal ? 'ArrowRight' : 'ArrowDown';
+        if (![decrease, increase, 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        resize(event.key === 'Home' ? 0.15 : event.key === 'End' ? 0.85 : ratio + (event.key === decrease ? -0.05 : 0.05));
+    });
+    if (window.ResizeObserver) {
+        const observer = new ResizeObserver(() => {
+            if (root.isConnected) editor.resize();
+            else observer.disconnect();
+        });
+        observer.observe(mainPanel);
+    }
+    applyLayout();
+    if (active) {
+        const format = document.createElement('button');
+        format.type = 'button'; format.textContent = 'Format Code'; format.dataset.studentFormat = '';
+        actions.appendChild(format);
+        SQLPluginUI.bindFormatting(format, root.querySelector('pre'), service,
+            () => editor.target('main.sql'), request, () => { if (field) field.value = editor.get(); });
+    }
     if (active && config.evalConfig?.runAtTest !== false) {
         const button = document.createElement('button');
         button.type = 'button'; button.textContent = 'Run SQL';
-        root.appendChild(button);
+        button.dataset.studentRun = '';
+        actions.appendChild(button);
         button.addEventListener('click', async () => {
             button.disabled = true;
             const output = root.querySelector('pre');

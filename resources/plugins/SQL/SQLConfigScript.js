@@ -1,7 +1,34 @@
-function configPluginSQL(dtoString) {
+async function configPluginSQL(dtoString) {
     const dto = JSON.parse(dtoString || '{}');
     const container = document.getElementById('configform_div');
     if (!container) return;
+    // LeTTo can invoke the configuration script without loading the student script.
+    if (!window.SQLPluginUI) {
+        const service = (dto.serviceBase || dto.params?.serviceBase || dto.pluginDto?.params?.serviceBase || '/pluginsql').replace(/\/$/, '');
+        try {
+            if (!window.sqlPluginSupportPromise) {
+                window.sqlPluginSupportPromise = new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = service + '/static/SQLScript.js';
+                    script.onload = () => {
+                        if (window.SQLPluginUI) resolve();
+                        else { window.sqlPluginSupportPromise = null; reject(new Error('SQL editor support is missing.')); }
+                    };
+                    script.onerror = () => {
+                        window.sqlPluginSupportPromise = null;
+                        script.remove();
+                        reject(new Error('Could not load SQL editor support. Check the /pluginsql/ proxy route and deployed plugin resources.'));
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+            await window.sqlPluginSupportPromise;
+        } catch (error) {
+            if (container.isConnected) container.textContent = error.message;
+            return;
+        }
+        if (!container.isConnected) return;
+    }
     const field = document.querySelector('.configform_config');
     let config = SQLPluginUI.decode(dto);
     try { config = {...config, ...JSON.parse(field?.value || '{}')}; } catch (_) {}
@@ -25,6 +52,7 @@ function configPluginSQL(dtoString) {
         <div class="sql-editor" data-editor="validation" aria-label="Python grading tests"></div></section></div>
         <label>CPU time (seconds) <input data-setting="cpu" type="number" min="1" step="1"></label>
         <label><input data-setting="run" type="checkbox"> Allow students to run SQL</label>
+        <button type="button" data-format disabled>Format</button>
         <button type="button" data-action="run">Run SQL</button>
         <button type="button" data-action="check">Check tests</button>
         <button type="button" data-action="scorePlugin">Calculate score</button>
@@ -131,6 +159,10 @@ function configPluginSQL(dtoString) {
     const exampleSelect = root.querySelector('[data-example-select]');
     const exampleApply = root.querySelector('[data-example-apply]');
     const output = root.querySelector('.sql-output');
+    SQLPluginUI.bindFormatting(root.querySelector('[data-format]'), output, service, () => {
+        const active = tabs.find(tab => tab.getAttribute('aria-selected') === 'true').dataset.tab;
+        return editors[active].target(active === 'validation' ? 'main.py' : active === 'preparation' ? 'preparation.sql' : 'main.sql');
+    }, request, save);
     let exampleCount = 0;
     function confirmExampleOverwrite() {
         const dialog = root.querySelector('.sql-example-confirm');

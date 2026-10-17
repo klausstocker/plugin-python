@@ -1,7 +1,7 @@
 # Formatting endpoints
 
 Teacher-facing documentation and official tool links are in the shared
-[environment help](../help/Environment.html), linked from both plugin help pages.
+[environment help](../help/Environment.html), linked from all three plugin help pages.
 
 The student and teacher Format buttons send source, filename, and the question's
 `formatterConfig` to the plugin. Results preserve Ace Undo and save the answer or
@@ -9,8 +9,10 @@ configuration. Results are discarded if the source changed while formatting.
 
 - `POST /pluginpython/format`: Ruff 0.17.0 from `requirements.txt`.
 - `POST /plugincpp/format`: clang-format 23.1.3, packaged as a binary wheel in `requirements.txt`.
+- `POST /pluginsql/format`: sqlparse 0.6.0 for `main.sql` and `preparation.sql`,
+  existing Ruff 0.17.0 for `main.py` (Python unit tests).
 
-Both endpoints use the execution token and accept
+All endpoints use the execution token and accept
 `{code, filename, questionConfigDto: {formatterConfig}}`, returning
 `{code, output, timings}`. Errors return an explanatory `output` without replacing
 the source. Tools use stdin and a five-second timeout and never execute code.
@@ -36,6 +38,18 @@ SortIncludes: Never
 AllowShortFunctionsOnASingleLine: None
 ```
 
+SQL uses fixed defaults: uppercase keywords and four-space reindentation, keeping
+comments and string literals. It accepts unfinished SQL without validating or
+executing it. The teacher's Format button follows the active tab; students use
+Format Code. Python tests use Ruff defaults. SQL questions need no formatter
+configuration fields. The same shared client preserves Undo, saves changes, and
+discards stale responses. SQL uses the plugin's interpreter in a subprocess with
+the same five-second timeout and 128 KiB request limit.
+
+After adding sqlparse, rebuild only the plugin image or reinstall requirements
+for local development. Jobe's Python/GCC versions were rechecked from the built
+image on 2026-10-17; SQL formatting does not add packages to Jobe.
+
 C/C++ also stores additional `compilerFlags`, e.g. `-O2 -Wextra -DNUMBER=42`.
 Flags apply to run, compile, unit tests, and grading, extending defaults C17/C++17,
 `-Wall -Werror`. Later flags can override defaults, e.g. `-std=c++20` or
@@ -56,3 +70,6 @@ using the normal project Jobe at `localhost:4000` and the normal plugin at
 special test image, headless browser, or local formatter installation is needed.
 Ruff and clang-format integration tests call the plugin's endpoints; endpoint
 and configuration unit tests use mocks.
+`tests.test_sql_formatting` checks real local sqlparse/Ruff output and SQLite
+behavior. Install requirements first. `SQL_BROWSER_TEST=true` enables the SQL
+browser smoke test when Chrome is installed.

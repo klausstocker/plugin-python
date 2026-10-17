@@ -20,7 +20,11 @@ Teachers prepare a fresh in-memory SQLite database using SQL; student
 SQL then executes before Python unit tests inspect `answer.results`, `answer.rows`,
 and `answer.connection`. Scores are the fraction of passing tests. SQL has a
 smaller configuration dialog without linting or formatting settings. It reuses
-Jobe's standard-library `sqlite3`; no runtime dependencies are added.
+Jobe's standard-library `sqlite3`; no additional Jobe packages are required.
+The Format button follows the active teacher tab: sqlparse 0.6.0 for preparation
+and starter SQL, Ruff 0.17.0 for Python tests. Students get Format Code for SQL.
+sqlparse is installed in the plugin service, with fixed defaults and no effect on
+grading. Rebuild the plugin image or reinstall requirements after this addition.
 See [SQL help](resources/help/SQL.html) and the [example](examples/SQL/README.md).
 With the development UI enabled, open `/pluginsql/dev/config`.
 The UnitTest tab offers five examples (SELECT, INSERT, UPDATE, DELETE, JOIN)
@@ -82,7 +86,7 @@ This stops the previous containers without deleting their persistent volumes.
 Compose now uses project `python-cpp-plugin`, service `pythoncppplugin`, and
 containers `PythonCppPlugin` and `PythonCppPlugin-jobe`. Jobe retains its network
 alias `jobe`. Existing file-storage and log-volume paths are retained. The proxy
-configuration includes both URL prefixes. Compose uses locally built `latest`
+configuration includes all three URL prefixes. Compose uses locally built `latest`
 images by default; set `PLUGIN_IMAGE_TAG` to deploy another published tag.
 
 ## Standalone development dialog
@@ -101,6 +105,12 @@ Open `http://localhost:8209/pluginpython/dev/config`. The dialog uses the normal
 plugin execution endpoints and the Jobe container. Bundled resources are served
 at `/pluginpython/dev/resources/`, for example
 `/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js`.
+The SQL dialog is at `http://localhost:8209/pluginsql/dev/config`.
+Inside LeTTo, SQL uses `configPluginSQL` and does not require `PLUGIN_DEV_UI`.
+Its config script loads editor support if the student script has not been loaded.
+For a blank SQL dialog, verify the deployed image contains both SQL scripts and
+that the installed proxy configuration forwards `/pluginsql/`. After deploying
+updated scripts, refresh LeTTo's plugin registration and reload the browser page.
 Ace is bundled and served by the plugin server, including Python/C++ modes,
 the Monokai and Chrome themes and the search dialog. Editors follow LeTTo's
 `window.dark_design` at initialization: dark uses Monokai with green output on

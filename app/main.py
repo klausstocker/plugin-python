@@ -1813,7 +1813,8 @@ def extern_reload(req: LoadPluginRequestDto):
         imageUrl="",
         width=CONF_width,
         height=CONF_height,
-        params={},
+        params={"config": req.config or "", "serviceBase": pi.SERVICEPATH},
+        jsonData=encode_question_config_base64(req.config, question_config_model(req.typ)),
     )
 
 

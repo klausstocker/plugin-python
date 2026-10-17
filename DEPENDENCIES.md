@@ -1,6 +1,7 @@
 # Dependencies and upgrades
 
 Versions checked against PyPI, npm and upstream releases on 2026-10-11.
+sqlparse 0.6.0 was added and checked against PyPI on 2026-10-17.
 All direct Python package pins below are the latest stable, non-yanked releases
 on that date. Install them with Python 3.14.
 
@@ -24,12 +25,19 @@ on that date. Install them with Python 3.14.
 | Markdown | 3.11 |
 | Ruff | 0.17.0 |
 | clang-format | 23.1.3 |
+| sqlparse | 0.6.0 |
 | tzdata, Windows only | 2026.5 |
 | Catch2 | 3.16.1 |
 | Ace | 1.44.0 |
 | jQuery, standalone development dialog | 4.0.0 |
 
 `requirements.txt` is shared by local development and the plugin image.
+SQL formatting uses sqlparse in the plugin service, with uppercase keywords,
+four-space indentation, and preserved comments and literals. Python tests in the
+SQL plugin reuse Ruff. Jobe does not install sqlparse and does not need rebuilding
+for this addition. Reinstall requirements or rebuild the plugin image to apply it.
+Jobe Python 3.14.4 and GCC/G++ 15.2.0 were rechecked from the built image on
+2026-10-17; the dated native package snapshots below remain separate from apt pins.
 clang-format comes from its binary wheel, so local and container formatting use
 the same version. Ace is bundled under `resources/vendor/ace/1.44.0` and served
 locally at `<serviceBase>/static/ace/1.44.0/` by all four plugin scripts. The
