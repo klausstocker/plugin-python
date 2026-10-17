@@ -25,10 +25,14 @@ from app.code_execution_endpoints import _file_specs_from_config, get_exec_token
 from app.dev_ui import install_dev_ui
 from app.static_resources import install_static_resources
 from app.cpp_execution_endpoints import CPP_SERVICEPATH, router as cpp_execution_router
+from app.sql_execution_endpoints import SQL_SERVICEPATH, router as sql_execution_router
+from shared.check_sql import check_sql
+from shared.question_config import SqlQuestionConfigDto
 from shared.check_catch2 import check_catch2
 from shared.cpp_dataset import cpp_dataset_files
 from shared.question_config import CppQuestionConfigDto
 from app.dataset_helper import (
+    dataset_file_from_payload,
     dataset_file_from_variables,
     extract_dataset_variables,
     extract_question_dataset_variables,
@@ -1074,9 +1078,53 @@ class PluginCpp(PluginPython):
         return info
 
 
+class PluginSQL(PluginPython):
+    PLUGIN_TYPE = "sql.PluginSQL"
+    SERVICEPATH = SQL_SERVICEPATH
+    DETAILED_HELPFILE = "help/SQL.html"
+    HELPFILES = ["plugins/SQL/SQL.html"]
+    JSLIBS = ["plugins/SQL/SQLScript.js", "plugins/SQL/SQLConfigScript.js"]
+    INIT_JS = "initPluginSQL"
+    CONFIG_JS = "configPluginSQL"
+
+    def get_html(self, params, q):
+        return '<div class="letto-plugin-sql">Write your SQL statements</div>'
+
+    def score(self, antwort, toleranz, answerDto, grade, config="", pluginDto=None, varsQuestion=None):
+        info = PluginScoreInfoDto(
+            schuelerErgebnis=CalcErgebnisDto(string=""), zielEinheit=answerDto.ze if answerDto else "",
+            punkteIst=0.0, punkteSoll=float(grade), status="FALSCH", htmlScoreInfo="", feedback="")
+        try:
+            raw = config or self.config or "{}"
+            if pluginDto and pluginDto.jsonData:
+                raw = base64.b64decode(pluginDto.jsonData).decode("utf-8")
+            settings = SqlQuestionConfigDto.model_validate_json(raw)
+            if varsQuestion is None:
+                files = dataset_file_from_payload(settings.model_dump())
+            else:
+                files = dataset_file_from_variables(extract_dataset_variables(varsQuestion))
+            result = check_sql(os.getenv("JOBE_SERVER", "jobe:80"), antwort or "", settings.validation,
+                               settings.preparation,
+                               files=JobeWrapper.createFiles(files), cputime=settings.cpuTime)
+            info.punkteIst = float(grade * result.score())
+            info.status = result.status()
+            info.feedback = repr(result)
+        except Exception as error:
+            logger.exception("SQL scoring failed")
+            info.feedback = f"Error scoring SQL: {error}"
+        info.schuelerErgebnis = CalcErgebnisDto(string=info.feedback)
+        info.htmlScoreInfo = f"<pre>{html.escape(info.feedback)}</pre>"
+        return info
+
+
+def question_config_model(typ):
+    return {"Cpp": CppQuestionConfigDto, "SQL": SqlQuestionConfigDto}.get(typ, QuestionConfigDto)
+
+
 REGISTERED_PLUGINS: Dict[str, str] = {
     CONF_PLUGIN: "Plugin Python",
     "Cpp": "Plugin C/C++",
+    "SQL": "Plugin SQL",
 }
 
 def create_plugin(typ: str, name: str, params: str) -> Optional[PluginPython]:
@@ -1084,6 +1132,8 @@ def create_plugin(typ: str, name: str, params: str) -> Optional[PluginPython]:
         return PluginPython(name, params)
     if typ == "Cpp":
         return PluginCpp(name, params)
+    if typ == "SQL":
+        return PluginSQL(name, params)
     return None
 
 
@@ -1415,6 +1465,7 @@ app = FastAPI(
 
 install_static_resources(app, SERVICEPATH)
 install_static_resources(app, CPP_SERVICEPATH, "Cpp", root_alias=False)
+install_static_resources(app, SQL_SERVICEPATH, "SQL", root_alias=False)
 
 
 @app.middleware("http")
@@ -1531,7 +1582,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             width=CONF_width,
             height=CONF_height,
             params={"serviceBase": pi.SERVICEPATH},
-            jsonData=encode_question_config_base64(req.config, CppQuestionConfigDto if req.typ == "Cpp" else QuestionConfigDto)
+            jsonData=encode_question_config_base64(req.config, question_config_model(req.typ))
         )
         log_dataset_transfer("/open loadplugindto response", question=req.q, plugin_dto=plugin_dto)
         return plugin_dto
@@ -1666,7 +1717,7 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
             width=CONF_width,
             height=CONF_height,
             params={"config": effective_config, "serviceBase": pi.SERVICEPATH},
-            jsonData=encode_question_config_base64(effective_config, CppQuestionConfigDto if effective_typ == "Cpp" else QuestionConfigDto),
+            jsonData=encode_question_config_base64(effective_config, question_config_model(effective_typ)),
         )
         log_dataset_transfer("/open reloadplugindto response", question=effective_question, plugin_dto=plugin_dto)
         return plugin_dto
@@ -1719,8 +1770,10 @@ def version():
 
 app.include_router(code_execution_router)
 app.include_router(cpp_execution_router)
+app.include_router(sql_execution_router)
 install_dev_ui(app, SERVICEPATH)
 install_dev_ui(app, CPP_SERVICEPATH, "Cpp")
+install_dev_ui(app, SQL_SERVICEPATH, "SQL")
 
 # Mount internal open API at /open and (for proxy setups) also under /pluginpython/open
 app.include_router(mount_internal_open(LOCAL_API))
@@ -1760,7 +1813,8 @@ def extern_reload(req: LoadPluginRequestDto):
         imageUrl="",
         width=CONF_width,
         height=CONF_height,
-        params={},
+        params={"config": req.config or "", "serviceBase": pi.SERVICEPATH},
+        jsonData=encode_question_config_base64(req.config, question_config_model(req.typ)),
     )
 
 

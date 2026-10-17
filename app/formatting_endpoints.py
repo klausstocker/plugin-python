@@ -1,4 +1,4 @@
-"""Shared request handling for the two authenticated formatting endpoints."""
+"""Shared request handling for authenticated formatting endpoints."""
 import subprocess
 from time import perf_counter
 from typing import Literal
@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from shared.formatting import FormatterUnavailable, format_source
-from shared.question_config import QuestionConfigDto, CppQuestionConfigDto
+from shared.question_config import QuestionConfigDto, CppQuestionConfigDto, SqlQuestionConfigDto
 
 
 class FormatRequest(BaseModel):
@@ -23,17 +23,26 @@ class CppFormatRequest(FormatRequest):
     questionConfigDto: CppQuestionConfigDto = Field(default_factory=CppQuestionConfigDto)
 
 
-async def format_request(request: Request, cpp: bool = False):
+class SqlFormatRequest(BaseModel):
+    code: str = Field(max_length=131072)
+    filename: Literal['main.sql', 'preparation.sql', 'main.py'] = 'main.sql'
+    questionConfigDto: SqlQuestionConfigDto = Field(default_factory=SqlQuestionConfigDto)
+
+
+async def format_request(request: Request, cpp: bool = False, sql: bool = False):
     from app.code_execution_endpoints import _authorize_or_response
-    denied = _authorize_or_response(request, '/cpp/format' if cpp else '/format')
+    denied = _authorize_or_response(request, '/sql/format' if sql else '/cpp/format' if cpp else '/format')
     if denied is not None:
         return denied
     try:
-        data = (CppFormatRequest if cpp else FormatRequest).model_validate(await request.json())
-        config = data.questionConfigDto.formatterConfig
+        model = SqlFormatRequest if sql else CppFormatRequest if cpp else FormatRequest
+        data = model.model_validate(await request.json())
+        config = '' if sql else data.questionConfigDto.formatterConfig
         if len(config) > 16384:
             raise ValueError('Formatter configuration must be at most 16384 characters')
         language = 'python'
+        if sql:
+            language = 'python' if data.filename == 'main.py' else 'sql'
         if cpp:
             language = data.questionConfigDto.language
             if data.filename:

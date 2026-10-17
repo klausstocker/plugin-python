@@ -21,6 +21,8 @@ def install_dev_ui(app: FastAPI, service_path: str, plugin: str = "Python") -> N
     @app.get(f"{prefix}/config", response_class=HTMLResponse, include_in_schema=False)
     def configuration_dialog() -> str:
         script_url = f"{prefix}/resources/plugins/{plugin}/{plugin}ConfigScript.js"
+        support_script = (f'<script src="{escape(prefix, quote=True)}/resources/plugins/SQL/SQLScript.js"></script>'
+                          if plugin == 'SQL' else '')
         # JSON encoding also keeps custom service paths safe in the inline script.
         dto = json.dumps({"tagName": "dev", "serviceBase": service_path}).replace("<", "\\u003c")
         return f"""<!doctype html>
@@ -28,6 +30,7 @@ def install_dev_ui(app: FastAPI, service_path: str, plugin: str = "Python") -> N
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{plugin} plugin development dialog</title>
 <script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
+{support_script}
 <script src="{escape(script_url, quote=True)}"></script>
 </head>
 <body>

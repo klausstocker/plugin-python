@@ -34,6 +34,7 @@ if errorlevel 1 goto failed
 echo Development containers started.
 echo Dialog: http://localhost:8209/pluginpython/dev/config
 echo C/C++ dialog: http://localhost:8209/plugincpp/dev/config
+echo SQL dialog: http://localhost:8209/pluginsql/dev/config
 echo Resources: http://localhost:8209/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js
 popd
 exit /b 0

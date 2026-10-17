@@ -34,6 +34,7 @@ services:
       LC_ALL: ${LOCALE:-de_DE.UTF-8}
       SERVICEPATH: "/pluginpython"
       CPP_SERVICEPATH: "/plugincpp"
+      SQL_SERVICEPATH: "/pluginsql"
       RESOURCE_DIR: "/app/resources"
       network_letto_address: PythonCppPlugin
       docker_container_name: PythonCppPlugin
