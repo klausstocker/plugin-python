@@ -8,6 +8,7 @@ on that date. Install them with Python 3.14.
 | --- | --- |
 | Python (plugin image) | 3.14.8, Debian Trixie slim |
 | Python (Jobe image) | 3.14.4, Ubuntu package 3.14.4-1ubuntu0.2 |
+| SQLite library (Jobe Python) | 3.46.1, verified in the running Jobe container on 2026-10-16 |
 | GCC / G++ (Jobe image) | 15.2.0, Ubuntu package 15.2.0-16ubuntu1 |
 | FastAPI | 0.143.0 |
 | Uvicorn, standard extras | 0.54.0 |

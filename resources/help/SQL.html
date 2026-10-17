@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>SQL - Plugin - Help</title></head><body>
+<h1 style="display:flex;align-items:center;gap:0.4rem;font-size:1.2em;">
+  <img src="static/sqlite-logo.png" data-plugin-static-file="sqlite-logo.png" alt="SQLite" width="40" height="40" style="object-fit:contain;">
+  SQL - Plugin
+  <img src="static/unittest-logo.png" data-plugin-static-file="unittest-logo.png" alt="UnitTest" width="40" height="40" style="object-fit:contain;">
+</h1>
+<p>SQL-Aufgaben erstellen, ausprobieren und mit Python-UnitTests bewerten.</p>
+<h2>Beispiele</h2>
+<p>Im Tab <strong>UnitTest</strong> ein Beispiel auswählen und mit <strong>Apply</strong> laden: SELECT, INSERT, UPDATE, DELETE oder JOIN. Vorhandener Code wird nach Rückfrage ersetzt.</p>
+<h2>Kurz erklärt</h2>
+<p><strong>Preparation:</strong> Tabellen und Daten mit SQL anlegen. Jeder Lauf beginnt mit einer neuen SQLite-Datenbank.<br>
+<strong>Template:</strong> SQL-Vorlage für Studierende.<br>
+<strong>UnitTest:</strong> Python-Tests in <code>Checker(unittest.TestCase)</code>; zuvor <code>import unittest</code> und <code>import answer</code>.</p>
+<h2>Prüfen und bewerten</h2>
+<p><code>answer.rows</code> und <code>answer.columns</code>: letztes Abfrageergebnis.<br>
+<code>answer.results</code>: alle Ergebnisse mit <code>rows</code> und <code>columns</code>.<br>
+<code>answer.connection.execute(...)</code>: Datenbank prüfen.<br>
+<code>answer.reset()</code> in <code>setUp</code>: Datenbank je Test zurücksetzen.</p>
+<p><strong>Run SQL:</strong> Template ausführen.<br>
+<strong>Check tests / Calculate score:</strong> Tests ausführen; jeder Test zählt gleich viel. SQL-Fehler ergeben keine Punkte.</p>
+<h2>Configuration</h2>
+<p>CPU-Zeit für den gesamten Lauf und den Run-Button der Studierenden festlegen. Für feste Zeilenreihenfolge <code>ORDER BY</code> verwenden.</p>
+<h2>Umgebung</h2>
+<p>SQLite <strong>3.46.1</strong> über Python in Jobe (am 16.10.2026 im laufenden Jobe-Container geprüft).
+<a href="static/help/Environment.html" data-plugin-help-file="help/Environment.html" target="_blank" rel="noopener">Ausführungsumgebung</a> ·
+<a href="https://www.sqlite.org/lang.html" target="_blank" rel="noopener">SQL-Referenz</a></p>
+</body></html>

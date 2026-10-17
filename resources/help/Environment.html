@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Python und C/C++ – Ausführungsumgebung und Werkzeuge</title>
+  <title>Python, C/C++ und SQL – Ausführungsumgebung und Werkzeuge</title>
   <style>
     body { max-width: 960px; margin: 2rem auto; padding: 0 1rem;
            font-family: sans-serif; line-height: 1.5; }
@@ -14,7 +14,7 @@
 </head>
 <body>
   <h1>Ausführungsumgebung und Werkzeuge</h1>
-  <p>Python- und C/C++-Aufgaben werden in Jobe ausgeführt. Linter und Autoformatter laufen
+  <p>Python-, C/C++- und SQL-Aufgaben werden in Jobe ausgeführt. Linter und Autoformatter laufen
     im Plugin-Dienst. Die folgenden Versionen wurden am <strong>11. Oktober 2026</strong>
     in den laufenden Projektcontainern geprüft. Bei anderen Installationen oder einem Neubau
     können sich Ubuntu-Paketversionen ändern; die Angaben sind ein geprüfter Versionsstand.</p>
@@ -74,6 +74,15 @@ quote-style = "double"</code></pre>
   <p>Formatierungseinstellungen werden mit der Aufgabe gespeichert. Formatieren ersetzt und
     speichert den Code im aktiven Editor; im Ace-Editor kann die Änderung rückgängig gemacht werden.
     Ruff führt den Code nicht aus und ändert keine Linter- oder Bewertungseinstellungen.</p>
+
+  <h2 id="sql">SQL</h2>
+  <p>Das SQL-Plugin verwendet das vorhandene Python-Modul <code>sqlite3</code> in Jobe.
+    Die Lehrperson bereitet eine neue In-Memory-Datenbank mit SQL vor;
+    anschließend werden die SQL-Anweisungen der Studierenden und die Python-Unit-Tests ausgeführt.
+    Weitere Pakete werden nicht benötigt. Das SQL-Plugin bietet keine Linter- oder Formatter-Einstellungen.
+    Siehe <a href="SQL.html">SQL-Hilfe</a> für Vorbereitung, Ergebnisdaten und Bewertungs-API.</p>
+  <p>SQLite-Laufzeitversion: <strong>3.46.1</strong>, am 16.10.2026 im laufenden Jobe-Container
+    mit <code>/opt/jobe-python/bin/python3</code> und <code>sqlite3.sqlite_version</code> geprüft.</p>
 
   <h2 id="cpp">C/C++</h2>
   <h3>Compiler und Testbibliothek in Jobe</h3>

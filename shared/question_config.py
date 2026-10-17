@@ -25,3 +25,17 @@ class CppQuestionConfigDto(QuestionConfigDto):
     evalConfig: EvalConfigDto = Field(default_factory=EvalConfigDto)
     linterWeight: float = 0.0
     compilerFlags: str = ""
+
+
+class SqlEvalConfigDto(BaseModel):
+    runAtTest: bool = True
+
+
+class SqlQuestionConfigDto(BaseModel):
+    indication: str = ""
+    preparation: str = ""
+    preparationLanguage: Literal['sql'] = 'sql'
+    validation: str = ""
+    cpuTime: int = Field(default=5, gt=0)
+    evalConfig: SqlEvalConfigDto = Field(default_factory=SqlEvalConfigDto)
+    datasetVariables: list[dict[str, Any]] = Field(default_factory=list)

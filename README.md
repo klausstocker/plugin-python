@@ -1,7 +1,7 @@
 # PythonCppPlugin
 
-One application container registers two independent LeTTo plugin types:
-`Python` and `Cpp`. Both use the same Jobe container. The Docker container and
+One application container registers three independent LeTTo plugin types:
+`Python`, `Cpp`, and `SQL`. All use the same Jobe container. The Docker container and
 service registration name is `PythonCppPlugin`; image repositories use lowercase
 `klausstocker/python-cpp-plugin` and `klausstocker/python-cpp-plugin-jobe`.
 
@@ -12,8 +12,23 @@ and the update procedure.
 The Python execution URLs remain under `/pluginpython`. The C/C++ plugin uses
 `/plugincpp/run`, `/plugincpp/check`, `/plugincpp/scorePlugin` and
 `/plugincpp/example`, with its own `CppScript.js` and `CppConfigScript.js`.
-The shared `/open/pluginlist` and `/open/generalinfolist` advertise both types.
+The shared `/open/pluginlist` and `/open/generalinfolist` advertise all three types.
 Execution endpoints use the same token authentication and uploaded-file storage.
+
+SQL exercises use `/pluginsql/run`, `/pluginsql/check`, and `/pluginsql/scorePlugin`.
+Teachers prepare a fresh in-memory SQLite database using SQL; student
+SQL then executes before Python unit tests inspect `answer.results`, `answer.rows`,
+and `answer.connection`. Scores are the fraction of passing tests. SQL has a
+smaller configuration dialog without linting or formatting settings. It reuses
+Jobe's standard-library `sqlite3`; no runtime dependencies are added.
+See [SQL help](resources/help/SQL.html) and the [example](examples/SQL/README.md).
+With the development UI enabled, open `/pluginsql/dev/config`.
+The UnitTest tab offers five examples (SELECT, INSERT, UPDATE, DELETE, JOIN)
+with an Apply button and confirmation before replacing code. Check and score
+output includes elapsed request time. Jobe Python's SQLite library was verified
+as 3.46.1 on 2026-10-16; see the SQL and environment help for the dated snapshot.
+Deploy the updated `proxy/pluginpythoncpp.conf` and reload the proxy to expose
+the SQL routes, then refresh the service registration to advertise the new type.
 
 The student and teacher Format buttons call `/pluginpython/format` (Ruff) and
 `/plugincpp/format` (clang-format). Formatter configuration is saved with each
