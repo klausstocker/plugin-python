@@ -8,6 +8,46 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
     function base(dto) {
         return (dto.serviceBase || dto.params?.serviceBase || dto.pluginDto?.params?.serviceBase || '/pluginsql').replace(/\/$/, '');
     }
+    function datasetVariables(...sources) {
+        const parse = value => {
+            if (typeof value !== 'string') return value;
+            try { return JSON.parse(value); } catch (_) { return null; }
+        };
+        const cleanUnit = value => String(value ?? '').split(',')[0].replace(/^['"]+|['"]+$/g, '').trim();
+        const number = value => typeof value === 'string' && value.trim() && !Number.isNaN(Number(value)) ? Number(value) : value;
+        function extract(source) {
+            source = parse(source);
+            if (!source || typeof source !== 'object') return [];
+            if (Array.isArray(source)) return source.filter(item => item && typeof item.name === 'string' && item.name)
+                .map(item => ({name:item.name, value:item.value, unit:item.unit || ''}));
+            if (source.datasetVariables != null) return extract(source.datasetVariables);
+            if (source.params) {
+                const nested = extract(source.params);
+                if (nested.length) return nested;
+            }
+            const hash = parse(source.vars);
+            if (!hash || typeof hash !== 'object' || Array.isArray(hash)) return [];
+            const variables = hash.vars && typeof hash.vars === 'object' ? hash.vars : hash;
+            return Object.entries(variables).map(([name, variable]) => {
+                const result = variable?.calcErgebnisDto || {};
+                const json = parse(result.json) || {};
+                const text = typeof result.string === 'string' ? result.string : '';
+                const numeric = text.match(/^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)/);
+                const quotedUnit = text.match(/'([^']+)'/);
+                const suffixUnit = text.match(/^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*([^\s]+)\s*$/);
+                const fallbackUnit = cleanUnit(variable?.ze);
+                return {name,
+                    value:Object.prototype.hasOwnProperty.call(json, 'd') ? number(json.d) : numeric ? number(numeric[1]) : text,
+                    unit:cleanUnit(json.originalEinheitString || json.grundEinheitString || quotedUnit?.[1] || suffixUnit?.[1]
+                        || (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(fallbackUnit) ? '' : fallbackUnit))};
+            });
+        }
+        for (const source of sources) {
+            const variables = extract(source);
+            if (variables.length) return variables;
+        }
+        return [];
+    }
     function client(service) {
         let token;
         async function request(path, body) {
@@ -69,6 +109,15 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
             .sql-config .sql-example-toolbar button {margin:0; padding:6px 14px;}
             .sql-config .sql-example-confirm {max-width:420px; border:1px solid #aaa; border-radius:6px; padding:20px;}
             .sql-config .sql-example-confirm::backdrop {background:rgba(0,0,0,0.35);}
+            .sql-config .dataset-variable-section {display:flex; flex-direction:column; flex:1 1 0; min-width:0; margin-top:16px; border:1px solid #d0d0d0; border-radius:4px; padding:8px; background:#fafafa;}
+            .sql-config .dataset-variable-head-row {display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+            .sql-config .dataset-variable-head-row h4 {margin:0;}
+            .sql-config .dataset-variable-help {display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid #888; border-radius:50%; color:#444; font-size:11px; font-weight:700; cursor:help;}
+            .sql-config .dataset-variable-list {max-height:160px; overflow:auto;}
+            .sql-config .dataset-variable-table {width:100%; border-collapse:collapse; font-family:monospace; font-size:12px;}
+            .sql-config .dataset-variable-table th, .sql-config .dataset-variable-table td {border:1px solid #ddd; padding:4px 6px; text-align:left; vertical-align:top;}
+            .sql-config .dataset-variable-table th {background:#f0f0f0;}
+            .sql-config .dataset-variable-empty {margin:0; color:#666; font-size:12px;}
             .sql-config .sql-config-help {flex:1; min-width:0; padding:8px; border:1px solid #ccc; max-height:75vh; overflow:auto; box-sizing:border-box;}
             .sql-config .sql-help-heading {display:flex; align-items:center; justify-content:space-between; gap:8px;}
             .sql-config .sql-help-heading h3 {margin:0;}
@@ -168,7 +217,7 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
         try {
             const {bindFormatButton} = await import(service + '/static/formatting/client.js');
             if (!button.isConnected) return;
-            bindFormatButton({button, output, getTarget, onChange,
+            return bindFormatButton({button, output, getTarget, onChange,
                 requestFormat: async (code, filename) => {
                     const data = await request('/format', {code, filename});
                     if (typeof data.code !== 'string') throw new Error('Formatter returned no code');
@@ -176,7 +225,7 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
                 }});
         } catch (error) { button.title = 'Formatter unavailable: ' + error.message; }
     }
-    return {decode, base, client, theme, editor, bindFormatting};
+    return {decode, base, client, theme, editor, bindFormatting, datasetVariables};
 })());
 
 function initPluginSQL(dtoString, active) {

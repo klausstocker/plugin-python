@@ -191,6 +191,42 @@ class TestSqlPlugin(unittest.TestCase):
             self.assertEqual(response.json()['score'], 1, response.text)
             self.assertGreaterEqual(response.json()['elapsedSeconds'], 0)
 
+    @patch('shared.jobe_wrapper.JobeWrapper.run_test', local_jobe_run)
+    def test_dataset_variables_are_importable_in_sql_unit_tests(self):
+        tests = '''import unittest
+import answer
+from dataset import n, DATASET_VARIABLES
+class Checker(unittest.TestCase):
+    def test_dataset_and_rows(self):
+        self.assertEqual(n.value, 3)
+        self.assertEqual(n.unit, 'm')
+        self.assertEqual(DATASET_VARIABLES['target-count'].value, 2)
+        self.assertEqual(answer.rows, [(n.value,)])
+'''
+        config = {'validation': tests, 'datasetVariables': [
+            {'name': 'n', 'value': 3, 'unit': 'm'}, {'name': 'target-count', 'value': 2, 'unit': ''}]}
+        for endpoint in ('check', 'scorePlugin'):
+            response = self.client.post('/pluginsql/' + endpoint, headers=self.headers,
+                                        json={'code': 'SELECT 3;', 'questionConfigDto': config})
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()['score'], 1, response.text)
+
+    @patch('shared.jobe_wrapper.JobeWrapper.run_test', local_jobe_run)
+    def test_lettoscore_uses_current_dataset_instead_of_saved_values(self):
+        tests = '''import unittest
+from dataset import n
+class Checker(unittest.TestCase):
+    def test_current_value(self):
+        self.assertEqual(n.value, 7)
+        self.assertEqual(n.unit, 'm')
+'''
+        config = {'validation': tests, 'datasetVariables': [{'name': 'n', 'value': 3, 'unit': 'old'}]}
+        response = self.client.post('/open/score', json={
+            'typ': 'SQL', 'config': json.dumps(config), 'antwort': 'SELECT 7;', 'grade': 8,
+            'varsQuestion': {'vars': {'n': {'calcErgebnisDto': {'string': "7 'm'", 'json': json.dumps({'d': 7, 'originalEinheitString': 'm'})}}}}})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()['punkteIst'], 8, response.text)
+
     @patch('app.main.check_sql', return_value=CheckResult({'count': 2, 'failure_count': 1}))
     def test_lettoscore_uses_sql_settings_and_ignores_linter(self, check):
         config = {'preparation': PREPARATION, 'validation': TESTS, 'cpuTime': 9, 'linterWeight': 1}

@@ -71,5 +71,4 @@ special test image, headless browser, or local formatter installation is needed.
 Ruff and clang-format integration tests call the plugin's endpoints; endpoint
 and configuration unit tests use mocks.
 `tests.test_sql_formatting` checks real local sqlparse/Ruff output and SQLite
-behavior. Install requirements first. `SQL_BROWSER_TEST=true` enables the SQL
-browser smoke test when Chrome is installed.
+behavior. Install requirements first.

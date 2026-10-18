@@ -1,5 +1,13 @@
 # Repository instructions
 
+## Browser tests
+
+Browser tests may be used temporarily during development to verify UI changes.
+Do not keep or commit browser tests, browser-specific fixtures, or browser test
+instructions in the finished version. Remove temporary browser tests before
+preparing changes for commit, and preserve any browser-test removals made by the
+user. Keep appropriate non-browser unit and integration tests instead.
+
 ## Dependency changes
 
 Whenever changing dependencies, runtime or compiler versions, Docker base images,

@@ -22,6 +22,10 @@
 <strong>Check tests / Calculate score:</strong> Tests ausführen; jeder Test zählt gleich viel. SQL-Fehler ergeben keine Punkte.</p>
 <h2>Configuration</h2>
 <p>CPU-Zeit für den gesamten Lauf und den Run-Button der Studierenden festlegen. Für feste Zeilenreihenfolge <code>ORDER BY</code> verwenden.</p>
+<p>Der Tab zeigt auch Datensatzvariablen mit Name, Wert und Einheit.
+In UnitTests: <code>from dataset import DATASET_VARIABLES</code>, dann
+<code>DATASET_VARIABLES["name"].value</code> oder <code>.unit</code>.
+Python-Bezeichner lassen sich direkt importieren, z. B. <code>from dataset import n</code>.</p>
 <h2>Umgebung</h2>
 <p>SQLite <strong>3.46.1</strong> über Python in Jobe (am 16.10.2026 im laufenden Jobe-Container geprüft).
 Formatierung im Plugin-Dienst: sqlparse <strong>0.6.0</strong>, Ruff <strong>0.17.0</strong>.

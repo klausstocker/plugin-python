@@ -30,8 +30,11 @@ async function configPluginSQL(dtoString) {
         if (!container.isConnected) return;
     }
     const field = document.querySelector('.configform_config');
-    let config = SQLPluginUI.decode(dto);
+    const jsonData = SQLPluginUI.decode(dto);
+    let config = {...jsonData};
     try { config = {...config, ...JSON.parse(field?.value || '{}')}; } catch (_) {}
+    const datasetVariables = SQLPluginUI.datasetVariables(dto.params, dto.pluginDto?.params, dto.q, dto,
+        jsonData.q, jsonData, dto.questionConfigDto, config);
     const service = SQLPluginUI.base(dto);
     const request = SQLPluginUI.client(service);
     const root = document.createElement('div');
@@ -40,6 +43,7 @@ async function configPluginSQL(dtoString) {
         <button type="button" role="tab" data-tab="validation" aria-selected="true">UnitTest</button>
         <button type="button" role="tab" data-tab="indication" aria-selected="false" tabindex="-1">Template</button>
         <button type="button" role="tab" data-tab="preparation" aria-selected="false" tabindex="-1">Preparation</button>
+        <button type="button" role="tab" data-tab="configuration" aria-selected="false" tabindex="-1">Configuration</button>
         </div><div class="sql-editor-panels">
         <section data-panel="preparation" role="tabpanel" hidden><h3>Database preparation</h3>
         <p>SQL statements to create tables and insert the initial data.</p>
@@ -49,9 +53,14 @@ async function configPluginSQL(dtoString) {
         <section data-panel="validation" role="tabpanel"><div class="sql-tab-title-row"><h3>Python unit tests</h3>
         <div class="sql-example-toolbar"><label>Example: <select data-example-select disabled aria-label="SQL example"><option>Loading examples…</option></select></label>
         <button type="button" data-example-apply disabled>Apply</button></div></div>
-        <div class="sql-editor" data-editor="validation" aria-label="Python grading tests"></div></section></div>
+        <div class="sql-editor" data-editor="validation" aria-label="Python grading tests"></div></section>
+        <section data-panel="configuration" role="tabpanel" hidden><h3>Configuration</h3>
         <label>CPU time (seconds) <input data-setting="cpu" type="number" min="1" step="1"></label>
         <label><input data-setting="run" type="checkbox"> Allow students to run SQL</label>
+        <div class="dataset-variable-section" title="Dataset variables are provided to UnitTest as a generated dataset.py file. Use from dataset import DATASET_VARIABLES and then DATASET_VARIABLES[&quot;name&quot;].value or .unit. Valid Python identifiers can also be imported directly, e.g. from dataset import myVar.">
+        <div class="dataset-variable-head-row"><h4>Available dataset variables</h4>
+        <span class="dataset-variable-help" aria-label="Dataset variable usage help">?</span></div>
+        <div class="dataset-variable-list"></div></div></section></div>
         <button type="button" data-format disabled>Format</button>
         <button type="button" data-action="run">Run SQL</button>
         <button type="button" data-action="check">Check tests</button>
@@ -65,6 +74,28 @@ async function configPluginSQL(dtoString) {
         <button type="button" data-example-cancel>Cancel</button><button type="button" data-example-confirm>Apply</button></dialog>`;
     container.replaceChildren(root);
     SQLPluginUI.theme(root);
+    const datasetList = root.querySelector('.dataset-variable-list');
+    if (!datasetVariables.length) {
+        const empty = document.createElement('p');
+        empty.className = 'dataset-variable-empty';
+        empty.textContent = 'No dataset variables available for this question.';
+        datasetList.appendChild(empty);
+    } else {
+        const table = document.createElement('table');
+        table.className = 'dataset-variable-table';
+        table.setAttribute('aria-label', 'Available dataset variables');
+        table.innerHTML = '<thead><tr><th>Name</th><th>Value</th><th>Unit</th></tr></thead><tbody></tbody>';
+        for (const variable of datasetVariables) {
+            const row = document.createElement('tr');
+            for (const value of [variable.name, variable.value, variable.unit]) {
+                const cell = document.createElement('td');
+                cell.textContent = value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+                row.appendChild(cell);
+            }
+            table.querySelector('tbody').appendChild(row);
+        }
+        datasetList.appendChild(table);
+    }
     const helpPanel = root.querySelector('.sql-config-help');
     const helpContent = root.querySelector('.sql-help-content');
     const helpToggle = root.querySelector('[data-help-toggle]');
@@ -110,9 +141,7 @@ async function configPluginSQL(dtoString) {
         config = {preparation:editors.preparation.get(),
             indication:editors.indication.get(), validation:editors.validation.get(),
             cpuTime:Math.max(1, Math.trunc(Number(cpu.value) || 5)), evalConfig:{runAtTest:run.checked},
-            datasetVariables:config.datasetVariables || []};
-        const variables = dto.params?.datasetVariables;
-        if (variables) { try { config.datasetVariables = typeof variables === 'string' ? JSON.parse(variables) : variables; } catch (_) {} }
+            datasetVariables};
         if (field) { field.value = JSON.stringify(config); field.dispatchEvent(new Event('change', {bubbles:true})); }
     }
     const defaults = {preparation:"CREATE TABLE products (name TEXT, price INTEGER);\nINSERT INTO products VALUES ('Pen', 2), ('Book', 8);\n",
@@ -132,7 +161,8 @@ async function configPluginSQL(dtoString) {
             candidate.tabIndex = selected ? 0 : -1;
         }
         for (const panel of panels) panel.hidden = panel.dataset.panel !== tab.dataset.tab;
-        editors[tab.dataset.tab].resize();
+        editors[tab.dataset.tab]?.resize();
+        refreshFormat();
     }
     tabs.forEach((tab, index) => {
         const panel = panels.find(panel => panel.dataset.panel === tab.dataset.tab);
@@ -159,10 +189,12 @@ async function configPluginSQL(dtoString) {
     const exampleSelect = root.querySelector('[data-example-select]');
     const exampleApply = root.querySelector('[data-example-apply]');
     const output = root.querySelector('.sql-output');
+    let refreshFormat = () => {};
     SQLPluginUI.bindFormatting(root.querySelector('[data-format]'), output, service, () => {
         const active = tabs.find(tab => tab.getAttribute('aria-selected') === 'true').dataset.tab;
+        if (!editors[active]) return null;
         return editors[active].target(active === 'validation' ? 'main.py' : active === 'preparation' ? 'preparation.sql' : 'main.sql');
-    }, request, save);
+    }, request, save).then(refresh => { if (refresh) refreshFormat = refresh; });
     let exampleCount = 0;
     function confirmExampleOverwrite() {
         const dialog = root.querySelector('.sql-example-confirm');

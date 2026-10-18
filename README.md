@@ -27,6 +27,11 @@ sqlparse is installed in the plugin service, with fixed defaults and no effect o
 grading. Rebuild the plugin image or reinstall requirements after this addition.
 See [SQL help](resources/help/SQL.html) and the [example](examples/SQL/README.md).
 With the development UI enabled, open `/pluginsql/dev/config`.
+SQL's Configuration tab contains CPU time, the student Run option, and a table of
+question dataset variables. Python unit tests access them through the generated
+`dataset.py`: `from dataset import DATASET_VARIABLES`, then
+`DATASET_VARIABLES['name'].value` / `.unit` (or `from dataset import n`). Current
+LeTTo dataset values are passed to grading, and applying examples preserves them.
 The UnitTest tab offers five examples (SELECT, INSERT, UPDATE, DELETE, JOIN)
 with an Apply button and confirmation before replacing code. Check and score
 output includes elapsed request time. Jobe Python's SQLite library was verified
