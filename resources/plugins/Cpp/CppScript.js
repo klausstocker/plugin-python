@@ -58,7 +58,7 @@ function initPluginCpp(dtoString, active) {
     let editorContainer = null;
 
     const answerField = document.getElementsByClassName(dto.tagName + "_inp")[0];
-    const defaultMain = dtoData.indication || "// Write your C/C++ code here\n";
+    const defaultMain = dtoData.indication ?? "// Write your C/C++ code here\n";
     const initialMain = (answerField && answerField.value) || defaultMain;
     const files = dtoData.files || {};
     const evalConfig = dtoData.evalConfig || {};
@@ -88,6 +88,7 @@ function initPluginCpp(dtoString, active) {
                         <div class="file-info main-header">
                             <span>${dtoData.language === "c" ? "answer.c" : "answer.cpp"}</span>
                             <span class="header-actions">
+                                ${plugin.active ? `<button class="layout-toggle-button" data-reset-code type="button" title="Aufgabe neu starten" aria-label="Aufgabe neu starten" disabled>&#8634;</button>` : ""}
                                 <button class="layout-toggle-button" id="${toggleLayoutButtonId}" type="button" title="Toggle layout">⇅</button>
                                 <span id="${buildInfoId}" class="build-info-help" title="Script build: ${escapeHtmlAttr(CPP_SCRIPT_COMMIT_HASH)}
 Server build: loading...">?</span>
@@ -315,6 +316,7 @@ Server build: loading...">?</span>
         }
 
         plugin.getMainCode = () => editor.getValue();
+        pluginContainer.querySelector('[data-reset-code]')?.removeAttribute('disabled');
         refreshFormat();
     }
 
@@ -331,6 +333,7 @@ Server build: loading...">?</span>
             });
         }
         plugin.getMainCode = () => mainTextArea.value;
+        pluginContainer.querySelector('[data-reset-code]')?.removeAttribute('disabled');
         refreshFormat();
     }
 
@@ -364,6 +367,7 @@ Server build: loading...">?</span>
     }
 
     function bindActions() {
+        setupReset();
         setupFormatting();
         const stopEnterPropagation = (event) => {
             if (event.key === "Enter" || event.keyCode === 13) {
@@ -381,6 +385,28 @@ Server build: loading...">?</span>
 
         bindRequest(runButtonId, "/run", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files, language: dtoData.language || "cpp", compilerFlags: dtoData.compilerFlags || "", cpuTime: dtoData.cpuTime || 5 } }), out);
         bindRequest(compileButtonId, "/compile", () => ({ code: plugin.getMainCode ? plugin.getMainCode() : "", questionConfigDto: { files: files, language: dtoData.language || "cpp", compilerFlags: dtoData.compilerFlags || "", cpuTime: dtoData.cpuTime || 5 } }), out);
+    }
+
+    function setupReset() {
+        const button = pluginContainer.querySelector('[data-reset-code]');
+        if (!button) return;
+        const dialog = document.createElement('dialog');
+        dialog.setAttribute('aria-label', 'Aufgabe neu starten');
+        dialog.innerHTML = `<p>Code auf den ursprünglichen Angabetext zurücksetzen? Deine Änderungen gehen dabei verloren.</p>
+            <button type="button" data-reset-no autofocus>Nein</button>
+            <button type="button" data-reset-yes>Ja</button>`;
+        pluginContainer.querySelector('.code-runner-root').appendChild(dialog);
+        button.addEventListener('click', () => dialog.showModal());
+        dialog.querySelector('[data-reset-no]').addEventListener('click', () => dialog.close());
+        dialog.querySelector('[data-reset-yes]').addEventListener('click', () => {
+            if (aceEditor) aceEditor.setValue(defaultMain, -1);
+            else editorContainer.querySelector('textarea').value = defaultMain;
+            if (answerField) answerField.value = defaultMain;
+            refreshFormat();
+            dialog.close();
+            if (aceEditor) aceEditor.focus();
+            else editorContainer.querySelector('textarea').focus();
+        });
     }
 
     async function setupBuildInfo() {

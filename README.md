@@ -111,6 +111,17 @@ plugin execution endpoints and the Jobe container. Bundled resources are served
 at `/pluginpython/dev/resources/`, for example
 `/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js`.
 The SQL dialog is at `http://localhost:8209/pluginsql/dev/config`.
+Student editor previews with Example 1 are available at:
+
+- Python: `http://localhost:8209/pluginpython/dev/student`
+- C/C++: `http://localhost:8209/plugincpp/dev/student` (the first C example)
+- SQL: `http://localhost:8209/pluginsql/dev/student`
+
+These pages load the normal editable student editor, including formatting,
+execution and the restart button with its Yes/No confirmation. They use the
+same execution endpoints as LeTTo; Python/C/C++ execution requires Jobe.
+Edits stay in the current page; reloading restores the example's starter code.
+
 Inside LeTTo, SQL uses `configPluginSQL` and does not require `PLUGIN_DEV_UI`.
 Its config script loads editor support if the student script has not been loaded.
 For a blank SQL dialog, verify the deployed image contains both SQL scripts and
@@ -125,7 +136,7 @@ your server for the editor. The standalone development dialog still loads
 jQuery from its CDN; LeTTo supplies its own jQuery.
 
 `PLUGIN_DEV_UI` defaults to `false`. Leave it unset or false in production:
-the dialog and the complete development resource mount then return 404.
+the dialogs, student previews and complete development resource mount then return 404.
 Changing the flag requires restarting the plugin process.
 
 ## Plugin help

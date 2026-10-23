@@ -35,6 +35,9 @@ echo Development containers started.
 echo Dialog: http://localhost:8209/pluginpython/dev/config
 echo C/C++ dialog: http://localhost:8209/plugincpp/dev/config
 echo SQL dialog: http://localhost:8209/pluginsql/dev/config
+echo Python student: http://localhost:8209/pluginpython/dev/student
+echo C/C++ student: http://localhost:8209/plugincpp/dev/student
+echo SQL student: http://localhost:8209/pluginsql/dev/student
 echo Resources: http://localhost:8209/pluginpython/dev/resources/plugins/Python/PythonConfigScript.js
 popd
 exit /b 0

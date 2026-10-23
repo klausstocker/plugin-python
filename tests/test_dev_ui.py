@@ -1,4 +1,6 @@
+import json
 import os
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -51,7 +53,56 @@ class TestDevUi(unittest.TestCase):
             install_dev_ui(app, "/pluginpython")
         client = TestClient(app)
         self.assertEqual(client.get("/pluginpython/dev/config").status_code, 404)
+        self.assertEqual(client.get("/pluginpython/dev/student").status_code, 404)
         self.assertEqual(client.get("/pluginpython/dev/resources/test.js").status_code, 404)
+
+    def test_student_previews_load_first_example_with_editable_student_script(self):
+        from shared.cpp_examples import cpp_examples
+        from shared.question_examples import QuestionConfigDtoExamples
+        from shared.sql_examples import sql_example
+
+        resources = Path(__file__).resolve().parents[1] / "resources"
+        cases = (
+            ("Python", QuestionConfigDtoExamples()[0].model_dump()),
+            ("Cpp", cpp_examples("c")[0]),
+            ("SQL", sql_example(0).model_dump()),
+        )
+        for plugin, expected in cases:
+            with self.subTest(plugin=plugin), patch.dict(os.environ, {
+                "RESOURCE_DIR": str(resources), "PLUGIN_DEV_UI": "true",
+            }):
+                app = FastAPI()
+                prefix = f"/custom/{plugin.lower()}"
+                install_dev_ui(app, prefix, plugin)
+                client = TestClient(app)
+                response = client.get(f"{prefix}/dev/student")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Example 1", response.text)
+                script = f"{prefix}/dev/resources/plugins/{plugin}/{plugin}Script.js"
+                self.assertIn(f'src="{script}"', response.text)
+                self.assertEqual(client.get(script).status_code, 200)
+                match = re.search(rf'initPlugin{plugin}\(JSON.stringify\((.*)\), true\);', response.text)
+                self.assertIsNotNone(match)
+                dto = json.loads(match.group(1))
+                self.assertEqual(dto["serviceBase"], prefix)
+                self.assertEqual(json.loads(dto["jsonData"]), expected)
+                self.assertIn(f'id="{dto["tagName"]}_div"', response.text)
+                self.assertIn(f'class="{dto["tagName"]}_inp" value=""', response.text)
+
+    def test_student_preview_escapes_example_code_in_inline_script(self):
+        from shared.question_config import QuestionConfigDto
+
+        resources = Path(__file__).resolve().parents[1] / "resources"
+        source = '</script><script>alert("example")</script>\n# Grüße'
+        with patch.dict(os.environ, {"RESOURCE_DIR": str(resources), "PLUGIN_DEV_UI": "true"}), \
+                patch("shared.question_examples.QuestionConfigDtoExamples",
+                      return_value=[QuestionConfigDto(indication=source)]):
+            app = FastAPI()
+            install_dev_ui(app, "/pluginpython")
+            page = TestClient(app).get("/pluginpython/dev/student").text
+        self.assertNotIn(source, page)
+        dto = json.loads(re.search(r'initPluginPython\(JSON.stringify\((.*)\), true\);', page).group(1))
+        self.assertEqual(json.loads(dto["jsonData"])["indication"], source)
 
     def test_enabled_serves_dialog_and_resources_without_traversal(self):
         with tempfile.TemporaryDirectory() as temp:

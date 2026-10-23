@@ -236,7 +236,8 @@ function initPluginSQL(dtoString, active) {
     const service = SQLPluginUI.base(dto);
     const request = SQLPluginUI.client(service);
     const field = document.getElementsByClassName(dto.tagName + '_inp')[0];
-    const initial = field?.value || config.indication || '-- Write your SQL here\n';
+    const defaultMain = config.indication ?? '-- Write your SQL here\n';
+    const initial = field?.value || defaultMain;
     if (active && field && !field.value) field.value = initial;
     container.querySelector('.sql-plugin')?.remove();
     const root = document.createElement('div');
@@ -244,6 +245,7 @@ function initPluginSQL(dtoString, active) {
     root.innerHTML = `<div class="sql-panels horizontal">
         <section class="sql-panel sql-main-panel"><div class="sql-file-info sql-main-header"><span>main.sql</span>
         <span class="sql-header-actions"><button type="button" class="sql-layout-toggle" aria-label="Switch to vertical layout" title="Switch to vertical layout">⇅</button>
+        ${active ? '<button type="button" class="sql-layout-toggle" data-reset-code title="Aufgabe neu starten" aria-label="Aufgabe neu starten">&#8634;</button>' : ''}
         <a class="sql-help-link" target="_blank" rel="noopener" aria-label="SQL help" title="SQL help">?</a></span></div>
         <div class="sql-editor" aria-label="Student SQL"></div></section>
         <div class="sql-splitter" role="separator" tabindex="0" aria-label="Resize panels" aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85"></div>
@@ -312,6 +314,22 @@ function initPluginSQL(dtoString, active) {
     }
     applyLayout();
     if (active) {
+        const resetButton = root.querySelector('[data-reset-code]');
+        const dialog = document.createElement('dialog');
+        dialog.setAttribute('aria-label', 'Aufgabe neu starten');
+        dialog.innerHTML = `<p>Code auf den ursprünglichen Angabetext zurücksetzen? Deine Änderungen gehen dabei verloren.</p>
+            <button type="button" data-reset-no autofocus>Nein</button>
+            <button type="button" data-reset-yes>Ja</button>`;
+        root.appendChild(dialog);
+        resetButton.addEventListener('click', () => dialog.showModal());
+        dialog.querySelector('[data-reset-no]').addEventListener('click', () => dialog.close());
+        dialog.querySelector('[data-reset-yes]').addEventListener('click', () => {
+            editor.set(defaultMain);
+            if (field) field.value = defaultMain;
+            dialog.close();
+            const target = editor.target('main.sql');
+            (target.editor || target.textarea).focus();
+        });
         const format = document.createElement('button');
         format.type = 'button'; format.textContent = 'Format Code'; format.dataset.studentFormat = '';
         actions.appendChild(format);
