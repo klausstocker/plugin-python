@@ -46,6 +46,13 @@ compile, tests, and grading. See [formatting configuration](resources/formatting
 
 Open `http://localhost:8209/plugincpp/dev/config` for the C/C++ development dialog.
 Select C17 or C++17 for answers; teacher tests use Catch2 and default to C++17.
+Jobe includes [{fmt}](https://fmt.dev/latest/api/): use `#include <fmt/format.h>`
+and `fmt::format("Hello {}", "world")` in C++ answers or teacher tests.
+Run and Catch2 grading link fmt automatically with `-lfmt`; Compile
+checks the headers without linking. No additional compiler flags are needed.
+Rebuild and recreate both the plugin and Jobe services to enable this support.
+Ubuntu `libfmt-dev` 10.1.1+ds1-4build1 was verified in the rebuilt Jobe image
+on 2026-10-31; see [dependency versions](DEPENDENCIES.md).
 The three C/C++ examples cover functions, stdout and file access. Their starter
 code intentionally needs completing. Each Catch2 TEST_CASE contributes one
 equally weighted case to the grade. Student Run Code needs a main function;

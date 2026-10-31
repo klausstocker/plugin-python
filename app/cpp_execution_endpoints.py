@@ -55,11 +55,14 @@ async def execute(request: Request):
             standard = '-std=c17' if config.language == 'c' else '-std=c++17'
             filename = 'answer.c' if config.language == 'c' else 'answer.cpp'
             files = [spec for spec in files if spec[1] != filename]
+            parameters = {'compileargs': [standard, '-Wall', '-Werror', *compiler_flags]}
+            if config.language == 'cpp' and operation == 'run':
+                parameters['linkargs'] = ['-lfmt']
             result = JobeWrapper(JOBE_SERVER).run_test(
                 ('compile' + config.language) if operation == 'compile' else config.language,
                 data.code, filename, files=files,
                 cputime=common._cputime_from_question_config(config.model_dump()),
-                parameters={'compileargs': [standard, '-Wall', '-Werror', *compiler_flags]})
+                parameters=parameters)
             if operation == 'compile':
                 compiler_output = result.cmpinfo or ''
                 summary = 'Compilation successful.' if result.success() else f'Compilation failed: {result.outcome()[1]}.'

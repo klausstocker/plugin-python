@@ -66,6 +66,7 @@ RUN ln -snf /usr/share/zoneinfo/"$TZ" /etc/localtime && \
     fp-compiler \
     git \
     libapache2-mod-php \
+    libfmt-dev \
     nano \
     nodejs \
     octave \
@@ -123,8 +124,12 @@ COPY jobe/Catch2cTask.php jobe/Catch2cppTask.php /var/www/html/jobe/app/Librarie
 COPY jobe/CompilecTask.php jobe/CompilecppTask.php /var/www/html/jobe/app/Libraries/
 COPY jobe/catch2_compile.py /usr/local/libexec/letto-catch2-compile.py
 COPY jobe/start-jobe.sh /usr/local/bin/start-jobe
-# Catch2 is required in every final image, not an optional runtime download.
+# Catch2 and fmt are required in every final image.
 RUN test -s /opt/catch2/VERSION && \
+    test -r /usr/include/fmt/format.h && \
+    printf '#include <fmt/format.h>\nint main() { return fmt::format("{}", 42) != "42"; }\n' > /tmp/fmt-check.cpp && \
+    g++ -std=c++17 /tmp/fmt-check.cpp -lfmt -o /tmp/fmt-check && \
+    /tmp/fmt-check && rm /tmp/fmt-check.cpp /tmp/fmt-check && \
     test -s /opt/catch2/lib/libCatch2.a && \
     test -s /opt/catch2/lib/letto-catch2-runner.o && \
     test -r /opt/catch2/include/catch2/catch_test_macros.hpp && \

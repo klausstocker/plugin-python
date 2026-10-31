@@ -69,7 +69,7 @@ def main():
     ] if mode == 'prepare' else [
         ('test_compile', ['g++', *test_flags, '-c', source, '-o', 'catch2-tests.o']),
         ('link', ['g++', 'catch2-tests.o', 'answer.o', '/opt/catch2/lib/letto-catch2-runner.o',
-                  '/opt/catch2/lib/libCatch2.a', '-pthread', '-o', executable]),
+                  '/opt/catch2/lib/libCatch2.a', '-lfmt', '-pthread', '-o', executable]),
     ]
     if mode == 'finish' and options == ['hit']:
         commands = commands[1:]

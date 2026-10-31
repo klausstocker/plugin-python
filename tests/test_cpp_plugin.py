@@ -192,6 +192,39 @@ class TestCppPlugin(unittest.TestCase):
 class TestCppPluginIntegration(unittest.TestCase):
     """Requires the development Jobe service at localhost:4000."""
 
+    def test_fmt_is_available_for_run_compile_check_and_score(self):
+        client = TestClient(main.app)
+        headers = {'Authorization': 'Bearer ' + common.get_exec_token()}
+        answer = '''#include <fmt/format.h>
+#include <iostream>
+std::string greeting() { return fmt::format("Hello {}: {:.2f}", "fmt", 3.5); }
+#ifndef LETTO_UNIT_TEST
+int main() { std::cout << greeting(); }
+#endif
+'''
+        tests = '''#include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
+std::string greeting();
+TEST_CASE("fmt in student and teacher code") {
+    REQUIRE(greeting() == fmt::format("Hello {}: {:.2f}", "fmt", 3.5));
+}
+'''
+        server = os.environ.get('JOBE_TEST_SERVER', '127.0.0.1:4000')
+        with patch.object(cpp, 'JOBE_SERVER', server):
+            for operation in ('run', 'compile', 'check', 'scorePlugin'):
+                with self.subTest(operation=operation):
+                    response = client.post('/plugincpp/' + operation, headers=headers, json={
+                        'code': answer, 'testcode': tests,
+                        'questionConfigDto': {'language': 'cpp'}})
+                    self.assertEqual(response.status_code, 200, response.text)
+                    result = response.json()
+                    if operation == 'compile':
+                        self.assertTrue(result['success'], response.text)
+                    elif operation == 'run':
+                        self.assertEqual(result['output'], 'Hello fmt: 3.50\n')
+                    else:
+                        self.assertEqual(result['score'], 1.0, response.text)
+
     def test_compile_checks_code_without_linking_or_running(self):
         client = TestClient(main.app)
         headers = {'Authorization': 'Bearer ' + common.get_exec_token()}

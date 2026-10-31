@@ -62,6 +62,13 @@ include paths are rejected. Use attached forms `-DNUMBER=42` and `-Iinclude`.
 Catch2 uses those flags too; C standard flags do not replace the C++17 harness
 standard for C answers. Test-object cache keys include effective flags.
 
+Jobe also installs Ubuntu's `libfmt-dev` for C++ `<fmt/format.h>` and `fmt::format`.
+Run and Catch2 grading link fmt automatically; no `compilerFlags`
+or formatter configuration is needed. This requires rebuilding and recreating
+both services. The verified fmt version is listed in the shared environment help.
+Ubuntu `libfmt-dev` 10.1.1+ds1-4build1, Jobe Python 3.14.4 and GCC/G++ 15.2.0
+were verified in the rebuilt Jobe image on 2026-10-31.
+
 Rebuild plugin and Jobe images to apply the formatter/compiler changes. For local
 development, `RUFF_BIN` and `CLANG_FORMAT_BIN` override executable paths.
 Run unit and Jobe integration tests with `py -m unittest discover -s tests -v`

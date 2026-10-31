@@ -5,31 +5,37 @@ sqlparse 0.6.0 was added and checked against PyPI on 2026-10-17.
 All direct Python package pins below are the latest stable, non-yanked releases
 on that date. Install them with Python 3.14.
 
-| Dependency | Version |
-| --- | --- |
-| Python (plugin image) | 3.14.8, Debian Trixie slim |
-| Python (Jobe image) | 3.14.4, Ubuntu package 3.14.4-1ubuntu0.2 |
-| SQLite library (Jobe Python) | 3.46.1, verified in the running Jobe container on 2026-10-16 |
-| GCC / G++ (Jobe image) | 15.2.0, Ubuntu package 15.2.0-16ubuntu1 |
-| FastAPI | 0.143.0 |
-| Uvicorn, standard extras | 0.54.0 |
-| Pydantic | 2.14.0 |
-| Pillow | 12.3.0 |
-| HTTPX2 | 2.13.1 |
-| python-multipart | 0.0.32 |
-| Jinja2 | 3.1.6 |
-| MarkupSafe | 3.0.4 |
-| itsdangerous | 2.2.0 |
-| Pylint | 4.1.2 |
-| NumPy | 2.5.4 |
-| Markdown | 3.11 |
-| Ruff | 0.17.0 |
-| clang-format | 23.1.3 |
-| sqlparse | 0.6.0 |
-| tzdata, Windows only | 2026.5 |
-| Catch2 | 3.16.1 |
-| Ace | 1.44.0 |
-| jQuery, standalone development dialog | 4.0.0 |
+All plugin types share one plugin service. Jobe is the separate execution
+service for student code and teacher tests. The table distinguishes where each
+dependency is installed or loaded; installation in the plugin service does not
+make a library available to student code in Jobe.
+
+| Dependency | Version | Installed / used by |
+| --- | --- | --- |
+| Python | 3.14.8, Debian Trixie slim | Plugin service |
+| Python | 3.14.4, Ubuntu package 3.14.4-1ubuntu0.2 | Jobe: Python/SQL execution and system tooling |
+| SQLite | 3.46.1, verified 2026-10-16 | Jobe: Python `sqlite3` module for Python/SQL execution |
+| GCC / G++ | 15.2.0, Ubuntu package 15.2.0-16ubuntu1 | Jobe: C/C++ compilation |
+| FastAPI | 0.143.0 | Plugin service |
+| Uvicorn, standard extras | 0.54.0 | Plugin service |
+| Pydantic | 2.14.0 | Plugin service |
+| Pillow | 12.3.0 | Plugin service |
+| HTTPX2 | 2.13.1 | Plugin service |
+| python-multipart | 0.0.32 | Plugin service |
+| Jinja2 | 3.1.6 | Plugin service |
+| MarkupSafe | 3.0.4 | Plugin service |
+| itsdangerous | 2.2.0 | Plugin service |
+| Pylint | 4.1.2 | Plugin service: Python linting; also installed in Jobe's Python environment |
+| NumPy | 2.5.4 | Plugin service and Jobe: Python library available to student code and teacher tests |
+| Markdown | 3.11 | Plugin service |
+| Ruff | 0.17.0 | Plugin service: Python formatting, including SQL teacher tests |
+| clang-format | 23.1.3 | Plugin service: C/C++ formatting |
+| sqlparse | 0.6.0 | Plugin service: SQL formatting |
+| tzdata | 2026.5 | Local development on Windows only; Linux images use OS timezone data |
+| Catch2 | 3.16.1 | Jobe: C++ teacher tests for C/C++ answers |
+| {fmt} | Ubuntu `libfmt-dev` 10.1.1+ds1-4build1, verified 2026-10-31 | Jobe: C++ answers and teacher tests |
+| Ace | 1.44.0 | Browser: bundled and served by the plugin service |
+| jQuery | 4.0.0 | Browser: official CDN in the standalone development dialog; supplied by the host in LeTTo |
 
 `requirements.txt` is shared by local development and the plugin image.
 SQL formatting uses sqlparse in the plugin service, with uppercase keywords,
@@ -37,7 +43,7 @@ four-space indentation, and preserved comments and literals. Python tests in the
 SQL plugin reuse Ruff. Jobe does not install sqlparse and does not need rebuilding
 for this addition. Reinstall requirements or rebuild the plugin image to apply it.
 Jobe Python 3.14.4 and GCC/G++ 15.2.0 were rechecked from the built image on
-2026-10-17; the dated native package snapshots below remain separate from apt pins.
+2026-10-31; the dated native package snapshots below remain separate from apt pins.
 clang-format comes from its binary wheel, so local and container formatting use
 the same version. Ace is bundled under `resources/vendor/ace/1.44.0` and served
 locally at `<serviceBase>/static/ace/1.44.0/` by all four plugin scripts. The
@@ -68,13 +74,25 @@ the operating system's timezone database.
 
 ## Update policy
 
+Jobe installs `libfmt-dev` from Ubuntu for `<fmt/format.h>` and `fmt::format`.
+C++ Run and all Catch2 tests link fmt with `-lfmt`, including
+C++ teacher tests for C answers. No task-specific flags are required. The image
+build compiles and runs a C++17 fmt smoke test. Rebuild and recreate both services
+after this addition. On upgrades, check `dpkg-query -W libfmt-dev`, Python and
+GCC/G++ in the resulting Jobe image, run the fmt integration tests, and update
+this file and the help pages. See the [official fmt documentation](https://fmt.dev/latest/api/).
+The rebuilt Jobe image was checked on 2026-10-31: `libfmt-dev`
+10.1.1+ds1-4build1, Python 3.14.4 (3.14.4-1ubuntu0.2), and GCC/G++ 15.2.0
+(15.2.0-16ubuntu1). These native packages follow Ubuntu updates rather than
+exact apt pins.
+
 The teacher-facing [environment help](resources/help/Environment.html) lists
 the verified Jobe interpreter, compiler, installed Python libraries and plugin
 tools, with documentation links. It is available from both detailed help pages
 at `<serviceBase>/static/help/Environment.html`. When upgrading or rebuilding,
 verify the deployed versions and update that page and the version summaries in
 `resources/help/Python.html` and `resources/help/Cpp.html`. Native versions above
-were read from the running Jobe container on 2026-10-11; they are not apt pins.
+are dated verification snapshots as noted above; they are not apt pins.
 
 Stay on the Python 3.14 minor series and deliberately adopt its newest bugfix
 release. An exact Docker tag such as `python:3.14.8-slim-trixie` controls when the

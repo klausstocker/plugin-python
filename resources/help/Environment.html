@@ -36,8 +36,9 @@
   </table>
   <p>Zusätzlich zu NumPy und Pylint enthält die Jobe-Python-Umgebung deren Abhängigkeiten:
     <code>astroid 4.3.4</code>, <code>dill 0.4.1</code>, <code>isort 9.0.2</code>,
-    <code>mccabe 0.7.0</code>, <code>mypy_extensions 1.1.0</code>, <code>platformdirs 4.13.0</code>
-    und <code>tomlkit 0.15.1</code>. Diese Versionen werden bei der Installation aufgelöst.</p>
+    <code>mccabe 0.7.0</code>, <code>mypy_extensions 1.1.0</code>, <code>platformdirs 4.14.0</code>
+    und <code>tomlkit 0.15.2</code>. Diese Versionen werden bei der Installation aufgelöst;
+    im neu gebauten Jobe-Image am 31.10.2026 geprüft.</p>
   <p>Die Python-Standardbibliothek ist verfügbar, zum Beispiel <code>math</code>,
     <code>csv</code>, <code>json</code> und <code>sqlite3</code>. SQLite benötigt kein zusätzliches
     Python-Paket. Das Programm <code>sqlite3</code> ist ebenfalls in Jobe installiert
@@ -89,7 +90,8 @@ quote-style = "double"</code></pre>
     SQL wird weder ausgeführt noch validiert. Für Python-UnitTests wird Ruff 0.17.0 verwendet.
     Eigene Formatierungseinstellungen sind im SQL-Dialog nicht erforderlich.
     <a href="https://sqlparse.readthedocs.io/en/stable/" target="_blank" rel="noopener">sqlparse-Dokumentation</a>.</p>
-  <p>Jobe Python 3.14.4 und GCC/G++ 15.2.0 wurden am 17.10.2026 erneut im gebauten Jobe-Image geprüft.</p>
+  <p>Jobe Python 3.14.4 (Ubuntu 3.14.4-1ubuntu0.2) und GCC/G++ 15.2.0
+    (Ubuntu 15.2.0-16ubuntu1) wurden am 31.10.2026 erneut im gebauten Jobe-Image geprüft.</p>
 
   <h2 id="cpp">C/C++</h2>
   <h3>Compiler und Testbibliothek in Jobe</h3>
@@ -101,8 +103,15 @@ quote-style = "double"</code></pre>
           <a href="https://gcc.gnu.org/onlinedocs/gcc-15.2.0/gcc/" target="_blank" rel="noopener">GCC 15.2-Dokumentation</a></td></tr>
       <tr><td>Catch2</td><td>3.16.1</td><td>UnitTest-Framework für die als C++ kompilierten Lehrertests.
         <a href="https://github.com/catchorg/Catch2/tree/v3.16.1/docs" target="_blank" rel="noopener">Catch2-Dokumentation</a></td></tr>
+      <tr><td>{fmt}</td><td>Ubuntu libfmt-dev 10.1.1+ds1-4build1; geprüft am 31.10.2026</td>
+        <td><code>fmt::format</code> für C++-Antworten und Lehrertests;
+          <a href="https://fmt.dev/latest/api/" target="_blank" rel="noopener">fmt-Dokumentation</a></td></tr>
     </tbody>
   </table>
+  <p>Mit <code>#include &lt;fmt/format.h&gt;</code> steht beispielsweise
+    <code>fmt::format("Hallo {}", "Welt")</code> bereit. Run und Catch2 verlinken fmt
+    automatisch, auch in C++-Lehrertests für C-Antworten. Keine zusätzlichen
+    Compileroptionen erforderlich. Plugin- und Jobe-Dienst neu bauen und erstellen.</p>
   <p>Vorgaben: C17 oder C++17, <code>-Wall -Werror</code>. Zusätzliche Compileroptionen
     werden pro Aufgabe im Tab <strong>Compiler</strong> gespeichert und gelten für Run,
     Compile, Check und Bewertung. Beispiele: <code>-O2 -Wextra -DNUMBER=42</code>,

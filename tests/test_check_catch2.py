@@ -77,6 +77,16 @@ class TestCatch2Jobe(unittest.TestCase):
 
     server = os.environ.get('JOBE_TEST_SERVER', 'localhost:4000')
 
+    def test_fmt_in_cpp_teacher_tests_for_c_answers(self):
+        result = check_catch2(self.server, 'int answer(void) { return 42; }', '''
+#include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
+extern "C" int answer(void);
+TEST_CASE("format C result") { REQUIRE(fmt::format("{}", answer()) == "42"); }
+''', language='c')
+        self.assertTrue(result.wasSuccessful(), repr(result))
+        self.assertEqual(result.count, 1)
+
     def test_cache_reuses_test_object_for_changed_answers_and_invalidates_headers(self):
         test_source = ('#include <catch2/catch_test_macros.hpp>\n#include "expected.h"\n'
                        'int answer();\nTEST_CASE("' + uuid.uuid4().hex + '") { REQUIRE(answer() == EXPECTED); }')
