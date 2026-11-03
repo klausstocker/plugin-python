@@ -2,6 +2,8 @@ async function configPluginSQL(dtoString) {
     const dto = JSON.parse(dtoString || '{}');
     const container = document.getElementById('configform_div');
     if (!container) return;
+    const owner = {};
+    container._sqlConfigOwner = owner;
     // LeTTo can invoke the configuration script without loading the student script.
     if (!window.SQLPluginUI) {
         const service = (dto.serviceBase || dto.params?.serviceBase || dto.pluginDto?.params?.serviceBase || '/pluginsql').replace(/\/$/, '');
@@ -27,7 +29,7 @@ async function configPluginSQL(dtoString) {
             if (container.isConnected) container.textContent = error.message;
             return;
         }
-        if (!container.isConnected) return;
+        if (!container.isConnected || container._sqlConfigOwner !== owner) return;
     }
     const field = document.querySelector('.configform_config');
     const jsonData = SQLPluginUI.decode(dto);
@@ -241,9 +243,11 @@ async function configPluginSQL(dtoString) {
         buttons.forEach(button => { button.disabled = true; });
         try {
             const {output:example} = await request('/example', {index:Number(exampleSelect.value)});
+            if (!root.isConnected) return;
             const changed = ['preparation', 'indication', 'validation'].some(name =>
                 editors[name].get().trim() && editors[name].get().trim() !== example[name].trim());
             if (changed && !await confirmExampleOverwrite()) return;
+            if (!root.isConnected) return;
             applyingExample = true;
             try {
                 for (const name of ['preparation', 'indication', 'validation']) editors[name].set(example[name]);

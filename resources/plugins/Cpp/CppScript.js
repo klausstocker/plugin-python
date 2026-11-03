@@ -4,6 +4,37 @@ try {
 
 const CPP_SCRIPT_COMMIT_HASH = "c70dad38cc61";
 
+
+// Keep answer ownership on the field: LeTTo may reuse it between previews.
+function bindCppAnswer(container, tagName, defaultCode, active) {
+    let field = null;
+    for (let scope = container; scope; scope = scope.parentElement) {
+        const matches = scope.getElementsByClassName(tagName + "_inp");
+        if (matches.length === 1) { field = matches[0]; break; }
+        if (matches.length > 1) break; // Never pick another question's first field.
+    }
+    const key = JSON.stringify(["Cpp", tagName, defaultCode]);
+    const previous = field?._pluginCodeAnswer;
+    // A changed server value is authoritative, including on a reused field.
+    const stale = previous && previous.key !== key && field.value === previous.value;
+    const initial = !field || stale ? defaultCode
+        : field.value || (previous?.key === key ? "" : defaultCode);
+    const owner = {key, value: initial};
+    if (active && field) {
+        field._pluginCodeAnswer = owner;
+        field.value = initial;
+    }
+    return {
+        initial,
+        set(value) {
+            if (active && field && container.isConnected && field.isConnected
+                    && field._pluginCodeAnswer === owner) {
+                field.value = value;
+                owner.value = value;
+            }
+        }
+    };
+}
 function initPluginCpp(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
     const darkTheme = window.dark_design === true;
@@ -57,18 +88,13 @@ function initPluginCpp(dtoString, active) {
     let aceEditor = null;
     let editorContainer = null;
 
-    const answerField = document.getElementsByClassName(dto.tagName + "_inp")[0];
     const defaultMain = dtoData.indication ?? "// Write your C/C++ code here\n";
-    const initialMain = (answerField && answerField.value) || defaultMain;
+    const answer = bindCppAnswer(pluginContainer, dto.tagName, defaultMain, plugin.active);
+    const initialMain = answer.initial;
     const files = dtoData.files || {};
     const evalConfig = dtoData.evalConfig || {};
     const enableRun = evalConfig.runAtTest !== false;
     const enableCompile = evalConfig.lintAtTest !== false;
-
-    // Let LeTTo score the initially rendered question by submitting the visible starter code.
-    if (plugin.active && answerField && !answerField.value) {
-        answerField.value = defaultMain;
-    }
 
     drawLayout();
     editorContainer = pluginContainer.querySelector(".editor-box");
@@ -308,10 +334,10 @@ Server build: loading...">?</span>
         editor.getSession().setValue(initialMainCode);
         editor.setReadOnly(!plugin.active);
 
-        if (plugin.active && answerField) {
+        if (plugin.active) {
             editor.session.on("change", function () {
                 // Persist only after an editor change, not while rendering fallback/indication text.
-                answerField.value = editor.getValue();
+                answer.set(editor.getValue());
             });
         }
 
@@ -326,10 +352,10 @@ Server build: loading...">?</span>
 
         const mainTextArea = mainEl.querySelector("textarea");
         mainTextArea.readOnly = !plugin.active;
-        if (plugin.active && answerField) {
+        if (plugin.active) {
             mainTextArea.addEventListener("input", () => {
                 // Persist only after student input in the fallback textarea.
-                answerField.value = mainTextArea.value;
+                answer.set(mainTextArea.value);
             });
         }
         plugin.getMainCode = () => mainTextArea.value;
@@ -359,7 +385,7 @@ Server build: loading...">?</span>
                     const textarea = editorContainer.querySelector("textarea");
                     return aceEditor || textarea ? { editor: aceEditor, textarea, filename: (dtoData.language === "c" ? "main.c" : "main.cpp") } : null;
                 },
-                onChange: () => { if (answerField) answerField.value = plugin.getMainCode(); }
+                onChange: () => answer.set(plugin.getMainCode())
             });
         } catch (error) {
             button.title = "Formatter could not be loaded: " + (error.message || error);
@@ -401,7 +427,7 @@ Server build: loading...">?</span>
         dialog.querySelector('[data-reset-yes]').addEventListener('click', () => {
             if (aceEditor) aceEditor.setValue(defaultMain, -1);
             else editorContainer.querySelector('textarea').value = defaultMain;
-            if (answerField) answerField.value = defaultMain;
+            answer.set(defaultMain);
             refreshFormat();
             dialog.close();
             if (aceEditor) aceEditor.focus();

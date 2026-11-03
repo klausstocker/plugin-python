@@ -228,6 +228,37 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
     return {decode, base, client, theme, editor, bindFormatting, datasetVariables};
 })());
 
+
+// Keep answer ownership on the field: LeTTo may reuse it between previews.
+function bindSQLAnswer(container, tagName, defaultCode, active) {
+    let field = null;
+    for (let scope = container; scope; scope = scope.parentElement) {
+        const matches = scope.getElementsByClassName(tagName + "_inp");
+        if (matches.length === 1) { field = matches[0]; break; }
+        if (matches.length > 1) break; // Never pick another question's first field.
+    }
+    const key = JSON.stringify(["SQL", tagName, defaultCode]);
+    const previous = field?._pluginCodeAnswer;
+    // A changed server value is authoritative, including on a reused field.
+    const stale = previous && previous.key !== key && field.value === previous.value;
+    const initial = !field || stale ? defaultCode
+        : field.value || (previous?.key === key ? "" : defaultCode);
+    const owner = {key, value: initial};
+    if (active && field) {
+        field._pluginCodeAnswer = owner;
+        field.value = initial;
+    }
+    return {
+        initial,
+        set(value) {
+            if (active && field && container.isConnected && field.isConnected
+                    && field._pluginCodeAnswer === owner) {
+                field.value = value;
+                owner.value = value;
+            }
+        }
+    };
+}
 function initPluginSQL(dtoString, active) {
     const dto = JSON.parse(dtoString || '{}');
     const container = document.getElementById(dto.tagName + '_div');
@@ -235,10 +266,9 @@ function initPluginSQL(dtoString, active) {
     const config = SQLPluginUI.decode(dto);
     const service = SQLPluginUI.base(dto);
     const request = SQLPluginUI.client(service);
-    const field = document.getElementsByClassName(dto.tagName + '_inp')[0];
     const defaultMain = config.indication ?? '-- Write your SQL here\n';
-    const initial = field?.value || defaultMain;
-    if (active && field && !field.value) field.value = initial;
+    const answer = bindSQLAnswer(container, dto.tagName, defaultMain, active);
+    const initial = answer.initial;
     container.querySelector('.sql-plugin')?.remove();
     const root = document.createElement('div');
     root.className = 'sql-plugin sql-student';
@@ -254,7 +284,7 @@ function initPluginSQL(dtoString, active) {
     container.appendChild(root);
     SQLPluginUI.theme(root);
     const editor = SQLPluginUI.editor(root.querySelector('.sql-editor'), initial, 'sql', !active, service,
-        value => { if (active && field) field.value = value; });
+        value => answer.set(value));
     root.querySelector('.sql-help-link').href = service + '/help';
     const panels = root.querySelector('.sql-panels');
     const mainPanel = root.querySelector('.sql-main-panel');
@@ -325,7 +355,7 @@ function initPluginSQL(dtoString, active) {
         dialog.querySelector('[data-reset-no]').addEventListener('click', () => dialog.close());
         dialog.querySelector('[data-reset-yes]').addEventListener('click', () => {
             editor.set(defaultMain);
-            if (field) field.value = defaultMain;
+            answer.set(defaultMain);
             dialog.close();
             const target = editor.target('main.sql');
             (target.editor || target.textarea).focus();
@@ -334,7 +364,7 @@ function initPluginSQL(dtoString, active) {
         format.type = 'button'; format.textContent = 'Format Code'; format.dataset.studentFormat = '';
         actions.appendChild(format);
         SQLPluginUI.bindFormatting(format, root.querySelector('pre'), service,
-            () => editor.target('main.sql'), request, () => { if (field) field.value = editor.get(); });
+            () => editor.target('main.sql'), request, () => answer.set(editor.get()));
     }
     if (active && config.evalConfig?.runAtTest !== false) {
         const button = document.createElement('button');

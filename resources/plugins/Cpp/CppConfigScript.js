@@ -829,17 +829,21 @@ function configPluginCpp(dtoString) {
     }
 
     async function setupEditors(initialUnit, initialPreview) {
+        const unitElement = document.getElementById(ids.unitEditorId);
+        const previewElement = document.getElementById(ids.previewEditorId);
         const aceAvailable = await ensureAceLoaded();
+        // A reopened dialog can reuse the IDs while the old Ace load is pending.
+        if (!unitElement?.isConnected || !previewElement?.isConnected) return;
         initialUnit = state.validation;
         initialPreview = state.indication;
 
         if (aceAvailable && window.ace) {
-            unitEditor = ace.edit(ids.unitEditorId);
+            unitEditor = ace.edit(unitElement);
             unitEditor.setTheme(aceTheme);
             unitEditor.session.setMode("ace/mode/c_cpp");
             unitEditor.session.setValue(initialUnit || "");
 
-            previewEditor = ace.edit(ids.previewEditorId);
+            previewEditor = ace.edit(previewElement);
             previewEditor.setTheme(aceTheme);
             previewEditor.session.setMode("ace/mode/c_cpp");
             previewEditor.session.setValue(initialPreview || "");
@@ -1173,6 +1177,7 @@ function configPluginCpp(dtoString) {
         if (!select || !applyBtn) return;
 
         const initial = await requestExample(0);
+        if (!select.isConnected || !applyBtn.isConnected) return;
         if (!initial || typeof initial.count !== "number") {
             applyBtn.disabled = true;
             return;
@@ -1199,8 +1204,10 @@ function configPluginCpp(dtoString) {
         applyBtn.addEventListener("click", async () => {
             const index = Number(select.value);
             const exampleData = await requestExample(index);
+            if (!select.isConnected || !applyBtn.isConnected) return;
             if (exampleData && exampleData.output) {
                 if (hasUserCodeToOverwrite(exampleData.output) && !(await confirmExampleOverwrite())) return;
+                if (!select.isConnected || !applyBtn.isConnected) return;
                 applyExample(exampleData.output);
             }
         });
