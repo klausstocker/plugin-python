@@ -59,16 +59,15 @@ def dataset_variables_to_python_source(variables: list[DatasetVariable]) -> str:
         "    DATASET_VARIABLES[_dataset_variable['name']] = _dataset_value",
         "    globals()[_dataset_variable['name']] = _dataset_value",
         "",
-        "del _dataset_variable, _dataset_value",
+        "if _DATASET_VARIABLE_VALUES:",
+        "    del _dataset_variable, _dataset_value",
         "",
     ]
     return "\n".join(lines)
 
 
 def dataset_file_from_variables(variables: list[DatasetVariable]) -> dict[str, bytes]:
-    """Return a Jobe file map containing dataset.py when variables are present."""
-    if not variables:
-        return {}
+    """Return a Jobe file map containing dataset.py, even without variables."""
     return {"dataset.py": dataset_variables_to_python_source(variables).encode("utf-8")}
 
 

@@ -1,4 +1,8 @@
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from app.dataset_helper import (
     DatasetVariable,
@@ -136,6 +140,37 @@ class TestDatasetVariableExtraction(unittest.TestCase):
         self.assertEqual(list(files.keys()), ["dataset.py"])
         self.assertIn(b"class DatasetVariable", files["dataset.py"])
         self.assertIn(b"myVar", files["dataset.py"])
+
+    def test_empty_dataset_source_has_no_variables(self):
+        namespace = {}
+
+        exec(dataset_variables_to_python_source([]), namespace)
+
+        self.assertEqual(namespace["DATASET_VARIABLES"], {})
+        self.assertNotIn("_dataset_variable", namespace)
+        self.assertNotIn("_dataset_value", namespace)
+
+    def test_importing_dataset_without_variables_succeeds(self):
+        for payload in (None, {}, {"datasetVariables": []}, {"datasetVariables": None}):
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as directory:
+                files = dataset_file_from_payload(payload)
+                self.assertEqual(set(files), {"dataset.py"})
+                (Path(directory) / "dataset.py").write_bytes(files["dataset.py"])
+                result = subprocess.run(
+                    [sys.executable, "-c", (
+                        "import dataset\n"
+                        "from dataset import DATASET_VARIABLES\n"
+                        "assert DATASET_VARIABLES == {}\n"
+                        "try:\n"
+                        "    from dataset import missing_variable\n"
+                        "except ImportError:\n"
+                        "    pass\n"
+                        "else:\n"
+                        "    raise AssertionError('Missing variable was importable')\n"
+                    )],
+                    cwd=directory, capture_output=True, text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":
