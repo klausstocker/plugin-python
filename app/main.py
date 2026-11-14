@@ -1524,6 +1524,10 @@ def mount_internal_open(router_prefix: str) -> APIRouter:
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")
         return "" if not pi else pi.get_angabe()
 
+    @r.post("/generatedatasets", response_model=PluginDatasetListDto)
+    def generate_datasets(req: PluginRequestDto):
+        return PluginDatasetListDto(datasets=[])
+
     @r.post("/image", response_model=ImageBase64Dto)
     def image(req: PluginRequestDto):
         pi = create_plugin(req.typ or "", req.name or "", req.config or "")

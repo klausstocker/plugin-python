@@ -235,6 +235,17 @@ class TestEndpoints(unittest.TestCase):
             finally:
                 code_execution_endpoints.FILE_STORAGE_ROOT = original_storage_root
 
+    def test_generatedatasets_returns_empty_dataset_list(self):
+        for prefix in ("/open", f"{BASE_PATH}/open"):
+            for typ in ("Python", "Cpp", "SQL"):
+                with self.subTest(prefix=prefix, typ=typ):
+                    response = self.client.post(
+                        f"{prefix}/generatedatasets",
+                        json={"typ": typ, "name": "example", "config": ""},
+                    )
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.json(), {"datasets": []})
+
     def test_post_generalinfo_returns_matching_typ(self):
         response = self.client.post(f"{BASE_PATH}/open/generalinfo", json="PIG")
 
