@@ -136,8 +136,14 @@ that the installed proxy configuration forwards `/pluginsql/`. After deploying
 updated scripts, refresh LeTTo's plugin registration and reload the browser page.
 Ace is bundled and served by the plugin server, including Python/C++ modes,
 the Monokai and Chrome themes and the search dialog. Editors follow LeTTo's
-`window.dark_design` at initialization: dark uses Monokai with green output on
-black; light uses Chrome with black output on white. An absent flag uses light.
+design through the bundled `plugintools.js` helpers: dark and soft-dark use Monokai with green
+output on black; default, soft-light and high-contrast use Chrome with black
+output on white. Design changes update open editors and output colors.
+Light is the default when LeTTo is absent or the theme helper scripts fail.
+The service embeds `plugins/plugintools.js` before `plugins/editor-theme.js`
+and the language scripts in `javascriptLibrariesLocal`; standalone previews
+load the same files in that order. Refresh LeTTo's plugin registration after
+deploying these resources.
 Student browsers need access only to
 your server for the editor. The standalone development dialog still loads
 jQuery from its CDN; LeTTo supplies its own jQuery.

@@ -40,6 +40,8 @@ def install_dev_ui(app: FastAPI, service_path: str, plugin: str = "Python") -> N
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{plugin} student preview — Example 1</title>
 <script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
+<script src="{escape(prefix, quote=True)}/resources/plugins/plugintools.js"></script>
+<script src="{escape(prefix, quote=True)}/resources/plugins/editor-theme.js"></script>
 <script src="{escape(script_url, quote=True)}"></script>
 </head>
 <body>
@@ -64,6 +66,8 @@ initPlugin{plugin}(JSON.stringify({dto}), true);
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{plugin} plugin development dialog</title>
 <script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
+<script src="{escape(prefix, quote=True)}/resources/plugins/plugintools.js"></script>
+<script src="{escape(prefix, quote=True)}/resources/plugins/editor-theme.js"></script>
 {support_script}
 <script src="{escape(script_url, quote=True)}"></script>
 </head>

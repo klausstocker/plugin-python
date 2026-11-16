@@ -81,6 +81,13 @@ class TestDevUi(unittest.TestCase):
                 script = f"{prefix}/dev/resources/plugins/{plugin}/{plugin}Script.js"
                 self.assertIn(f'src="{script}"', response.text)
                 self.assertEqual(client.get(script).status_code, 200)
+                for name in ("plugintools.js", "editor-theme.js"):
+                    helper = f"{prefix}/dev/resources/plugins/{name}"
+                    self.assertLess(response.text.index(f'src="{helper}"'), response.text.index(f'src="{script}"'))
+                    self.assertEqual(client.get(helper).content, (resources / "plugins" / name).read_bytes())
+                config = client.get(f"{prefix}/dev/config").text
+                self.assertLess(config.index('plugins/plugintools.js'), config.index('plugins/editor-theme.js'))
+                self.assertLess(config.index('plugins/editor-theme.js'), config.index(f'plugins/{plugin}/{plugin}ConfigScript.js'))
                 match = re.search(rf'initPlugin{plugin}\(JSON.stringify\((.*)\), true\);', response.text)
                 self.assertIsNotNone(match)
                 dto = json.loads(match.group(1))

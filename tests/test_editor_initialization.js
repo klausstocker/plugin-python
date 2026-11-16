@@ -144,27 +144,28 @@ for (const plugin of ['Python', 'Cpp']) {
         const pending = new Promise(resolve => { finish = () => resolve(available); });
         const elements = {unit: {isConnected: true}, preview: {isConnected: true}};
         const writes = [];
+        const themes = [];
         const context = vm.createContext({
             ids: {unitEditorId: 'unit', previewEditorId: 'preview'},
             document: {getElementById: id => elements[id]},
             ensureAceLoaded: () => pending,
-            window: {ace: true}, aceTheme: 'theme',
+            window: {ace: true}, updateTheme() {},
             state: {validation: 'test A', indication: 'starter A'},
             unitEditor: null, previewEditor: null, editorAccess: {},
             refreshFormat() {}, saveConfig() {},
             fallbackTextArea: (id, value) => writes.push([elements[id], value]),
             fallbackTextAreaSetter() {},
-            ace: {edit: element => ({setTheme() {}, session: {
+            ace: {edit: element => ({setTheme: theme => themes.push(theme), session: {
                 setMode() {}, setValue: value => writes.push([element, value]), on() {}
             }})}
         });
         vm.runInContext(initializer, context);
-        return {context, elements, writes, finish};
+        return {context, elements, writes, themes, finish};
     };
 
     for (const available of [true, false]) {
         test(plugin + ': a delayed initializer ignores replaced dialog elements (Ace=' + available + ')', async () => {
-            const {context, elements, writes, finish} = fixture(available);
+            const {context, elements, writes, themes, finish} = fixture(available);
             const pending = context.setupEditors('test A', 'starter A');
             elements.unit.isConnected = elements.preview.isConnected = false;
             elements.unit = {isConnected: true};
@@ -172,16 +173,18 @@ for (const plugin of ['Python', 'Cpp']) {
             finish();
             await pending;
             assert.deepEqual(writes, []);
+            assert.deepEqual(themes, []);
         });
 
         test(plugin + ': loading an example before Ace finishes uses the latest code (Ace=' + available + ')', async () => {
-            const {context, elements, writes, finish} = fixture(available);
+            const {context, elements, writes, themes, finish} = fixture(available);
             const pending = context.setupEditors('test A', 'starter A');
             context.state.validation = 'test B';
             context.state.indication = 'starter B';
             finish();
             await pending;
             assert.deepEqual(writes, [[elements.unit, 'test B'], [elements.preview, 'starter B']]);
+            assert.deepEqual(themes, available ? ['ace/theme/chrome', 'ace/theme/chrome'] : []);
         });
     }
 }

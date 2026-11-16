@@ -77,7 +77,10 @@ CONF_CONFIG_JS = "configPluginPython"
 CONF_HELPFILES = ["plugins/Python/Python.html"]
 CONF_DETAILED_HELPFILE = "help/Python.html"
 # Javascript Dateien die für dieses Plugin von LeTTo eingebunden werden müssen
-CONF_JSLIBS = ["plugins/Python/PythonScript.js", "plugins/Python/PythonConfigScript.js"]
+CONF_JSLIBS = [
+    "plugins/plugintools.js", "plugins/editor-theme.js",
+    "plugins/Python/PythonScript.js", "plugins/Python/PythonConfigScript.js",
+]
 # Namen der Wiki-Seite wenn eine Doku am LeTTo-Wiki vorliegt
 CONF_wikiHelp = "Plugins"
 # Hilfe-URL für die Beschreibung des Plugins
@@ -92,8 +95,6 @@ CONF_height = 500
 CONF_imageWidthProzent = 100
 # True wenn das Plugin CalcErgebnis und VarHash als JSON verarbeiten kann
 CONF_math = False
-# Javascript Libraries für das Plugin
-CONF_javascriptLibs = {"plugins/plugintools.js"}
 # Name der JAVA-Script Methode zur Plugin-Initialisierung für die interaktive Ergebniseingabe
 CONF_initPluginJS = ""
 # gibt an ob das Plugin eine Java-Script Schnittstelle bei der Beispieldarstellung hat
@@ -1041,7 +1042,10 @@ class PluginCpp(PluginPython):
     SERVICEPATH = CPP_SERVICEPATH
     DETAILED_HELPFILE = "help/Cpp.html"
     HELPFILES = ["plugins/Cpp/Cpp.html"]
-    JSLIBS = ["plugins/Cpp/CppScript.js", "plugins/Cpp/CppConfigScript.js"]
+    JSLIBS = [
+        "plugins/plugintools.js", "plugins/editor-theme.js",
+        "plugins/Cpp/CppScript.js", "plugins/Cpp/CppConfigScript.js",
+    ]
     INIT_JS = "initPluginCpp"
     CONFIG_JS = "configPluginCpp"
 
@@ -1083,7 +1087,10 @@ class PluginSQL(PluginPython):
     SERVICEPATH = SQL_SERVICEPATH
     DETAILED_HELPFILE = "help/SQL.html"
     HELPFILES = ["plugins/SQL/SQL.html"]
-    JSLIBS = ["plugins/SQL/SQLScript.js", "plugins/SQL/SQLConfigScript.js"]
+    JSLIBS = [
+        "plugins/plugintools.js", "plugins/editor-theme.js",
+        "plugins/SQL/SQLScript.js", "plugins/SQL/SQLConfigScript.js",
+    ]
     INIT_JS = "initPluginSQL"
     CONFIG_JS = "configPluginSQL"
 

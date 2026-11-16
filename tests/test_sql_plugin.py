@@ -241,7 +241,12 @@ class Checker(unittest.TestCase):
             plugin = main.create_plugin('SQL', '', '')
             info = plugin.plugin_general_info('SQL')
             self.assertEqual(info.initPluginJS, 'initPluginSQL')
-            self.assertTrue(all(lib.js_code for lib in info.javascriptLibrariesLocal))
+            self.assertEqual([lib.name for lib in info.javascriptLibrariesLocal], [
+                "plugins/plugintools.js", "plugins/editor-theme.js",
+                "plugins/SQL/SQLScript.js", "plugins/SQL/SQLConfigScript.js",
+            ])
+            for lib in info.javascriptLibrariesLocal:
+                self.assertEqual(lib.js_code, (ROOT / "resources" / lib.name).read_text(encoding="utf-8"))
             state = main.create_or_update_configuration_state('sql-test', typ='SQL', plugin_python=plugin)
             self.addCleanup(main.CONFIG_STATES.pop, 'sql-test', None)
             self.assertEqual(state.pluginConfigurationInfoDto.javaScriptMethode, 'configPluginSQL')

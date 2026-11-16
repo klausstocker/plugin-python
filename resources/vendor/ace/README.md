@@ -16,6 +16,10 @@ directory, update the version in all four plugin scripts and DEPENDENCIES.md,
 then rebuild the plugin image. Include additional modes, extensions or workers
 here if future editor features need them.
 
-All four editors read LeTTo's `window.dark_design` when initialized. `true`
-selects Monokai and green output on black; `false` or an absent flag selects
-Chrome and black output on white.
+All Python, C/C++ and SQL editors use LeTTo's `lettoDunkel()` from the bundled
+`resources/plugins/plugintools.js`. Dark and soft-dark select Monokai and green
+output on black; default, soft-light and high-contrast select Chrome and black
+output on white. `lettoOnUmgebung()` updates existing editors and outputs on
+design changes. Shared integration lives in `resources/plugins/editor-theme.js`
+and unregisters removed roots. Light is the default if LeTTo or the theme helper
+scripts are unavailable or the environment helpers fail.

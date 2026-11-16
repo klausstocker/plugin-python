@@ -37,8 +37,6 @@ function bindPythonAnswer(container, tagName, defaultCode, active) {
 }
 function initPluginPython(dtoString, active) {
     const dto = JSON.parse(dtoString || "{}");
-    const darkTheme = window.dark_design === true;
-    const aceTheme = darkTheme ? "ace/theme/monokai" : "ace/theme/chrome";
     const dtoParams = (dto.params && typeof dto.params === "object")
         ? dto.params
         : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
@@ -99,6 +97,8 @@ function initPluginPython(dtoString, active) {
     const enableLint = evalConfig.lintAtTest !== false;
 
     drawLayout();
+    const themeRoot = pluginContainer.querySelector(".code-runner-root");
+    const updateTheme = window.PluginEditorTheme?.bind(themeRoot, () => [aceEditor]) || (() => {});
     editorContainer = pluginContainer.querySelector(".editor-box");
     if (!editorContainer) return;
     ensureStyles();
@@ -110,7 +110,7 @@ function initPluginPython(dtoString, active) {
         $(pluginContainer).children(".code-runner-root").remove();
 
         $(pluginContainer).append(`
-            <div class="${escapeHtmlAttr(rootClass)} code-runner-root" data-service-base="${escapeHtmlAttr(plugin.serviceBase)}" style="--plugin-output-background: ${darkTheme ? "black" : "white"}; --plugin-output-color: ${darkTheme ? "rgb(70, 242, 70)" : "black"};">
+            <div class="${escapeHtmlAttr(rootClass)} code-runner-root" data-service-base="${escapeHtmlAttr(plugin.serviceBase)}" style="--plugin-output-background: white; --plugin-output-color: black;">
                 <div class="container horizontal" id="${containerId}">
                     <div class="panel panel-main" id="${mainPanelId}">
                         <div class="file-info main-header">
@@ -331,7 +331,8 @@ Server build: loading...">?</span>
 
         const editor = ace.edit(editorContainer);
         aceEditor = editor;
-        editor.setTheme(aceTheme);
+        editor.setTheme("ace/theme/chrome");
+        updateTheme();
         editor.session.setMode("ace/mode/python");
         editor.getSession().setValue(initialMainCode);
         editor.setReadOnly(!plugin.active);

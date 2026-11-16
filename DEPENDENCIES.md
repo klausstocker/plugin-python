@@ -34,6 +34,7 @@ make a library available to student code in Jobe.
 | tzdata | 2026.5 | Local development on Windows only; Linux images use OS timezone data |
 | Catch2 | 3.16.1 | Jobe: C++ teacher tests for C/C++ answers |
 | {fmt} | Ubuntu `libfmt-dev` 10.1.1+ds1-4build1, verified 2026-10-31 | Jobe: C++ answers and teacher tests |
+| plugintools.js | Unversioned supplied snapshot, integrated 2026-11-16 | Browser: bundled LeTTo environment helpers |
 | Ace | 1.44.0 | Browser: bundled and served by the plugin service |
 | jQuery | 4.0.0 | Browser: official CDN in the standalone development dialog; supplied by the host in LeTTo |
 
@@ -126,3 +127,27 @@ For future upgrades, verify release metadata at [PyPI](https://pypi.org/),
 [jQuery](https://blog.jquery.com/). Update the pins and this table, build both
 images with `--no-push`, and run the repository tests against the rebuilt plugin
 and Jobe. Check the development dialogs after browser-library upgrades.
+
+## LeTTo browser helpers (2026-11-16)
+
+`resources/plugins/plugintools.js` is the supplied LeTTo helper file, included
+unchanged. It has no declared upstream version. Snapshot SHA-256:
+`08d2f0884da11b5059f183e9c2bc041519434d7c254149a71d12ddea3ee1fab9`.
+The exact upstream commit and license metadata were not supplied and remain
+unverified. The [official LeTTo JavaScript documentation](https://doc.letto.at/wiki/Plugins/JavaScript-Schnittstelle/)
+describes obtaining this file from the Java demo plugin (a copy from `letto-plugins`).
+
+Each plugin embeds it before `editor-theme.js` and its language scripts.
+`lettoDunkel()` selects the existing Monokai/Chrome Ace themes;
+`lettoOnUmgebung()` updates open editors and outputs when the design changes.
+Removed plugin roots unsubscribe. Light is the default if LeTTo or the theme
+scripts are absent or the environment helpers fail. No browser CDN is required
+for these files. Ace and execution runtime versions are unchanged.
+
+To update the copy, record its source revision/license and checksum, recheck
+these two helper APIs and listener cleanup, run the JavaScript unit tests and
+resource/registration tests, rebuild the plugin image, and refresh LeTTo's plugin
+registration. Keep the shared theme integration separate from the upstream file.
+Update the help and version documentation when changing this bundled tool.
+Jobe Python 3.14.4 (3.14.4-1ubuntu0.2) and GCC/G++ 15.2.0
+(15.2.0-16ubuntu1) were rechecked in the running container on 2026-11-16.

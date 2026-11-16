@@ -27,8 +27,12 @@ class TestCppPlugin(unittest.TestCase):
                 plugin = main.create_plugin(typ, '', '')
                 info = plugin.plugin_general_info(typ)
                 self.assertEqual(info.initPluginJS, callback)
-                self.assertEqual(len(info.javascriptLibrariesLocal), 2)
-                self.assertTrue(all(lib.js_code for lib in info.javascriptLibrariesLocal))
+                self.assertEqual([lib.name for lib in info.javascriptLibrariesLocal], [
+                    "plugins/plugintools.js", "plugins/editor-theme.js",
+                    f"plugins/{typ}/{typ}Script.js", f"plugins/{typ}/{typ}ConfigScript.js",
+                ])
+                for lib in info.javascriptLibrariesLocal:
+                    self.assertEqual(lib.js_code, (RESOURCES / lib.name).read_text(encoding="utf-8"))
             self.assertEqual(main.create_plugin('Cpp', '', '').CONFIG_JS, 'configPluginCpp')
 
     def test_language_and_service_base_survive_load_and_reload(self):

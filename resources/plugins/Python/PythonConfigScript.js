@@ -13,8 +13,6 @@ function configPluginPython(dtoString) {
     // ------------------------------------------------------------------------------------------------
 
     const dto = JSON.parse(dtoString || "{}");
-    const darkTheme = window.dark_design === true;
-    const aceTheme = darkTheme ? "ace/theme/monokai" : "ace/theme/chrome";
     const dtoParams = (dto.params && typeof dto.params === "object")
         ? dto.params
         : (dto.pluginDto && dto.pluginDto.params && typeof dto.pluginDto.params === "object" ? dto.pluginDto.params : {});
@@ -83,6 +81,8 @@ function configPluginPython(dtoString) {
     let refreshFormat = () => {};
 
     drawForm();
+    const themeRoot = document.querySelector("." + ids.rootClass);
+    const updateTheme = window.PluginEditorTheme?.bind(themeRoot, () => [unitEditor, previewEditor]) || (() => {});
     ensureStyles();
     setupTabs();
     setupSettingsTabs();
@@ -309,7 +309,7 @@ function configPluginPython(dtoString) {
         $(config_form_div).find(selector).remove();
 
         $(config_form_div).append(`
-            <div class="${ids.rootClass}" style="--plugin-output-background: ${darkTheme ? "black" : "white"}; --plugin-output-color: ${darkTheme ? "rgb(70, 242, 70)" : "black"};">
+            <div class="${ids.rootClass}" style="--plugin-output-background: white; --plugin-output-color: black;">
                 <div class="config-main">
                     <div class="tab-head-row">
                         <div class="tab-buttons">
@@ -1060,12 +1060,13 @@ function configPluginPython(dtoString) {
 
         if (aceAvailable && window.ace) {
             unitEditor = ace.edit(unitElement);
-            unitEditor.setTheme(aceTheme);
+            unitEditor.setTheme("ace/theme/chrome");
             unitEditor.session.setMode("ace/mode/python");
             unitEditor.session.setValue(initialUnit || "");
 
             previewEditor = ace.edit(previewElement);
-            previewEditor.setTheme(aceTheme);
+            previewEditor.setTheme("ace/theme/chrome");
+            updateTheme();
             previewEditor.session.setMode("ace/mode/python");
             previewEditor.session.setValue(initialPreview || "");
 

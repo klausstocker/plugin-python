@@ -136,8 +136,9 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
     }
     function theme(root) {
         styles();
-        root.style.setProperty('--sql-bg', window.dark_design === true ? 'black' : 'white');
-        root.style.setProperty('--sql-fg', window.dark_design === true ? 'rgb(70, 242, 70)' : 'black');
+        root.style.setProperty('--sql-bg', 'white');
+        root.style.setProperty('--sql-fg', 'black');
+        window.PluginEditorTheme?.bind(root);
     }
     async function loadAce(service) {
         const path = service + '/static/ace/1.44.0';
@@ -197,7 +198,8 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
             const current = textarea.value;
             element.replaceChildren();
             const editor = ace.edit(element);
-            editor.setTheme(window.dark_design === true ? 'ace/theme/monokai' : 'ace/theme/chrome');
+            editor.setTheme('ace/theme/chrome');
+            window.PluginEditorTheme?.bind(element, () => [editor]);
             const mode = language => editor.session.setMode(language === 'python' ? 'ace/mode/python' : 'ace/mode/letto_sql');
             mode(language);
             editor.session.setUseWorker(false);
