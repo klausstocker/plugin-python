@@ -44,7 +44,7 @@ function initPluginPython(dtoString, active) {
     try {
         if (dto.jsonData) {
             try {
-                const decoded = atob(dto.jsonData);
+                const decoded = new TextDecoder("utf-8").decode(Uint8Array.from(atob(dto.jsonData), c => c.charCodeAt(0)));
                 dtoData = JSON.parse(decoded);
             } catch (decodeError) {
                 dtoData = JSON.parse(dto.jsonData);

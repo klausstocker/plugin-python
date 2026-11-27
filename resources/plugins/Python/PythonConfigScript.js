@@ -204,7 +204,7 @@ function configPluginPython(dtoString) {
         if (!sourceDto || !sourceDto.jsonData) return {};
         try {
             try {
-                return JSON.parse(atob(sourceDto.jsonData));
+                return JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(sourceDto.jsonData), c => c.charCodeAt(0))));
             } catch (decodeError) {
                 return JSON.parse(sourceDto.jsonData);
             }
