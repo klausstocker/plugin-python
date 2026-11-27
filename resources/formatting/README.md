@@ -3,6 +3,14 @@
 Teacher-facing documentation and official tool links are in the shared
 [environment help](../help/Environment.html), linked from all three plugin help pages.
 
+The formatter wrapper is installed with `letto-pluginpython-shared` 0.1.0.
+For local service development install `pip install -r requirements.txt -e .`;
+the package declares the existing Ruff, clang-format and sqlparse pins.
+Docker installs a regular wheel using Hatchling 1.33.0 (build-time only).
+This packaging migration changes no formatter versions or configuration.
+Jobe Python 3.14.4 and GCC/G++ 15.2.0 were rechecked in the running container
+on 2026-11-28.
+
 The student and teacher Format buttons send source, filename, and the question's
 `formatterConfig` to the plugin. Results preserve Ace Undo and save the answer or
 configuration. Results are discarded if the source changed while formatting.

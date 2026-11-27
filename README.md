@@ -9,6 +9,45 @@ The plugin uses Python 3.14.8; Jobe uses Ubuntu 26.04's Python 3.14.
 See [dependencies and upgrades](DEPENDENCIES.md) for versions, runtime details,
 and the update procedure.
 
+## Installing the shared Python package
+
+The service helpers are distributed as `letto-pluginpython-shared` 0.1.0
+(Python 3.14+). Existing imports such as `from shared.check import checkCode`
+remain compatible. Install the package explicitly when migrating an existing
+development environment:
+
+```powershell
+.venv/Scripts/python.exe -m pip install -r requirements.txt -e .
+```
+
+On Linux use `.venv/bin/python`. For a regular installation use `python -m pip
+install .`. The package declares its own helper dependencies; `requirements.txt`
+also supplies the FastAPI service dependencies. The wheel includes Python, C/C++
+and SQL examples and runner support files, so these helpers work outside the
+checkout. Editable installs read the examples and C/C++ support files from the
+checkout. `app.dataset_helper` remains a compatibility import for the dataset
+helpers now provided by `shared.dataset_helper`.
+
+The Docker build installs the package into site-packages; it no longer depends
+on `/app/shared`. Rebuild the plugin image to migrate; Jobe needs no changes.
+Package builds use [Hatchling](https://hatch.pypa.io/latest/config/build/) 1.33.0
+as the build backend, including its asset mapping support.
+For distribution and installed-package regression checks:
+
+```powershell
+.venv/Scripts/python.exe -m pip install build
+.venv/Scripts/python.exe -m build
+.venv/Scripts/python.exe -m pip install --force-reinstall --no-deps dist/letto_pluginpython_shared-0.1.0-py3-none-any.whl
+.venv/Scripts/python.exe scripts/test_installed_package.py
+```
+
+The build checks the source distribution by building the wheel from it. The
+test runner stages the application and tests outside the checkout without
+`shared/`, verifies the installed package location, and exercises endpoints and
+bundled assets. Optional arguments select additional unittest modules, including
+Jobe integration tests when a Jobe server is available. CI runs the default suite.
+After testing a wheel, reinstall with `pip install -e .` to resume editable work.
+
 The Python execution URLs remain under `/pluginpython`. The C/C++ plugin uses
 `/plugincpp/run`, `/plugincpp/check`, `/plugincpp/scorePlugin` and
 `/plugincpp/example`, with its own `CppScript.js` and `CppConfigScript.js`.

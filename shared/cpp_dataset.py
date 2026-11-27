@@ -1,9 +1,8 @@
 """Generate student-specific C/C++ dataset headers for Jobe submissions."""
 import math
 import struct
-from pathlib import Path
-
-from app.dataset_helper import DatasetVariable, dataset_variables_from_payload
+from shared.dataset_helper import DatasetVariable, dataset_variables_from_payload
+from shared.package_data import data_path
 
 
 def _string_literal(value: str) -> str:
@@ -42,14 +41,14 @@ def cpp_helper_files(language: str = 'cpp') -> dict[str, bytes]:
     """Supply the support types independently of student-specific datasets."""
     if language not in {'c', 'cpp'}:
         raise ValueError('Dataset language must be c or cpp')
-    helper_path = Path(__file__).resolve().parents[1] / 'resources/plugins/Cpp/helpers.h'
+    helper_path = data_path('helpers.h')
     return {'helpers.h': helper_path.read_bytes()}
 
 
 def cpp_dataset_files(variables: list[DatasetVariable], language: str = 'cpp') -> dict[str, bytes]:
     """Supply teacher-test helpers.h, helpers.c, and a student-specific dataset.h."""
     files = cpp_helper_files(language)
-    helper_path = Path(__file__).resolve().parents[1] / 'resources/plugins/Cpp/helpers.c'
+    helper_path = data_path('helpers.c')
     files['helpers.c'] = helper_path.read_bytes()
     # Match Python's name-keyed mapping when a payload repeats a name.
     values = {variable.name: variable for variable in variables}

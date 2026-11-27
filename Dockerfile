@@ -21,9 +21,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip check
 
+# Build the reusable helpers separately; the runtime has no /app/shared source tree.
+COPY pyproject.toml README.md /tmp/shared-package/
+COPY shared /tmp/shared-package/shared
+COPY examples/Python /tmp/shared-package/examples/Python
+COPY examples/CPP /tmp/shared-package/examples/CPP
+COPY examples/SQL /tmp/shared-package/examples/SQL
+COPY resources/plugins/Cpp/helpers.h resources/plugins/Cpp/helpers.c /tmp/shared-package/resources/plugins/Cpp/
+RUN pip install --no-cache-dir --no-deps /tmp/shared-package && pip check \
+    && rm -rf /tmp/shared-package
+
 RUN mkdir /scripts -p
 COPY app ./app
-COPY shared ./shared
 COPY examples ./examples
 # Includes the vendored Ace editor for browsers without internet access.
 COPY resources       ./resources

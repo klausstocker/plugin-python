@@ -1,9 +1,9 @@
 """Load C17/C++17 templates and shared Catch2 tests from the examples folders."""
-from pathlib import Path
+from shared.package_data import data_path
 
 from shared.question_config import CppQuestionConfigDto
 
-_EXAMPLES_DIR = Path(__file__).resolve().parents[1] / 'examples' / 'CPP'
+_EXAMPLES_DIR = data_path('examples/CPP')
 EXAMPLE_NAMES = ('calculate_sum', 'printed_output', 'read_file', 'even_numbers',
                  'validate_age', 'counter', 'read_text', 'write_text', 'dataset_numbers')
 _SOURCE_FILES = {'template.c', 'template.cpp', 'test_answer.cpp', 'answer.c', 'answer.cpp', 'README.md'}

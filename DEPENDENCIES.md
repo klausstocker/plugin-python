@@ -39,6 +39,18 @@ make a library available to student code in Jobe.
 | jQuery | 4.0.0 | Browser: official CDN in the standalone development dialog; supplied by the host in LeTTo |
 
 `requirements.txt` is shared by local development and the plugin image.
+The internal `letto-pluginpython-shared` package is version 0.1.0 and requires
+Python 3.14+. Its runtime dependency pins in `pyproject.toml` match the relevant
+entries here; update both files when upgrading those tools. Hatchling 1.33.0
+(build-time only, checked on PyPI on 2026-11-28) builds the package and bundles
+its examples and C/C++ support assets. See the
+[Hatchling build configuration](https://hatch.pypa.io/latest/config/build/).
+Install `pip install -r requirements.txt -e .` for local development or `pip
+install .` for reuse. Rebuild the plugin image after package changes; Docker
+installs the package into site-packages. Jobe does not install this package.
+Python 3.14.4 (Ubuntu 3.14.4-1ubuntu0.2) and GCC/G++ 15.2.0 were verified
+again in the running `PythonCppPlugin-jobe` container on 2026-11-28; no Jobe
+runtime, compiler or dependency pins changed for this packaging migration.
 SQL formatting uses sqlparse in the plugin service, with uppercase keywords,
 four-space indentation, and preserved comments and literals. Python tests in the
 SQL plugin reuse Ruff. Jobe does not install sqlparse and does not need rebuilding
@@ -111,7 +123,7 @@ For Windows, create a fresh virtual environment with the installed Python 3.14:
 
 ```powershell
 py -3.14 -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements.txt
+.venv/Scripts/python.exe -m pip install -r requirements.txt -e .
 .venv/Scripts/python.exe -m pip check
 .venv/Scripts/python.exe -m pip list --outdated
 ```
