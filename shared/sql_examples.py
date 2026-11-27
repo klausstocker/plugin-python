@@ -1,10 +1,10 @@
 """SQL teaching examples shared by the configuration dialog and tests."""
-from pathlib import Path
+from shared.package_data import data_path
 
 from shared.question_config import SqlQuestionConfigDto
 
 
-EXAMPLES_DIR = Path(__file__).resolve().parents[1] / 'examples' / 'SQL'
+EXAMPLES_DIR = data_path('examples/SQL')
 EXAMPLE_NAMES = ('select_products', 'insert_products', 'update_prices', 'delete_products', 'join_products')
 
 

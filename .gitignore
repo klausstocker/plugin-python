@@ -4,6 +4,8 @@
 *.log
 /.venv/
 /build/
+/dist/
+*.egg-info/
 /tmp/
 /out/
 /target/

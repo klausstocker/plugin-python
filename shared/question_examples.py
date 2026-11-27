@@ -1,10 +1,10 @@
 """Python examples, from printed output to libraries and LeTTo datasets."""
 
-from pathlib import Path
+from shared.package_data import data_path
 
 from shared.question_config import QuestionConfigDto
 
-_EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples" / "Python"
+_EXAMPLES_DIR = data_path('examples/Python')
 EXAMPLE_NAMES = (
     "printed_output",
     "calculate_sum",

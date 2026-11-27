@@ -14,3 +14,6 @@ __pycache__/
 .git/
 target/
 build/
+dist/
+tmp/
+*.egg-info/
