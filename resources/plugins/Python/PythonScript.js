@@ -131,6 +131,11 @@ Server build: loading...">?</span>
                     </div>
                 </div>
 
+                <div class="height-resizer" data-height-resizer role="separator" tabindex="0"
+                    aria-label="Editorhöhe ändern" aria-orientation="horizontal"
+                    aria-valuemin="240" aria-valuenow="340"
+                    title="Ziehen oder Pfeiltasten verwenden, um die Editorhöhe zu ändern"></div>
+
                 <div class="btn-container">
                     ${plugin.active ? `<button class="black-button" id="${formatButtonId}" type="button" title="Format code" disabled>Format Code</button>` : ""}
                     ${plugin.active && enableLint ? `<button class="black-button" id="${lintButtonId}" type="button">Lint Code</button>` : ""}
@@ -224,8 +229,27 @@ Server build: loading...">?</span>
             }
             .code-runner-root .container {
                 display: flex;
-                margin-bottom: 10px;
                 height: 340px;
+                min-height: 240px;
+            }
+            .code-runner-root .height-resizer {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 16px;
+                cursor: ns-resize;
+                touch-action: none;
+                user-select: none;
+            }
+            .code-runner-root .height-resizer::before {
+                content: "";
+                width: 48px;
+                border-top: 4px solid #888;
+                border-radius: 2px;
+            }
+            .code-runner-root .height-resizer:focus-visible {
+                outline: 2px solid #2674c8;
+                outline-offset: -2px;
             }
             .code-runner-root .container.vertical {
                 flex-direction: column;
@@ -476,6 +500,47 @@ Server build: unavailable`;
         if (!container || !mainPanel || !outputPanel || !splitter || !toggleBtn) return;
 
         applyLayout();
+
+        const heightResizer = pluginContainer.querySelector('[data-height-resizer]');
+        let heightDrag = null;
+        const setHeight = (height) => {
+            const nextHeight = Math.max(240, Math.round(height));
+            container.style.height = `${nextHeight}px`;
+            heightResizer.setAttribute('aria-valuenow', String(nextHeight));
+            aceEditor?.resize();
+        };
+        heightResizer.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0 || heightDrag) return;
+            event.preventDefault();
+            heightResizer.focus();
+            heightResizer.setPointerCapture(event.pointerId);
+            heightDrag = {
+                pointerId: event.pointerId,
+                startY: event.clientY,
+                startHeight: container.getBoundingClientRect().height
+            };
+        });
+        heightResizer.addEventListener('pointermove', (event) => {
+            if (heightDrag?.pointerId !== event.pointerId) return;
+            setHeight(heightDrag.startHeight + event.clientY - heightDrag.startY);
+        });
+        const endHeightDrag = (event) => {
+            if (heightDrag?.pointerId !== event.pointerId) return;
+            heightDrag = null;
+            if (heightResizer.hasPointerCapture(event.pointerId)) {
+                heightResizer.releasePointerCapture(event.pointerId);
+            }
+        };
+        for (const eventType of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+            heightResizer.addEventListener(eventType, endHeightDrag);
+        }
+        heightResizer.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            event.stopPropagation();
+            const step = event.shiftKey ? 50 : 10;
+            setHeight(container.getBoundingClientRect().height + (event.key === 'ArrowDown' ? step : -step));
+        });
 
         toggleBtn.addEventListener("click", () => {
             orientation = orientation === "horizontal" ? "vertical" : "horizontal";
