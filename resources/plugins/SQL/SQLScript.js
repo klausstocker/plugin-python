@@ -81,7 +81,26 @@ var SQLPluginUI = window.SQLPluginUI || (window.SQLPluginUI = (() => {
             .sql-plugin button {padding:8px 14px; margin:8px 8px 8px 0; cursor:pointer;}
             .sql-plugin label {display:block; margin:10px 0;}
             .sql-plugin .sql-output {background:var(--sql-bg); color:var(--sql-fg);}
-            .sql-student .sql-panels {gap:0; flex-wrap:nowrap; height:340px; margin-bottom:10px;}
+            .sql-student .sql-panels {gap:0; flex-wrap:nowrap; height:340px; min-height:240px;}
+            .sql-student .sql-height-resizer {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 16px;
+                cursor: ns-resize;
+                touch-action: none;
+                user-select: none;
+            }
+            .sql-student .sql-height-resizer::before {
+                content: "";
+                width: 48px;
+                border-top: 4px solid #888;
+                border-radius: 2px;
+            }
+            .sql-student .sql-height-resizer:focus-visible {
+                outline: 2px solid #2674c8;
+                outline-offset: -2px;
+            }
             .sql-student .sql-panels.vertical {flex-direction:column;}
             .sql-student .sql-panel {display:flex; flex-direction:column; min-width:120px; min-height:80px; overflow:hidden; border:1px solid #d0d0d0; box-sizing:border-box;}
             .sql-student .sql-file-info {padding:10px; background:#f0f0f0; color:black; font: bold 16px monospace; border-bottom:1px solid #ccc; flex-shrink:0;}
@@ -282,6 +301,11 @@ function initPluginSQL(dtoString, active) {
         <div class="sql-editor" aria-label="Student SQL"></div></section>
         <div class="sql-splitter" role="separator" tabindex="0" aria-label="Resize panels" aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85"></div>
         <section class="sql-panel sql-output-panel"><div class="sql-file-info">output</div><pre class="sql-output" role="status"></pre></section></div>
+                <div class="sql-height-resizer" data-height-resizer role="separator" tabindex="0"
+                    aria-label="Editorhöhe ändern" aria-orientation="horizontal"
+                    aria-valuemin="240" aria-valuenow="340"
+                    title="Ziehen oder Pfeiltasten verwenden, um die Editorhöhe zu ändern"></div>
+
         <div class="sql-actions"></div>`;
     container.appendChild(root);
     SQLPluginUI.theme(root);
@@ -312,6 +336,47 @@ function initPluginSQL(dtoString, active) {
         ratio = Math.min(0.85, Math.max(0.15, value));
         applyLayout();
     }
+    const heightResizer = root.querySelector('[data-height-resizer]');
+    let heightDrag = null;
+    const setHeight = (height) => {
+        const nextHeight = Math.max(240, Math.round(height));
+        panels.style.height = `${nextHeight}px`;
+        heightResizer.setAttribute('aria-valuenow', String(nextHeight));
+        editor.resize();
+    };
+    heightResizer.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || heightDrag) return;
+        event.preventDefault();
+        heightResizer.focus();
+        heightResizer.setPointerCapture(event.pointerId);
+        heightDrag = {
+            pointerId: event.pointerId,
+            startY: event.clientY,
+            startHeight: panels.getBoundingClientRect().height
+        };
+    });
+    heightResizer.addEventListener('pointermove', (event) => {
+        if (heightDrag?.pointerId !== event.pointerId) return;
+        setHeight(heightDrag.startHeight + event.clientY - heightDrag.startY);
+    });
+    const endHeightDrag = (event) => {
+        if (heightDrag?.pointerId !== event.pointerId) return;
+        heightDrag = null;
+        if (heightResizer.hasPointerCapture(event.pointerId)) {
+            heightResizer.releasePointerCapture(event.pointerId);
+        }
+    };
+    for (const eventType of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+        heightResizer.addEventListener(eventType, endHeightDrag);
+    }
+    heightResizer.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        event.stopPropagation();
+        const step = event.shiftKey ? 50 : 10;
+        setHeight(panels.getBoundingClientRect().height + (event.key === 'ArrowDown' ? step : -step));
+    });
+
     layoutToggle.addEventListener('click', () => { horizontal = !horizontal; applyLayout(); });
     splitter.addEventListener('pointerdown', event => {
         event.preventDefault();
